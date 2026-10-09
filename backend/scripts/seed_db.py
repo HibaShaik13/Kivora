@@ -29,12 +29,15 @@ from backend.app.models.models import (
     WorkflowStep,
     EvidenceRecord,
     VerificationRecord,
+    VerificationAiAnalysis,
     Brief,
     BriefSkill,
     BriefTool,
     Application,
     Engagement,
+    EngagementDeliverable,
 )
+
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger("seed_db")
@@ -49,6 +52,11 @@ def parse_dt(dt_str):
 
 
 def seed_database():
+    env = os.getenv("KIVORA_ENV", os.getenv("ENV", "development")).lower()
+    if env in ["production", "prod"]:
+        logger.warning("SECURITY ABORT: seed_db.py cannot execute against production databases.")
+        return
+
     seed_file = Path("backend/app/data/seed_data.json")
     if not seed_file.exists():
         logger.error(f"Seed file not found at {seed_file}")

@@ -58,10 +58,16 @@ def register_user(payload: UserRegisterRequest, db: Session = Depends(get_db)):
     email = payload.email.lower().strip()
     existing_user = db.query(User).filter(User.email == email).first()
     if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="An account with this email address already exists."
-        )
+        if existing_user.is_email_verified:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="An account with this email address already exists. Please sign in."
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="An account with this email exists but is not verified yet. Please verify your email with OTP."
+            )
 
     role = payload.role.upper().strip()
     if role not in ["CREATOR", "BRAND"]:
@@ -172,6 +178,17 @@ def resend_otp(payload: ResendOtpRequest, db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No account associated with this email address."
+        )
+
+    # Rate limiting: Maximum 1 OTP dispatch per 60 seconds per email
+    recent_otp = db.query(OtpCode).filter(
+        OtpCode.email == email,
+        OtpCode.created_at >= datetime.utcnow() - timedelta(seconds=60)
+    ).first()
+    if recent_otp:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="A verification code was recently sent. Please wait 60 seconds before requesting a new code."
         )
 
     otp = generate_otp_code()

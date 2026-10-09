@@ -17,17 +17,30 @@ router = APIRouter(prefix="/api/match", tags=["Matching"])
 def get_brief_creator_matches(
     brief_id: str,
     min_score: float = Query(0.0, description="Minimum match score filter"),
+    enforce_hard_filters: bool = Query(False, description="Filter out creators who fail hard requirements"),
+    limit: int = Query(None, description="Limit top N matches"),
     db: Session = Depends(get_db)
 ):
     brief = db.query(Brief).filter(Brief.id == brief_id).first()
     if not brief:
         raise HTTPException(status_code=404, detail="Brief not found")
 
-    matches = match_creators_for_brief(db, brief, min_score=min_score)
+    total_evaluated = db.query(Brief).filter(Brief.id == brief_id).first()
+    from backend.app.models.models import CreatorProfile
+    total_creators = db.query(CreatorProfile).count()
+
+    matches = match_creators_for_brief(
+        db,
+        brief,
+        min_score=min_score,
+        enforce_hard_filters=enforce_hard_filters,
+        limit=limit
+    )
 
     return BriefMatchResponse(
         brief_id=brief.id,
         brief_title=brief.title,
-        total_creators_evaluated=len(matches),
+        total_creators_evaluated=total_creators,
         matches=matches
     )
+

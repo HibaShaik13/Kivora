@@ -79,6 +79,17 @@ class BrandProfileSetupRequest(BaseModel):
     headquarters: str
 
 
+class BrandProfileUpdateRequest(BaseModel):
+    company_name: Optional[str] = None
+    slug: Optional[str] = None
+    industry: Optional[str] = None
+    website_url: Optional[str] = None
+    logo_url: Optional[str] = None
+    description: Optional[str] = None
+    company_size: Optional[str] = None
+    headquarters: Optional[str] = None
+
+
 class PortfolioProjectCreate(BaseModel):
     title: str
     description: str
@@ -93,6 +104,60 @@ class PortfolioProjectCreate(BaseModel):
     featured: bool = False
     workflow_steps: List[Dict[str, Any]] = []
     evidence_records: List[Dict[str, Any]] = []
+
+
+class PortfolioProjectUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    content_type: Optional[str] = None
+    primary_asset_url: Optional[str] = None
+    thumbnail_url: Optional[str] = None
+    aspect_ratio: Optional[str] = None
+    resolution: Optional[str] = None
+    duration_seconds: Optional[int] = None
+    commercial_rights_held: Optional[bool] = None
+    commercial_license_type: Optional[str] = None
+    featured: Optional[bool] = None
+    workflow_steps: Optional[List[Dict[str, Any]]] = None
+
+
+class WorkflowStepCreate(BaseModel):
+    stage_name: str
+    tools_used: str
+    description: str
+    step_order: Optional[int] = None
+    parameters_snippet: Optional[str] = None
+    output_sample_url: Optional[str] = None
+
+
+class EvidenceRecordCreate(BaseModel):
+    evidence_type: str = "PROCESS_SCREENSHOT"
+    file_url: str
+    title: str
+    description: str
+    request_verification: bool = False
+    target_type: Optional[str] = "PORTFOLIO_PROJECT"
+    target_id: Optional[str] = None
+    verification_scope: Optional[str] = None
+
+
+class VerificationRequestCreate(BaseModel):
+    evidence_id: str
+    target_type: str  # PORTFOLIO_PROJECT, CREATOR_TOOL, CREATOR_SKILL, WORKFLOW_STEP
+    target_id: str
+    verification_scope: str
+
+
+class VerificationReviewRequest(BaseModel):
+    status: str  # APPROVED, REJECTED
+    reviewer_notes: str
+
+
+class MediaUploadResponse(BaseModel):
+    url: str
+    filename: str
+    content_type: str
+    size_bytes: int
 
 
 # ==========================================
@@ -169,6 +234,41 @@ class VerificationRecordRead(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class InconsistencyFlag(BaseModel):
+    reason: str
+    supporting_info: str
+
+
+class AIEvidenceAnalysisRead(BaseModel):
+    id: str
+    verification_id: str
+    summary: str
+    evidence_items_detected: List[str]
+    missing_evidence: List[str]
+    potential_inconsistencies: List[InconsistencyFlag]
+    limitations: List[str]
+    analysis_status: str  # COMPLETED, UNAVAILABLE, ERROR
+    disclaimer: str
+    model_name: Optional[str] = None
+    analyzed_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class VerificationRecordDetailRead(VerificationRecordRead):
+    evidence_id: Optional[str] = None
+    evidence_title: Optional[str] = None
+    evidence_file_url: Optional[str] = None
+    evidence_type: Optional[str] = None
+    project_id: Optional[str] = None
+    project_title: Optional[str] = None
+    creator_id: Optional[str] = None
+    creator_name: Optional[str] = None
+    creator_handle: Optional[str] = None
+    ai_analysis: Optional[AIEvidenceAnalysisRead] = None
 
 
 class EvidenceRecordRead(BaseModel):
@@ -322,7 +422,7 @@ class BriefRead(BaseModel):
 
 
 class BriefCreate(BaseModel):
-    brand_id: str
+    brand_id: Optional[str] = None  # Derived from authenticated brand profile; rejected if mismatched
     title: str
     campaign_objective: str
     target_audience: str
@@ -343,8 +443,39 @@ class BriefCreate(BaseModel):
     usage_territories: str
     restrictions_and_guidelines: str
     disclosure_requirements: str
+    status: Optional[str] = "PUBLISHED"  # "PUBLISHED" or "DRAFT"
     required_skill_ids: List[str] = []
     required_tool_ids: List[str] = []
+
+
+class BriefUpdate(BaseModel):
+    title: Optional[str] = None
+    campaign_objective: Optional[str] = None
+    target_audience: Optional[str] = None
+    content_type: Optional[str] = None
+    creative_style_mood: Optional[str] = None
+    aspect_ratio: Optional[str] = None
+    duration_seconds_min: Optional[int] = None
+    duration_seconds_max: Optional[int] = None
+    resolution_min: Optional[str] = None
+    deliverables_description: Optional[str] = None
+    revision_allowance: Optional[int] = None
+    budget_amount: Optional[float] = None
+    budget_currency: Optional[str] = None
+    deadline_days: Optional[int] = None
+    commercial_use_requirements: Optional[str] = None
+    usage_channels: Optional[str] = None
+    usage_duration: Optional[str] = None
+    usage_territories: Optional[str] = None
+    restrictions_and_guidelines: Optional[str] = None
+    disclosure_requirements: Optional[str] = None
+    status: Optional[str] = None
+    required_skill_ids: Optional[List[str]] = None
+    required_tool_ids: Optional[List[str]] = None
+
+
+class BriefStatusUpdate(BaseModel):
+    status: str  # DRAFT, PUBLISHED, CLOSED, CANCELLED
 
 
 # ==========================================
@@ -352,8 +483,8 @@ class BriefCreate(BaseModel):
 # ==========================================
 
 class ApplicationCreate(BaseModel):
-    brief_id: str
-    creator_id: str
+    brief_id: Optional[str] = None
+    creator_id: Optional[str] = None  # Derived from authenticated creator profile; rejected if mismatched
     pitch_text: str
     proposed_rate: float
     proposed_timeline_days: int
@@ -385,6 +516,44 @@ class ApplicationStatusUpdate(BaseModel):
     brand_feedback: Optional[str] = None
 
 
+class DeliverableRead(BaseModel):
+    id: str
+    engagement_id: str
+    version: int
+    title: str
+    asset_url: str
+    notes: Optional[str] = None
+    submitted_by: str
+    status: str
+    feedback: Optional[str] = None
+    submitted_at: datetime
+    reviewed_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class DeliverableSubmissionCreate(BaseModel):
+    asset_url: str = Field(..., min_length=3, description="Deliverable asset link or storage path")
+    title: Optional[str] = Field("Draft Deliverable", min_length=2)
+    notes: Optional[str] = None
+
+
+class RevisionRequestCreate(BaseModel):
+    feedback: str = Field(..., min_length=3, description="Specific revision instructions and feedback")
+    revision_notes: Optional[str] = None
+
+
+class EngagementReviewCreate(BaseModel):
+    rating: int = Field(..., ge=1, le=5, description="Star rating from 1 to 5")
+    review: str = Field(..., min_length=3, description="Written performance review")
+
+
+class EngagementStatusUpdate(BaseModel):
+    status: str  # DRAFT_SUBMITTED, REVISION_REQUESTED, FINAL_APPROVED, COMPLETED, DISPUTED
+    notes: Optional[str] = None
+
+
 class EngagementRead(BaseModel):
     id: str
     brief_id: str
@@ -399,9 +568,18 @@ class EngagementRead(BaseModel):
     brand_review: Optional[str] = None
     created_at: datetime
     updated_at: datetime
+    deliverables: List[DeliverableRead] = []
 
     class Config:
         from_attributes = True
+
+
+class EngagementDetailRead(EngagementRead):
+    brief_title: Optional[str] = None
+    brief_slug: Optional[str] = None
+    brand_company_name: Optional[str] = None
+    creator_display_name: Optional[str] = None
+    creator_handle: Optional[str] = None
 
 
 # ==========================================
@@ -432,6 +610,12 @@ class CreatorMatchResult(BaseModel):
     breakdown: MatchScoreBreakdown
     reasons: List[str]
     gaps: List[str]
+    matched_skills: List[str] = []
+    matched_tools: List[str] = []
+    strengths: List[str] = []
+    missing_requirements: List[str] = []
+    compatibility_disclaimer: str = "Scores represent estimated compatibility based on declared and verified portfolio evidence, not a guarantee of outcome."
+    hard_requirements_met: bool = True
 
 
 class BriefMatchResponse(BaseModel):
@@ -439,6 +623,7 @@ class BriefMatchResponse(BaseModel):
     brief_title: str
     total_creators_evaluated: int
     matches: List[CreatorMatchResult]
+
 
 
 # ==========================================

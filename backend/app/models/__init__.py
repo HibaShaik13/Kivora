@@ -11,11 +11,13 @@ from backend.app.models.models import (
     WorkflowStep,
     EvidenceRecord,
     VerificationRecord,
+    VerificationAiAnalysis,
     Brief,
     BriefSkill,
     BriefTool,
     Application,
     Engagement,
+    EngagementDeliverable,
 )
 
 __all__ = [
@@ -31,9 +33,12 @@ __all__ = [
     "WorkflowStep",
     "EvidenceRecord",
     "VerificationRecord",
+    "VerificationAiAnalysis",
     "Brief",
     "BriefSkill",
     "BriefTool",
     "Application",
     "Engagement",
+    "EngagementDeliverable",
 ]
+

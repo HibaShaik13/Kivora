@@ -10,7 +10,19 @@ import jwt
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 
-SECRET_KEY = os.getenv("SECRET_KEY", "kivora_super_secret_hackathon_jwt_key_2026_change_in_prod")
+ENV = os.getenv("KIVORA_ENV", os.getenv("ENV", "development")).lower()
+SECRET_KEY = os.getenv("SECRET_KEY")
+
+if not SECRET_KEY:
+    if ENV in ["development", "dev", "test", "testing"]:
+        # Permitted fallback only under explicit local development or testing environments
+        SECRET_KEY = "kivora_dev_test_ephemeral_jwt_secret_never_use_in_production"
+    else:
+        raise RuntimeError(
+            "CRITICAL SECURITY CONFIGURATION ERROR: 'SECRET_KEY' environment variable "
+            "must be explicitly set in non-development environments."
+        )
+
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 24
 

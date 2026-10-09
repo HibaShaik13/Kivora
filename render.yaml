@@ -1,0 +1,49 @@
+services:
+  # Kivora FastAPI Backend Service
+  - type: web
+    name: kivora-api
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: KIVORA_ENV
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: kivora-postgres
+          property: connectionString
+      - key: KIVORA_CORS_ORIGINS
+        value: https://your-kivora-app.vercel.app
+      - key: KIVORA_UPLOAD_DIR
+        value: uploads
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: 587
+      - key: SMTP_USERNAME
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM_EMAIL
+        sync: false
+      - key: SMTP_FROM_NAME
+        value: "Kivora Platform"
+      - key: SMTP_USE_TLS
+        value: "true"
+
+databases:
+  # Managed PostgreSQL Database
+  - name: kivora-postgres
+    plan: free
+    region: oregon
+    databaseName: kivoradb
+    user: kivora_user

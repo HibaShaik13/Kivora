@@ -17,6 +17,7 @@ from sqlalchemy import (
     UniqueConstraint,
     Index,
     Enum,
+    JSON,
 )
 from sqlalchemy.orm import relationship
 from backend.app.database import Base
@@ -245,6 +246,25 @@ class VerificationRecord(Base):
     reviewed_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     evidence = relationship("EvidenceRecord", back_populates="verification")
+    ai_analysis = relationship("VerificationAiAnalysis", back_populates="verification_record", uselist=False, cascade="all, delete-orphan")
+
+
+class VerificationAiAnalysis(Base):
+    __tablename__ = "verification_ai_analyses"
+
+    id = Column(String(36), primary_key=True)
+    verification_id = Column(String(36), ForeignKey("verification_records.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    summary = Column(Text, nullable=False)
+    evidence_items_detected = Column(JSON, nullable=False)   # List[str]
+    missing_evidence = Column(JSON, nullable=False)          # List[str]
+    potential_inconsistencies = Column(JSON, nullable=False) # List[dict]
+    limitations = Column(JSON, nullable=False)               # List[str]
+    analysis_status = Column(String(30), nullable=False, default="COMPLETED", index=True)  # COMPLETED, UNAVAILABLE, ERROR
+    disclaimer = Column(Text, nullable=False)
+    model_name = Column(String(100), nullable=False)
+    analyzed_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    verification_record = relationship("VerificationRecord", back_populates="ai_analysis")
 
 
 # ==========================================
@@ -368,3 +388,23 @@ class Engagement(Base):
     brief = relationship("Brief", back_populates="engagements")
     creator = relationship("CreatorProfile", back_populates="engagements")
     application = relationship("Application", back_populates="engagement")
+    deliverables = relationship("EngagementDeliverable", back_populates="engagement", cascade="all, delete-orphan", order_by="EngagementDeliverable.version")
+
+
+class EngagementDeliverable(Base):
+    __tablename__ = "engagement_deliverables"
+
+    id = Column(String(36), primary_key=True)
+    engagement_id = Column(String(36), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False, index=True)
+    version = Column(Integer, nullable=False, default=1)
+    title = Column(String(200), nullable=False)
+    asset_url = Column(String(500), nullable=False)
+    notes = Column(Text, nullable=True)
+    submitted_by = Column(String(36), nullable=False)  # creator_id
+    status = Column(String(30), nullable=False, default="SUBMITTED")  # SUBMITTED, REVISION_REQUESTED, APPROVED
+    feedback = Column(Text, nullable=True)
+    submitted_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    reviewed_at = Column(DateTime, nullable=True)
+
+    engagement = relationship("Engagement", back_populates="deliverables")
+
