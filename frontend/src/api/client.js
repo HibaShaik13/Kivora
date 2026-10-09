@@ -4,7 +4,9 @@
  * normalizes error responses, and handles multipart uploads.
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const rawBaseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000').trim().replace(/\/+$/, '');
+// Strip trailing /api if user specified it in VITE_API_BASE_URL so that endpoint paths like /api/... concatenate properly
+const API_BASE_URL = rawBaseUrl.endsWith('/api') ? rawBaseUrl.slice(0, -4) : rawBaseUrl;
 const TOKEN_STORAGE_KEY = 'kivora_access_token';
 
 /**

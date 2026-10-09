@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 
 ENV = os.getenv("KIVORA_ENV", os.getenv("ENV", "development")).lower()
-SECRET_KEY = os.getenv("SECRET_KEY")
+SECRET_KEY = os.getenv("SECRET_KEY", os.getenv("JWT_SECRET_KEY"))
 
 if not SECRET_KEY:
     if ENV in ["development", "dev", "test", "testing"]:

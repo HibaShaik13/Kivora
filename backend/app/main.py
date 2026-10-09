@@ -52,6 +52,45 @@ app.include_router(media.router)
 app.include_router(verification.router)
 
 
+@app.on_event("startup")
+def on_startup():
+    """Ensure database schema and essential taxonomy exist on application boot."""
+    try:
+        from backend.app.database import engine, Base, SessionLocal
+        from backend.app.models.models import Skill, Tool
+        import json
+
+        # 1. Ensure all database tables exist (PostgreSQL / SQLite)
+        Base.metadata.create_all(bind=engine)
+
+        # 2. Seed taxonomy catalog (Skills & Generative Tools only) if empty
+        db = SessionLocal()
+        try:
+            if db.query(Skill).count() == 0 or db.query(Tool).count() == 0:
+                seed_file = Path(__file__).resolve().parent / "data" / "seed_data.json"
+                if seed_file.exists():
+                    with open(seed_file, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+
+                    if db.query(Skill).count() == 0 and "skills" in data:
+                        for s in data["skills"]:
+                            if not db.query(Skill).filter(Skill.id == s["id"]).first():
+                                db.add(Skill(id=s["id"], name=s["name"], category=s.get("category", "General")))
+                        db.commit()
+
+                    if db.query(Tool).count() == 0 and "tools" in data:
+                        for t in data["tools"]:
+                            if not db.query(Tool).filter(Tool.id == t["id"]).first():
+                                db.add(Tool(id=t["id"], name=t["name"], category=t.get("category", "General")))
+                        db.commit()
+        except Exception:
+            db.rollback()
+        finally:
+            db.close()
+    except Exception as e:
+        import logging
+        logging.getLogger("uvicorn.error").error(f"Startup DB initialization error: {e}")
+
 
 @app.get("/")
 def root():

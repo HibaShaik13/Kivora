@@ -26,7 +26,7 @@ else:
 
 # Environment settings
 KIVORA_ENV = os.getenv("KIVORA_ENV", os.getenv("ENV", "development")).lower()
-SECRET_KEY = os.getenv("SECRET_KEY")
+SECRET_KEY = os.getenv("SECRET_KEY", os.getenv("JWT_SECRET_KEY"))
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./kivora.db")
 UPLOAD_DIR = Path(os.getenv("KIVORA_UPLOAD_DIR", "uploads"))
 
@@ -47,7 +47,7 @@ RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 SENDER_EMAIL = os.getenv("SENDER_EMAIL", "shaikhibatharunnum@gmail.com")
 
 # SMTP Configuration (e.g. Gmail SMTP)
-SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
+SMTP_HOST = os.getenv("SMTP_HOST", os.getenv("SMTP_SERVER", "smtp.gmail.com"))
 try:
     SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 except ValueError:
