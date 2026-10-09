@@ -42,6 +42,18 @@ class User(Base):
     brand_profile = relationship("BrandProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
 
 
+class OtpCode(Base):
+    __tablename__ = "otp_codes"
+
+    id = Column(String(36), primary_key=True)
+    email = Column(String(255), nullable=False, index=True)
+    code = Column(String(10), nullable=False)
+    purpose = Column(String(30), nullable=False, default="REGISTRATION")  # REGISTRATION, LOGIN, PASSWORD_RESET
+    expires_at = Column(DateTime, nullable=False)
+    is_used = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
 # ==========================================
 # 2. CREATOR PROFILES & TAXONOMY
 # ==========================================

@@ -5,7 +5,94 @@ Defines input/output contracts, validation rules, and response shapes.
 
 from typing import List, Optional, Dict, Any
 from datetime import datetime
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field
+
+
+# ==========================================
+# 0. AUTHENTICATION & USER SCHEMAS
+# ==========================================
+
+EMAIL_PATTERN = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
+
+class UserRegisterRequest(BaseModel):
+    email: str = Field(..., pattern=EMAIL_PATTERN, description="Valid email address")
+    password: str = Field(..., min_length=8, description="Password must be at least 8 characters")
+    role: str = Field("CREATOR", description="Role: 'CREATOR' or 'BRAND'")
+
+
+class UserLoginRequest(BaseModel):
+    email: str = Field(..., pattern=EMAIL_PATTERN)
+    password: str
+
+
+class VerifyOtpRequest(BaseModel):
+    email: str = Field(..., pattern=EMAIL_PATTERN)
+    otp_code: str = Field(..., min_length=6, max_length=6)
+
+
+class ResendOtpRequest(BaseModel):
+    email: str = Field(..., pattern=EMAIL_PATTERN)
+
+
+class UserSummaryResponse(BaseModel):
+    id: str
+    email: str
+    role: str
+    is_email_verified: bool
+    has_profile: bool = False
+    profile_id: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserSummaryResponse
+
+
+class CreatorProfileSetupRequest(BaseModel):
+    display_name: str
+    handle: str
+    bio: str
+    avatar_url: str = "/assets/avatars/default.jpg"
+    banner_url: Optional[str] = None
+    location: str
+    years_experience: int = 1
+    primary_specialization: str
+    website_url: Optional[str] = None
+    min_budget: float = 500.0
+    hourly_rate: Optional[float] = None
+    skill_ids: List[str] = []
+    tool_ids: List[str] = []
+
+
+class BrandProfileSetupRequest(BaseModel):
+    company_name: str
+    slug: str
+    industry: str
+    website_url: Optional[str] = None
+    logo_url: str = "/assets/brands/default.svg"
+    description: str
+    company_size: str = "10-50"
+    headquarters: str
+
+
+class PortfolioProjectCreate(BaseModel):
+    title: str
+    description: str
+    content_type: str
+    primary_asset_url: str
+    thumbnail_url: str
+    aspect_ratio: str
+    resolution: str = "4K UHD"
+    duration_seconds: Optional[int] = None
+    commercial_rights_held: bool = True
+    commercial_license_type: str = "Full Commercial Buyout"
+    featured: bool = False
+    workflow_steps: List[Dict[str, Any]] = []
+    evidence_records: List[Dict[str, Any]] = []
 
 
 # ==========================================
@@ -277,7 +364,9 @@ class ApplicationRead(BaseModel):
     id: str
     brief_id: str
     creator_id: str
-    creator: Optional[CreatorProfileListRead] = None
+    creator_display_name: Optional[str] = None
+    creator_handle: Optional[str] = None
+    creator_avatar_url: Optional[str] = None
     pitch_text: str
     proposed_rate: float
     proposed_timeline_days: int

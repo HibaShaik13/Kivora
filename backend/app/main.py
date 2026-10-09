@@ -6,7 +6,7 @@ Main entrypoint initializing REST routes, CORS middleware, and system health che
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.app.api import creators, briefs, matching, ai, taxonomy
+from backend.app.api import auth, creators, brands, briefs, matching, ai, taxonomy
 
 app = FastAPI(
     title="Kivora API",
@@ -24,7 +24,9 @@ app.add_middleware(
 )
 
 # Mount API Routers
+app.include_router(auth.router)
 app.include_router(creators.router)
+app.include_router(brands.router)
 app.include_router(briefs.router)
 app.include_router(matching.router)
 app.include_router(ai.router)

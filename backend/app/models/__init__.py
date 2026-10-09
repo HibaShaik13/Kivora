@@ -1,5 +1,6 @@
 from backend.app.models.models import (
     User,
+    OtpCode,
     CreatorProfile,
     Skill,
     CreatorSkill,
@@ -19,6 +20,7 @@ from backend.app.models.models import (
 
 __all__ = [
     "User",
+    "OtpCode",
     "CreatorProfile",
     "Skill",
     "CreatorSkill",

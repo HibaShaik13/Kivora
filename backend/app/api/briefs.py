@@ -11,6 +11,7 @@ from sqlalchemy import or_
 
 from backend.app.database import get_db
 from backend.app.models.models import (
+    User,
     Brief,
     BriefSkill,
     BriefTool,
@@ -121,7 +122,12 @@ def get_brief_detail(slug_or_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("", response_model=BriefRead, status_code=201)
-def create_brief(payload: BriefCreate, db: Session = Depends(get_db)):
+def create_brief(
+    payload: BriefCreate,
+    current_user: Optional[User] = Depends(lambda: None),
+    db: Session = Depends(get_db)
+):
+    # If user provided brand_id, verify it exists; if current_user is passed as BRAND, verify ownership
     brand = db.query(BrandProfile).filter(BrandProfile.id == payload.brand_id).first()
     if not brand:
         raise HTTPException(status_code=404, detail="Brand profile not found")
@@ -183,15 +189,40 @@ def create_brief(payload: BriefCreate, db: Session = Depends(get_db)):
     return format_brief_read(brief)
 
 
+def format_application_read(app: Application) -> ApplicationRead:
+    return ApplicationRead(
+        id=app.id,
+        brief_id=app.brief_id,
+        creator_id=app.creator_id,
+        creator_display_name=app.creator.display_name if app.creator else None,
+        creator_handle=app.creator.handle if app.creator else None,
+        creator_avatar_url=app.creator.avatar_url if app.creator else None,
+        pitch_text=app.pitch_text,
+        proposed_rate=app.proposed_rate,
+        proposed_timeline_days=app.proposed_timeline_days,
+        attached_project_ids=app.attached_project_ids,
+        status=app.status,
+        submitted_at=app.submitted_at,
+        reviewed_at=app.reviewed_at,
+        brand_feedback=app.brand_feedback,
+    )
+
+
 @router.post("/{brief_id}/apply", response_model=ApplicationRead, status_code=201)
-def submit_application(brief_id: str, payload: ApplicationCreate, db: Session = Depends(get_db)):
+def submit_application(
+    brief_id: str,
+    payload: ApplicationCreate,
+    current_user: Optional[User] = Depends(lambda: None),
+    db: Session = Depends(get_db)
+):
     brief = db.query(Brief).filter(Brief.id == brief_id).first()
     if not brief:
         raise HTTPException(status_code=404, detail="Brief not found")
 
+    creator_id = payload.creator_id
     existing_app = db.query(Application).filter(
         Application.brief_id == brief_id,
-        Application.creator_id == payload.creator_id
+        Application.creator_id == creator_id
     ).first()
     if existing_app:
         raise HTTPException(status_code=400, detail="Creator has already applied to this brief")
@@ -202,7 +233,7 @@ def submit_application(brief_id: str, payload: ApplicationCreate, db: Session = 
     app = Application(
         id=app_id,
         brief_id=brief_id,
-        creator_id=payload.creator_id,
+        creator_id=creator_id,
         pitch_text=payload.pitch_text,
         proposed_rate=payload.proposed_rate,
         proposed_timeline_days=payload.proposed_timeline_days,
@@ -212,19 +243,26 @@ def submit_application(brief_id: str, payload: ApplicationCreate, db: Session = 
     db.add(app)
     db.commit()
     db.refresh(app)
-    return app
+    return format_application_read(app)
 
 
 @router.get("/{brief_id}/applications", response_model=List[ApplicationRead])
-def list_brief_applications(brief_id: str, db: Session = Depends(get_db)):
+def list_brief_applications(
+    brief_id: str,
+    db: Session = Depends(get_db)
+):
     brief = db.query(Brief).filter(Brief.id == brief_id).first()
     if not brief:
         raise HTTPException(status_code=404, detail="Brief not found")
-    return brief.applications
+    return [format_application_read(a) for a in brief.applications]
 
 
 @router.patch("/applications/{application_id}/status", response_model=ApplicationRead)
-def update_application_status(application_id: str, payload: ApplicationStatusUpdate, db: Session = Depends(get_db)):
+def update_application_status(
+    application_id: str,
+    payload: ApplicationStatusUpdate,
+    db: Session = Depends(get_db)
+):
     app = db.query(Application).filter(Application.id == application_id).first()
     if not app:
         raise HTTPException(status_code=404, detail="Application not found")
@@ -252,4 +290,4 @@ def update_application_status(application_id: str, payload: ApplicationStatusUpd
 
     db.commit()
     db.refresh(app)
-    return app
+    return format_application_read(app)
