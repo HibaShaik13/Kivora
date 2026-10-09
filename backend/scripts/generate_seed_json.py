@@ -1,0 +1,1397 @@
+"""
+Seed Data Generator for Kivora Marketplace
+Constructs reproducible, relational demo data for 14 creators, 6 brands, 9 briefs,
+portfolios, multi-stage workflows, evidence, verifications, applications, and engagements.
+"""
+
+import json
+from datetime import datetime, timedelta
+from pathlib import Path
+
+# Base time anchor for consistent relative dates
+T0 = datetime(2026, 10, 1, 10, 0, 0)
+
+
+def fmt_dt(dt: datetime) -> str:
+    return dt.isoformat()
+
+
+# 1. USERS & PASSWORDS (Argon2 placeholder hashes for demo testing)
+users = []
+creator_profiles = []
+brand_profiles = []
+
+# SKILLS & TOOLS MASTER LIST
+skills_data = [
+    {"id": "skill-lora-char", "name": "LoRA Character Consistency", "category": "Generative Video"},
+    {"id": "skill-4k-video", "name": "4K Video Synthesis & Upscaling", "category": "Generative Video"},
+    {"id": "skill-camera-control", "name": "Camera Motion & Trajectory Control", "category": "Generative Video"},
+    {"id": "skill-product-viz", "name": "Photorealistic 3D Product Rendering", "category": "3D & Synthesis"},
+    {"id": "skill-macro-fluid", "name": "Macro Fluid Dynamics & Particles", "category": "Generative Video"},
+    {"id": "skill-fashion-avatar", "name": "Digital Fashion & Virtual Fabric Simulation", "category": "3D & Synthesis"},
+    {"id": "skill-prompt-eng", "name": "Advanced Multi-Pass Prompt Engineering", "category": "Image Synthesis"},
+    {"id": "skill-lip-sync", "name": "AI Voice Synthesis & Lip-Sync Alignment", "category": "Audio & Lip-sync"},
+    {"id": "skill-concept-matte", "name": "Sci-Fi Matte Painting & World Building", "category": "Concept Art"},
+    {"id": "skill-audio-reactive", "name": "Audio-Reactive Generative Visuals", "category": "Audio & Lip-sync"},
+    {"id": "skill-automotive-cgi", "name": "Automotive Exterior Lighting & Motion", "category": "3D & Synthesis"},
+    {"id": "skill-commercial-ip", "name": "Commercial IP Compliance & Model Licensing", "category": "Production & Rights"}
+]
+
+tools_data = [
+    {"id": "tool-runway-gen3", "name": "Runway Gen-3 Alpha", "category": "Video Generation", "vendor": "Runway ML"},
+    {"id": "tool-midjourney-v6", "name": "Midjourney v6", "category": "Image Synthesis", "vendor": "Midjourney Inc"},
+    {"id": "tool-comfyui", "name": "ComfyUI Node Pipelines", "category": "Pipeline Orchestration", "vendor": "Open Source"},
+    {"id": "tool-flux1-pro", "name": "Flux.1 Pro", "category": "Image Synthesis", "vendor": "Black Forest Labs"},
+    {"id": "tool-kling-ai", "name": "Kling AI 1.5", "category": "Video Generation", "vendor": "Kuaishou"},
+    {"id": "tool-luma-dream", "name": "Luma Dream Machine", "category": "Video Generation", "vendor": "Luma AI"},
+    {"id": "tool-topaz-video", "name": "Topaz Video AI 5", "category": "Post-Processing", "vendor": "Topaz Labs"},
+    {"id": "tool-magnific", "name": "Magnific AI Upscaler", "category": "Post-Processing", "vendor": "Magnific"},
+    {"id": "tool-elevenlabs", "name": "ElevenLabs Prime Voice", "category": "Audio & Voice", "vendor": "ElevenLabs"},
+    {"id": "tool-pika2", "name": "Pika 2.0", "category": "Video Generation", "vendor": "Pika Labs"},
+    {"id": "tool-sdxl", "name": "Stable Diffusion XL", "category": "Image Synthesis", "vendor": "Stability AI"},
+    {"id": "tool-udio", "name": "Udio Music Generation", "category": "Audio & Voice", "vendor": "Udio"}
+]
+
+# CREATORS MASTER DEFINITION
+creators_def = [
+    {
+        "user_id": "user-creator-1",
+        "email": "elena.rostova@kivora.demo",
+        "creator_id": "creator-elena-rostova",
+        "display_name": "Elena Rostova",
+        "handle": "elena_creative",
+        "bio": "Director and AI cinematographer specializing in hyper-realistic luxury commercials, fluid dynamics, and consistent character storytelling across multi-shot arcs.",
+        "avatar_url": "/assets/avatars/elena.jpg",
+        "banner_url": "/assets/banners/elena_banner.jpg",
+        "location": "Berlin, Germany",
+        "years_experience": 4,
+        "primary_specialization": "AI Cinematic Filmmaking",
+        "website_url": "https://elenarostova.studio",
+        "min_budget": 3000.0,
+        "hourly_rate": 150.0,
+        "availability_status": "AVAILABLE",
+        "verification_tier": "VERIFIED_PRO",
+        "verified_claims_count": 3,
+        "completed_projects_count": 14,
+        "average_rating": 4.96,
+        "skills": [
+            ("skill-4k-video", "EXPERT"),
+            ("skill-camera-control", "EXPERT"),
+            ("skill-lora-char", "ADVANCED"),
+            ("skill-macro-fluid", "ADVANCED"),
+            ("skill-commercial-ip", "EXPERT")
+        ],
+        "tools": [
+            ("tool-runway-gen3", "MASTER", True),
+            ("tool-comfyui", "MASTER", True),
+            ("tool-midjourney-v6", "ADVANCED", True),
+            ("tool-topaz-video", "MASTER", True)
+        ]
+    },
+    {
+        "user_id": "user-creator-2",
+        "email": "marcus.vance@kivora.demo",
+        "creator_id": "creator-marcus-vance",
+        "display_name": "Marcus Vance",
+        "handle": "vance_3d",
+        "bio": "Generative 3D industrial designer translating complex mechanical CADs and luxury cosmetic packaging into photorealistic ray-traced visuals.",
+        "avatar_url": "/assets/avatars/marcus.jpg",
+        "banner_url": "/assets/banners/marcus_banner.jpg",
+        "location": "London, UK",
+        "years_experience": 3,
+        "primary_specialization": "Photorealistic 3D Product Visualization",
+        "website_url": "https://marcusvance.design",
+        "min_budget": 1800.0,
+        "hourly_rate": 110.0,
+        "availability_status": "AVAILABLE",
+        "verification_tier": "VERIFIED_PRO",
+        "verified_claims_count": 2,
+        "completed_projects_count": 9,
+        "average_rating": 4.88,
+        "skills": [
+            ("skill-product-viz", "EXPERT"),
+            ("skill-prompt-eng", "EXPERT"),
+            ("skill-commercial-ip", "ADVANCED")
+        ],
+        "tools": [
+            ("tool-flux1-pro", "MASTER", True),
+            ("tool-magnific", "ADVANCED", True),
+            ("tool-midjourney-v6", "EXPERT", False)
+        ]
+    },
+    {
+        "user_id": "user-creator-3",
+        "email": "kai.tanaka@kivora.demo",
+        "creator_id": "creator-kai-tanaka",
+        "display_name": "Kai Tanaka",
+        "handle": "kai_anime",
+        "bio": "Stylized 2D/2.5D generative anime animator and dynamic motion creator for web series, game promotional teasers, and music videos.",
+        "avatar_url": "/assets/avatars/kai.jpg",
+        "banner_url": "/assets/banners/kai_banner.jpg",
+        "location": "Tokyo, Japan",
+        "years_experience": 2,
+        "primary_specialization": "Stylized Generative Anime Animation",
+        "website_url": "https://kaitanaka.art",
+        "min_budget": 1200.0,
+        "hourly_rate": 80.0,
+        "availability_status": "AVAILABLE",
+        "verification_tier": "COMMUNITY",
+        "verified_claims_count": 1,
+        "completed_projects_count": 6,
+        "average_rating": 4.75,
+        "skills": [
+            ("skill-lora-char", "ADVANCED"),
+            ("skill-camera-control", "INTERMEDIATE")
+        ],
+        "tools": [
+            ("tool-kling-ai", "ADVANCED", True),
+            ("tool-comfyui", "ADVANCED", False),
+            ("tool-midjourney-v6", "COMPETENT", False)
+        ]
+    },
+    {
+        "user_id": "user-creator-4",
+        "email": "maya.lin@kivora.demo",
+        "creator_id": "creator-maya-lin",
+        "display_name": "Maya Lin",
+        "handle": "mayalin_fashion",
+        "bio": "Digital couturier and virtual fashion visionary creating speculative textiles, surreal runway spectacles, and high-fashion editorial campaigns.",
+        "avatar_url": "/assets/avatars/maya.jpg",
+        "banner_url": "/assets/banners/maya_banner.jpg",
+        "location": "Paris, France",
+        "years_experience": 5,
+        "primary_specialization": "Haute Couture & Surreal AI Fashion",
+        "website_url": "https://mayalinstudio.fr",
+        "min_budget": 4000.0,
+        "hourly_rate": 200.0,
+        "availability_status": "LIMITED",
+        "verification_tier": "TOP_STUDIO",
+        "verified_claims_count": 4,
+        "completed_projects_count": 21,
+        "average_rating": 4.98,
+        "skills": [
+            ("skill-fashion-avatar", "EXPERT"),
+            ("skill-prompt-eng", "EXPERT"),
+            ("skill-4k-video", "ADVANCED"),
+            ("skill-commercial-ip", "EXPERT")
+        ],
+        "tools": [
+            ("tool-flux1-pro", "MASTER", True),
+            ("tool-magnific", "MASTER", True),
+            ("tool-runway-gen3", "ADVANCED", True),
+            ("tool-midjourney-v6", "MASTER", True)
+        ]
+    },
+    {
+        "user_id": "user-creator-5",
+        "email": "alex.rivera@kivora.demo",
+        "creator_id": "creator-alex-rivera",
+        "display_name": "Alex Rivera",
+        "handle": "arivera_motion",
+        "bio": "High-octane commercial director merging AI generative video synthesis with motion graphics and cinematic audio engineering for tech brands.",
+        "avatar_url": "/assets/avatars/alex.jpg",
+        "banner_url": "/assets/banners/alex_banner.jpg",
+        "location": "Los Angeles, USA",
+        "years_experience": 3,
+        "primary_specialization": "High-Speed Commercial Advertising & Motion",
+        "website_url": "https://alexriveramotion.com",
+        "min_budget": 2500.0,
+        "hourly_rate": 135.0,
+        "availability_status": "AVAILABLE",
+        "verification_tier": "VERIFIED_PRO",
+        "verified_claims_count": 2,
+        "completed_projects_count": 11,
+        "average_rating": 4.90,
+        "skills": [
+            ("skill-4k-video", "EXPERT"),
+            ("skill-camera-control", "EXPERT"),
+            ("skill-lip-sync", "ADVANCED")
+        ],
+        "tools": [
+            ("tool-luma-dream", "MASTER", True),
+            ("tool-runway-gen3", "ADVANCED", True),
+            ("tool-elevenlabs", "ADVANCED", False),
+            ("tool-topaz-video", "ADVANCED", False)
+        ]
+    },
+    {
+        "user_id": "user-creator-6",
+        "email": "zara.chen@kivora.demo",
+        "creator_id": "creator-zara-chen",
+        "display_name": "Zara Chen",
+        "handle": "zara_concept",
+        "bio": "Sci-Fi concept artist and matte painter crafting monumental interstellar architectures, futuristic cityscapes, and planetary horizons.",
+        "avatar_url": "/assets/avatars/zara.jpg",
+        "banner_url": "/assets/banners/zara_banner.jpg",
+        "location": "Vancouver, Canada",
+        "years_experience": 2,
+        "primary_specialization": "Sci-Fi Concept Art & World Building",
+        "website_url": "https://zarachen.artstation.com",
+        "min_budget": 800.0,
+        "hourly_rate": 65.0,
+        "availability_status": "AVAILABLE",
+        "verification_tier": "COMMUNITY",
+        "verified_claims_count": 1,
+        "completed_projects_count": 5,
+        "average_rating": 4.70,
+        "skills": [
+            ("skill-concept-matte", "EXPERT"),
+            ("skill-prompt-eng", "ADVANCED")
+        ],
+        "tools": [
+            ("tool-midjourney-v6", "MASTER", True),
+            ("tool-sdxl", "ADVANCED", False)
+        ]
+    },
+    {
+        "user_id": "user-creator-7",
+        "email": "devon.ross@kivora.demo",
+        "creator_id": "creator-devon-ross",
+        "display_name": "Devon Ross",
+        "handle": "devon_audio_vis",
+        "bio": "Synesthetic audio-visual artist generating algorithmic visuals that pulse to custom neural acoustic soundscapes and darkwave electronic music.",
+        "avatar_url": "/assets/avatars/devon.jpg",
+        "banner_url": "/assets/banners/devon_banner.jpg",
+        "location": "Austin, USA",
+        "years_experience": 3,
+        "primary_specialization": "Synesthetic Audio-Visuals & Soundscapes",
+        "website_url": "https://devonross.audio",
+        "min_budget": 1500.0,
+        "hourly_rate": 90.0,
+        "availability_status": "AVAILABLE",
+        "verification_tier": "COMMUNITY",
+        "verified_claims_count": 1,
+        "completed_projects_count": 7,
+        "average_rating": 4.82,
+        "skills": [
+            ("skill-audio-reactive", "EXPERT"),
+            ("skill-camera-control", "INTERMEDIATE")
+        ],
+        "tools": [
+            ("tool-udio", "MASTER", True),
+            ("tool-comfyui", "ADVANCED", False),
+            ("tool-runway-gen3", "COMPETENT", False)
+        ]
+    },
+    {
+        "user_id": "user-creator-8",
+        "email": "sophia.dubois@kivora.demo",
+        "creator_id": "creator-sophia-dubois",
+        "display_name": "Sophia Dubois",
+        "handle": "sophia_beauty",
+        "bio": "Cosmetics visual director focusing on ultra-macro droplet dynamics, glowing dermal micro-textures, and pristine product reveals.",
+        "avatar_url": "/assets/avatars/sophia.jpg",
+        "banner_url": "/assets/banners/sophia_banner.jpg",
+        "location": "Geneva, Switzerland",
+        "years_experience": 4,
+        "primary_specialization": "Cosmetics & Fluid Macro Cinematography",
+        "website_url": "https://sophiadubois.ch",
+        "min_budget": 3500.0,
+        "hourly_rate": 160.0,
+        "availability_status": "AVAILABLE",
+        "verification_tier": "VERIFIED_PRO",
+        "verified_claims_count": 3,
+        "completed_projects_count": 16,
+        "average_rating": 4.95,
+        "skills": [
+            ("skill-macro-fluid", "EXPERT"),
+            ("skill-4k-video", "EXPERT"),
+            ("skill-product-viz", "ADVANCED"),
+            ("skill-commercial-ip", "EXPERT")
+        ],
+        "tools": [
+            ("tool-runway-gen3", "MASTER", True),
+            ("tool-comfyui", "MASTER", True),
+            ("tool-topaz-video", "MASTER", True)
+        ]
+    },
+    {
+        "user_id": "user-creator-9",
+        "email": "tariq.mansoor@kivora.demo",
+        "creator_id": "creator-tariq-mansoor",
+        "display_name": "Tariq Mansoor",
+        "handle": "tariq_archviz",
+        "bio": "Architectural visualizer generating climate-responsive biophilic buildings and luxury spatial atmospheres using multi-control diffusion pipelines.",
+        "avatar_url": "/assets/avatars/tariq.jpg",
+        "banner_url": "/assets/banners/tariq_banner.jpg",
+        "location": "Dubai, UAE",
+        "years_experience": 3,
+        "primary_specialization": "Generative Architecture & Spatial Design",
+        "website_url": "https://tariqmansoor.ae",
+        "min_budget": 2200.0,
+        "hourly_rate": 120.0,
+        "availability_status": "AVAILABLE",
+        "verification_tier": "VERIFIED_PRO",
+        "verified_claims_count": 2,
+        "completed_projects_count": 8,
+        "average_rating": 4.87,
+        "skills": [
+            ("skill-product-viz", "EXPERT"),
+            ("skill-prompt-eng", "EXPERT")
+        ],
+        "tools": [
+            ("tool-flux1-pro", "MASTER", True),
+            ("tool-sdxl", "ADVANCED", True),
+            ("tool-magnific", "ADVANCED", False)
+        ]
+    },
+    {
+        "user_id": "user-creator-10",
+        "email": "chloe.dupont@kivora.demo",
+        "creator_id": "creator-chloe-dupont",
+        "display_name": "Chloé Dupont",
+        "handle": "chloe_vfx",
+        "bio": "Virtual human specialist training bespoke facial LoRAs for hyper-realistic speech synthesis, multilingual lip-syncing, and brand ambassador avatars.",
+        "avatar_url": "/assets/avatars/chloe.jpg",
+        "banner_url": "/assets/banners/chloe_banner.jpg",
+        "location": "Montreal, Canada",
+        "years_experience": 4,
+        "primary_specialization": "Virtual Humans & Consistent Lip-Sync",
+        "website_url": "https://chloedupont.vfx",
+        "min_budget": 2800.0,
+        "hourly_rate": 140.0,
+        "availability_status": "AVAILABLE",
+        "verification_tier": "VERIFIED_PRO",
+        "verified_claims_count": 3,
+        "completed_projects_count": 13,
+        "average_rating": 4.92,
+        "skills": [
+            ("skill-lora-char", "EXPERT"),
+            ("skill-lip-sync", "EXPERT"),
+            ("skill-4k-video", "ADVANCED")
+        ],
+        "tools": [
+            ("tool-comfyui", "MASTER", True),
+            ("tool-elevenlabs", "MASTER", True),
+            ("tool-kling-ai", "ADVANCED", True)
+        ]
+    },
+    {
+        "user_id": "user-creator-11",
+        "email": "liam.obrien@kivora.demo",
+        "creator_id": "creator-liam-obrien",
+        "display_name": "Liam O'Brien",
+        "handle": "liam_games",
+        "bio": "Video game cinematics artist crafting intense lore reveal teasers, boss battles, and ambient world cinematics blending Unreal Engine and neural motion models.",
+        "avatar_url": "/assets/avatars/liam.jpg",
+        "banner_url": "/assets/banners/liam_banner.jpg",
+        "location": "Dublin, Ireland",
+        "years_experience": 3,
+        "primary_specialization": "Game Cinematics & Neural Action Shots",
+        "website_url": "https://liamobrien.games",
+        "min_budget": 3200.0,
+        "hourly_rate": 145.0,
+        "availability_status": "AVAILABLE",
+        "verification_tier": "VERIFIED_PRO",
+        "verified_claims_count": 2,
+        "completed_projects_count": 10,
+        "average_rating": 4.89,
+        "skills": [
+            ("skill-4k-video", "EXPERT"),
+            ("skill-camera-control", "EXPERT"),
+            ("skill-concept-matte", "ADVANCED")
+        ],
+        "tools": [
+            ("tool-runway-gen3", "MASTER", True),
+            ("tool-kling-ai", "ADVANCED", True),
+            ("tool-midjourney-v6", "ADVANCED", False)
+        ]
+    },
+    {
+        "user_id": "user-creator-12",
+        "email": "ananya.sharma@kivora.demo",
+        "creator_id": "creator-ananya-sharma",
+        "display_name": "Ananya Sharma",
+        "handle": "ananya_social",
+        "bio": "Social video innovator optimizing fast-turnaround 9:16 vertical storytelling, dynamic meme-adjacent commercial edits, and TikTok UGC style campaigns.",
+        "avatar_url": "/assets/avatars/ananya.jpg",
+        "banner_url": "/assets/banners/ananya_banner.jpg",
+        "location": "Bangalore, India",
+        "years_experience": 2,
+        "primary_specialization": "Viral 9:16 Vertical Video Production",
+        "website_url": "https://ananyasharma.co",
+        "min_budget": 900.0,
+        "hourly_rate": 55.0,
+        "availability_status": "AVAILABLE",
+        "verification_tier": "COMMUNITY",
+        "verified_claims_count": 1,
+        "completed_projects_count": 8,
+        "average_rating": 4.79,
+        "skills": [
+            ("skill-camera-control", "ADVANCED"),
+            ("skill-prompt-eng", "ADVANCED")
+        ],
+        "tools": [
+            ("tool-pika2", "MASTER", True),
+            ("tool-midjourney-v6", "ADVANCED", False)
+        ]
+    },
+    {
+        "user_id": "user-creator-13",
+        "email": "hassan.khalil@kivora.demo",
+        "creator_id": "creator-hassan-khalil",
+        "display_name": "Hassan Khalil",
+        "handle": "hassan_automotive",
+        "bio": "Automotive visualizer producing photorealistic commercial car sequences, high-speed night drifts, and reflections in architectural tunnels.",
+        "avatar_url": "/assets/avatars/hassan.jpg",
+        "banner_url": "/assets/banners/hassan_banner.jpg",
+        "location": "Munich, Germany",
+        "years_experience": 5,
+        "primary_specialization": "Automotive CGI & High-Octane Ads",
+        "website_url": "https://hassankhalil.studio",
+        "min_budget": 5000.0,
+        "hourly_rate": 220.0,
+        "availability_status": "AVAILABLE",
+        "verification_tier": "TOP_STUDIO",
+        "verified_claims_count": 4,
+        "completed_projects_count": 25,
+        "average_rating": 5.00,
+        "skills": [
+            ("skill-automotive-cgi", "EXPERT"),
+            ("skill-4k-video", "EXPERT"),
+            ("skill-camera-control", "EXPERT"),
+            ("skill-commercial-ip", "EXPERT")
+        ],
+        "tools": [
+            ("tool-runway-gen3", "MASTER", True),
+            ("tool-flux1-pro", "MASTER", True),
+            ("tool-topaz-video", "MASTER", True),
+            ("tool-magnific", "ADVANCED", True)
+        ]
+    },
+    {
+        "user_id": "user-creator-14",
+        "email": "nora.lindqvist@kivora.demo",
+        "creator_id": "creator-nora-lindqvist",
+        "display_name": "Nora Lindqvist",
+        "handle": "nora_minimal",
+        "bio": "Nordic minimalist product photographer exploring organic materials, diffused daylight casting, and serene botanical still life compositions.",
+        "avatar_url": "/assets/avatars/nora.jpg",
+        "banner_url": "/assets/banners/nora_banner.jpg",
+        "location": "Stockholm, Sweden",
+        "years_experience": 2,
+        "primary_specialization": "Scandinavian Minimalist Product Design",
+        "website_url": "https://noralindqvist.se",
+        "min_budget": 1100.0,
+        "hourly_rate": 70.0,
+        "availability_status": "AVAILABLE",
+        "verification_tier": "UNVERIFIED",
+        "verified_claims_count": 0,
+        "completed_projects_count": 3,
+        "average_rating": 4.60,
+        "skills": [
+            ("skill-product-viz", "ADVANCED"),
+            ("skill-prompt-eng", "ADVANCED")
+        ],
+        "tools": [
+            ("tool-midjourney-v6", "ADVANCED", False),
+            ("tool-flux1-pro", "COMPETENT", False)
+        ]
+    }
+]
+
+# BRANDS MASTER DEFINITION
+brands_def = [
+    {
+        "user_id": "user-brand-1",
+        "email": "creative@luminaskincare.demo",
+        "brand_id": "brand-lumina-skincare",
+        "company_name": "Lumina Skincare",
+        "slug": "lumina-skincare",
+        "industry": "Luxury Cosmetics & Clean Beauty",
+        "website_url": "https://luminaskincare.demo",
+        "logo_url": "/assets/brands/lumina.svg",
+        "description": "Biotech-driven clean cosmetic house formulating clinical-grade botanical serums and luminous skincare rituals.",
+        "company_size": "50-250",
+        "headquarters": "Zurich, Switzerland",
+        "is_verified_brand": True
+    },
+    {
+        "user_id": "user-brand-2",
+        "email": "marketing@voltmobility.demo",
+        "brand_id": "brand-volt-mobility",
+        "company_name": "Volt Mobility",
+        "slug": "volt-mobility",
+        "industry": "Electric Vehicles & Clean Transport",
+        "website_url": "https://voltmobility.demo",
+        "logo_url": "/assets/brands/volt.svg",
+        "description": "Pioneering high-performance electric sports GTs and autonomous battery architecture.",
+        "company_size": "500+",
+        "headquarters": "Stuttgart, Germany",
+        "is_verified_brand": True
+    },
+    {
+        "user_id": "user-brand-3",
+        "email": "publishing@apexgaming.demo",
+        "brand_id": "brand-apex-gaming",
+        "company_name": "Apex Interactive",
+        "slug": "apex-interactive",
+        "industry": "Gaming & Interactive Entertainment",
+        "website_url": "https://apexinteractive.demo",
+        "logo_url": "/assets/brands/apex.svg",
+        "description": "Independent studio producing cinematic action-RPGs with deep procedural worldbuilding.",
+        "company_size": "50-250",
+        "headquarters": "Seattle, USA",
+        "is_verified_brand": True
+    },
+    {
+        "user_id": "user-brand-4",
+        "email": "atelier@maisonaurora.demo",
+        "brand_id": "brand-aurora-fashion",
+        "company_name": "Maison Aurora",
+        "slug": "maison-aurora",
+        "industry": "Haute Couture & Digital Fashion",
+        "website_url": "https://maisonaurora.demo",
+        "logo_url": "/assets/brands/aurora.svg",
+        "description": "Parisian luxury fashion label fusing physical runway garments with digital metaverse drops.",
+        "company_size": "10-50",
+        "headquarters": "Paris, France",
+        "is_verified_brand": True
+    },
+    {
+        "user_id": "user-brand-5",
+        "email": "growth@zenithfintech.demo",
+        "brand_id": "brand-zenith-fintech",
+        "company_name": "Zenith Financial",
+        "slug": "zenith-financial",
+        "industry": "FinTech & Wealth Management",
+        "website_url": "https://zenithfinancial.demo",
+        "logo_url": "/assets/brands/zenith.svg",
+        "description": "Next-generation institutional and consumer wealth platform powered by automated portfolio engines.",
+        "company_size": "50-250",
+        "headquarters": "New York, USA",
+        "is_verified_brand": True
+    },
+    {
+        "user_id": "user-brand-6",
+        "email": "partners@vitalitynutra.demo",
+        "brand_id": "brand-vitality-labs",
+        "company_name": "Vitality Labs",
+        "slug": "vitality-labs",
+        "industry": "Nutraceuticals & Bio-Wellness",
+        "website_url": "https://vitalitylabs.demo",
+        "logo_url": "/assets/brands/vitality.svg",
+        "description": "Functional adaptogenic hydration and cellular vitality supplements designed for modern performance.",
+        "company_size": "10-50",
+        "headquarters": "Denver, USA",
+        "is_verified_brand": False
+    }
+]
+
+# CAMPAIGN BRIEFS MASTER DEFINITION
+briefs_def = [
+    {
+        "id": "brief-lumina-dewdrop",
+        "brand_id": "brand-lumina-skincare",
+        "title": "Dewdrop Radiance Serum 4K Cinematic Launch",
+        "slug": "dewdrop-radiance-serum-4k-cinematic-launch",
+        "campaign_objective": "Launch commercial teasing the breakthrough micro-hydration technology with hypnotic fluid dynamics and glowing skin reveals.",
+        "target_audience": "Affluent beauty consumers, ages 24-42, interested in high-tech clean clinical skincare.",
+        "content_type": "VIDEO",
+        "creative_style_mood": "Ethereal Luxury, Clinical Elegance, Macro Fluidity",
+        "aspect_ratio": "16:9",
+        "duration_seconds_min": 25,
+        "duration_seconds_max": 35,
+        "resolution_min": "4K UHD",
+        "deliverables_description": "1x 30s Master Cut (16:9 4K ProRes), 2x 15s Cutdowns (9:16 Vertical for IG/TikTok), plus clean textless render.",
+        "revision_allowance": 2,
+        "budget_amount": 4500.0,
+        "budget_currency": "USD",
+        "deadline": fmt_dt(T0 + timedelta(days=21)),
+        "commercial_use_requirements": "Full commercial buyout for paid digital advertising, web embed, and social distribution across all global territories.",
+        "usage_channels": "Paid Social, YouTube Pre-roll, Brand Website, Digital Out of Home",
+        "usage_duration": "12 Months",
+        "usage_territories": "Worldwide",
+        "restrictions_and_guidelines": "No uncanny valley human faces. Realistic water tension and droplet mechanics required. Must conform to clean aesthetic palette (blush, translucent gold, glass).",
+        "disclosure_requirements": "Mandatory AI transparency tagging (#CreatedWithAI) in compliance with EU AI Act.",
+        "status": "PUBLISHED",
+        "required_skills": [
+            ("skill-4k-video", True),
+            ("skill-macro-fluid", True),
+            ("skill-camera-control", False)
+        ],
+        "required_tools": [
+            ("tool-runway-gen3", True),
+            ("tool-comfyui", False)
+        ]
+    },
+    {
+        "id": "brief-volt-hypercar",
+        "brand_id": "brand-volt-mobility",
+        "title": "Volt Spectre GT: Cyberpunk Dawn Reveal",
+        "slug": "volt-spectre-gt-cyberpunk-dawn-reveal",
+        "campaign_objective": "Spectacular night-time reveal of the electric supercar accelerating through a misty neon-lit metropolis at dusk.",
+        "target_audience": "Automotive enthusiasts, luxury EV adopters, technology executives.",
+        "content_type": "VIDEO",
+        "creative_style_mood": "High-Contrast Cyberpunk, Hyper-Speed, Metallic Reflections",
+        "aspect_ratio": "16:9",
+        "duration_seconds_min": 40,
+        "duration_seconds_max": 60,
+        "resolution_min": "4K UHD",
+        "deliverables_description": "1x 45s Cinematic Trailer (2.39:1 Anamorphic & 16:9), Raw 4K master, color-graded delivery.",
+        "revision_allowance": 3,
+        "budget_amount": 6500.0,
+        "budget_currency": "USD",
+        "deadline": fmt_dt(T0 + timedelta(days=28)),
+        "commercial_use_requirements": "Worldwide perpetual commercial usage across automotive broadcast, web, and investor showcases.",
+        "usage_channels": "Broadcast TV, YouTube, International Auto Expos, Digital OOH",
+        "usage_duration": "Perpetual",
+        "usage_territories": "Worldwide",
+        "restrictions_and_guidelines": "Wheel rotation, headlight volumetric rays, and road wet-reflection must remain physically cohesive across camera cuts.",
+        "disclosure_requirements": "Labelled as CGI/Generative Simulation in broadcast credits.",
+        "status": "PUBLISHED",
+        "required_skills": [
+            ("skill-automotive-cgi", True),
+            ("skill-4k-video", True),
+            ("skill-camera-control", True)
+        ],
+        "required_tools": [
+            ("tool-runway-gen3", True),
+            ("tool-flux1-pro", False)
+        ]
+    },
+    {
+        "id": "brief-apex-chronicles",
+        "brand_id": "brand-apex-gaming",
+        "title": "Aetheria: Character Intro Motion Teaser",
+        "slug": "aetheria-character-intro-motion-teaser",
+        "campaign_objective": "Animated teaser introducing the protagonist 'Lyra' and her spirit wolf in an ancient overgrown monolith forest.",
+        "target_audience": "Action RPG gamers, Steam wishlisters, fantasy fantasy community.",
+        "content_type": "ANIMATION",
+        "creative_style_mood": "Dark Fantasy, Ethereal Celtic, Stylized Cinematic",
+        "aspect_ratio": "16:9",
+        "duration_seconds_min": 30,
+        "duration_seconds_max": 45,
+        "resolution_min": "1080p",
+        "deliverables_description": "1x 30s Animated Teaser with character lip-sync dialogue, stems, and sound effects layer.",
+        "revision_allowance": 2,
+        "budget_amount": 3800.0,
+        "budget_currency": "USD",
+        "deadline": fmt_dt(T0 + timedelta(days=18)),
+        "commercial_use_requirements": "Usage for game marketing, Steam store page header video, and social promotion.",
+        "usage_channels": "Steam Page, YouTube Gaming, Twitch Ads",
+        "usage_duration": "24 Months",
+        "usage_territories": "Worldwide",
+        "restrictions_and_guidelines": "Consistent character face and clothing across 5 distinct narrative camera angles.",
+        "disclosure_requirements": "Generative Promotional Teaser disclosure in video description.",
+        "status": "PUBLISHED",
+        "required_skills": [
+            ("skill-lora-char", True),
+            ("skill-lip-sync", True)
+        ],
+        "required_tools": [
+            ("tool-kling-ai", True),
+            ("tool-elevenlabs", True)
+        ]
+    },
+    {
+        "id": "brief-aurora-meta",
+        "brand_id": "brand-aurora-fashion",
+        "title": "Metamorphic Silk: Digital Runway 9:16 Campaign",
+        "slug": "metamorphic-silk-digital-runway-campaign",
+        "campaign_objective": "Surreal fashion film showing a digital model whose haute couture gown organically morphs from spun iridescent glass to cascading black liquid silk.",
+        "target_audience": "Luxury fashion buyers, art collectors, Instagram & TikTok fashion community.",
+        "content_type": "VIDEO",
+        "creative_style_mood": "Surreal Avant-Garde, Haute Couture, Fluid Metamorphosis",
+        "aspect_ratio": "9:16",
+        "duration_seconds_min": 15,
+        "duration_seconds_max": 30,
+        "resolution_min": "4K UHD",
+        "deliverables_description": "3x 15s High-resolution vertical reels (9:16), 1x 1:1 Carousel cut.",
+        "revision_allowance": 2,
+        "budget_amount": 5000.0,
+        "budget_currency": "USD",
+        "deadline": fmt_dt(T0 + timedelta(days=14)),
+        "commercial_use_requirements": "Exclusive digital fashion rights for social media campaigns and Paris Fashion Week digital displays.",
+        "usage_channels": "Instagram, TikTok, LED Gallery Displays",
+        "usage_duration": "12 Months",
+        "usage_territories": "EMEA & North America",
+        "restrictions_and_guidelines": "High aesthetic rigor. Fabric physics must be breathtaking. No generic AI blur.",
+        "disclosure_requirements": "Collaborative AI Haute Couture disclosure.",
+        "status": "PUBLISHED",
+        "required_skills": [
+            ("skill-fashion-avatar", True),
+            ("skill-4k-video", True)
+        ],
+        "required_tools": [
+            ("tool-flux1-pro", True),
+            ("tool-runway-gen3", True)
+        ]
+    },
+    {
+        "id": "brief-zenith-explainer",
+        "brand_id": "brand-zenith-fintech",
+        "title": "Quantum Wealth: Minimalist 3D Motion Explainer",
+        "slug": "quantum-wealth-minimalist-3d-motion-explainer",
+        "campaign_objective": "Abstract, clean 3D motion visualization showing mathematical geometric shapes harmonizing to represent risk-weighted automated rebalancing.",
+        "target_audience": "High-net-worth investors, tech founders, family offices.",
+        "content_type": "PRODUCT_VIZ",
+        "creative_style_mood": "Minimalist Bauhaus, Matte White & Brushed Titanium, Architectural Precision",
+        "aspect_ratio": "16:9",
+        "duration_seconds_min": 20,
+        "duration_seconds_max": 30,
+        "resolution_min": "4K UHD",
+        "deliverables_description": "1x 30s Explainer Loop, 4x Keyframe Stills for web landing page hero section.",
+        "revision_allowance": 2,
+        "budget_amount": 2500.0,
+        "budget_currency": "USD",
+        "deadline": fmt_dt(T0 + timedelta(days=20)),
+        "commercial_use_requirements": "Full commercial ownership for brand marketing and product application splash screens.",
+        "usage_channels": "App Store Previews, Web Landing Page, LinkedIn Sponsored Content",
+        "usage_duration": "Perpetual",
+        "usage_territories": "Worldwide",
+        "restrictions_and_guidelines": "No cheesy stock finance cliches (no coins, green arrows, or physical money). Clean mathematical minimalism only.",
+        "disclosure_requirements": "Internal brand asset; public disclosure not required.",
+        "status": "PUBLISHED",
+        "required_skills": [
+            ("skill-product-viz", True),
+            ("skill-prompt-eng", True)
+        ],
+        "required_tools": [
+            ("tool-flux1-pro", True)
+        ]
+    },
+    {
+        "id": "brief-vitality-elixir",
+        "brand_id": "brand-vitality-labs",
+        "title": "Vital Surge: High-Energy TikTok/Reels Ad Series",
+        "slug": "vital-surge-high-energy-tiktok-reels-ad-series",
+        "campaign_objective": "Punchy, fast-paced vertical video ads demonstrating instant mental focus and physical revitalization from organic electrolytes.",
+        "target_audience": "Gen-Z and millennial fitness enthusiasts, marathoners, biohackers.",
+        "content_type": "VIDEO",
+        "creative_style_mood": "Electric Neon, Fast Hyper-Lapse, Kinetic Energy",
+        "aspect_ratio": "9:16",
+        "duration_seconds_min": 10,
+        "duration_seconds_max": 18,
+        "resolution_min": "1080p",
+        "deliverables_description": "4x 12s Vertical Video Ad variants with text hook overlays.",
+        "revision_allowance": 1,
+        "budget_amount": 1500.0,
+        "budget_currency": "USD",
+        "deadline": fmt_dt(T0 + timedelta(days=10)),
+        "commercial_use_requirements": "Paid Social direct response marketing rights.",
+        "usage_channels": "TikTok Spark Ads, Meta Reels",
+        "usage_duration": "6 Months",
+        "usage_territories": "North America",
+        "restrictions_and_guidelines": "High retention first 3 seconds. Vibrant citrus and electric blue color grading.",
+        "disclosure_requirements": "Standard FTC and social platform commercial AI disclosure.",
+        "status": "PUBLISHED",
+        "required_skills": [
+            ("skill-camera-control", True)
+        ],
+        "required_tools": [
+            ("tool-pika2", True)
+        ]
+    },
+    {
+        "id": "brief-lumina-packaging",
+        "brand_id": "brand-lumina-skincare",
+        "title": "Ethereal Frosted Glass: 1:1 Social Still Render Series",
+        "slug": "ethereal-frosted-glass-1-1-social-still-render-series",
+        "campaign_objective": "Series of ultra-detailed still renders showcasing the frosted glass droplet pipette bottles resting on wet Icelandic basalt stone.",
+        "target_audience": "Luxury retail partners, Sephora shoppers, aesthetic skincare collectors.",
+        "content_type": "PRODUCT_VIZ",
+        "creative_style_mood": "Nordic Basalt, Wet Stone, Morning Dew, Diffused Natural Sunlight",
+        "aspect_ratio": "1:1",
+        "duration_seconds_min": None,
+        "duration_seconds_max": None,
+        "resolution_min": "4K UHD",
+        "deliverables_description": "6x High-resolution 4000x4000px product still imagery in TIFF and PNG formats.",
+        "revision_allowance": 2,
+        "budget_amount": 1800.0,
+        "budget_currency": "USD",
+        "deadline": fmt_dt(T0 + timedelta(days=12)),
+        "commercial_use_requirements": "Commercial usage in e-commerce, print retail display, and social media feed.",
+        "usage_channels": "Shopify Storefront, Instagram Feed, Print Lookbook",
+        "usage_duration": "Perpetual",
+        "usage_territories": "Worldwide",
+        "restrictions_and_guidelines": "Logo typography on bottle must remain perfectly sharp without hallucinated letterforms.",
+        "disclosure_requirements": "Virtual Product Simulation tag.",
+        "status": "PUBLISHED",
+        "required_skills": [
+            ("skill-product-viz", True),
+            ("skill-prompt-eng", True)
+        ],
+        "required_tools": [
+            ("tool-flux1-pro", True),
+            ("tool-magnific", True)
+        ]
+    },
+    {
+        "id": "brief-volt-interior",
+        "brand_id": "brand-volt-mobility",
+        "title": "Holographic Cockpit: Spatial UI Concept Art",
+        "slug": "holographic-cockpit-spatial-ui-concept-art",
+        "campaign_objective": "Concept art visualizing the 2030 autonomous interior with augmented floating heads-up display and sustainable mycelium leather trim.",
+        "target_audience": "Automotive UI/UX design community, future mobility investors.",
+        "content_type": "CONCEPT_ART",
+        "creative_style_mood": "Minimalist High-Tech, Warm Amber HUD, Sustainable Luxury",
+        "aspect_ratio": "16:9",
+        "duration_seconds_min": None,
+        "duration_seconds_max": None,
+        "resolution_min": "4K UHD",
+        "deliverables_description": "5x Detailed wide-angle interior matte concept artworks.",
+        "revision_allowance": 2,
+        "budget_amount": 2000.0,
+        "budget_currency": "USD",
+        "deadline": fmt_dt(T0 + timedelta(days=25)),
+        "commercial_use_requirements": "Internal design inspiration and public PR thought-leadership.",
+        "usage_channels": "Press Releases, Auto Design Magazines, Web",
+        "usage_duration": "Perpetual",
+        "usage_territories": "Worldwide",
+        "restrictions_and_guidelines": "Ergonomically plausible driver seat perspective.",
+        "disclosure_requirements": "Generative Concept Design statement.",
+        "status": "PUBLISHED",
+        "required_skills": [
+            ("skill-concept-matte", True),
+            ("skill-prompt-eng", True)
+        ],
+        "required_tools": [
+            ("tool-midjourney-v6", True)
+        ]
+    },
+    {
+        "id": "brief-apex-soundtrack",
+        "brand_id": "brand-apex-gaming",
+        "title": "Aetheria: Audio-Reactive Darkwave Synth Teaser",
+        "slug": "aetheria-audio-reactive-darkwave-synth-teaser",
+        "campaign_objective": "Hypnotic audio-visual teaser where generative bioluminescent flora reacts in real-time to an atmospheric synthwave track.",
+        "target_audience": "Synthwave, game audio, and dark electronic music lovers.",
+        "content_type": "VIDEO",
+        "creative_style_mood": "Cyber-Gothic, Bioluminescent Neon, Frequency-Modulated",
+        "aspect_ratio": "16:9",
+        "duration_seconds_min": 45,
+        "duration_seconds_max": 75,
+        "resolution_min": "4K UHD",
+        "deliverables_description": "1x 60s High-bitrate audio-visual render with uncompressed WAV master.",
+        "revision_allowance": 2,
+        "budget_amount": 2200.0,
+        "budget_currency": "USD",
+        "deadline": fmt_dt(T0 + timedelta(days=15)),
+        "commercial_use_requirements": "Worldwide rights for YouTube Music, Spotify Canvas, and game promotion.",
+        "usage_channels": "Spotify Canvas, YouTube Music, Twitter/X",
+        "usage_duration": "Perpetual",
+        "usage_territories": "Worldwide",
+        "restrictions_and_guidelines": "Perfect synchronization between audio transient peaks and video light pulses.",
+        "disclosure_requirements": "AI Collaborative Music & Visual production tag.",
+        "status": "PUBLISHED",
+        "required_skills": [
+            ("skill-audio-reactive", True)
+        ],
+        "required_tools": [
+            ("tool-udio", True)
+        ]
+    }
+]
+
+# PORTFOLIO PROJECTS, WORKFLOW STEPS, EVIDENCE & VERIFICATIONS
+portfolio_def = [
+    {
+        "id": "proj-elena-solaris",
+        "creator_id": "creator-elena-rostova",
+        "title": "Solaris Anomaly: Luxury Fragrance Spec Commercial",
+        "slug": "solaris-anomaly-luxury-fragrance-spec",
+        "description": "A 30-second spec commercial for a celestial fragrance brand, tracking an iridescent glass monolith suspended in a weightless golden desert at solar eclipse.",
+        "content_type": "VIDEO",
+        "primary_asset_url": "/assets/portfolio/solaris_anomaly_master.mp4",
+        "thumbnail_url": "/assets/portfolio/solaris_anomaly_thumb.jpg",
+        "aspect_ratio": "16:9",
+        "resolution": "4K UHD",
+        "duration_seconds": 30,
+        "commercial_rights_held": True,
+        "commercial_license_type": "Full Commercial Buyout",
+        "featured": True,
+        "created_at": fmt_dt(T0 - timedelta(days=45)),
+        "workflow_steps": [
+            {
+                "step_order": 1,
+                "stage_name": "Concept Art & Monolith Geometry Synthesis",
+                "tools_used": "Midjourney v6, ComfyUI",
+                "description": "Explored 140+ prompt variations testing glass refraction through golden dust storms. Synthesized 4 hero keyframes with precise depth maps.",
+                "parameters_snippet": "prompt: 'celestial obsidian glass perfume bottle suspended over dunes, rim lighting, 35mm panavision anamorphic --ar 16:9 --style raw --v 6.0', seed: 489102",
+                "output_sample_url": "/assets/evidence/solaris_step1_keyframe.jpg"
+            },
+            {
+                "step_order": 2,
+                "stage_name": "Multi-Pass Motion Camera Trajectory Control",
+                "tools_used": "Runway Gen-3 Alpha",
+                "description": "Input keyframe image into Runway Gen-3 with custom camera pathing prompts: slow rising dolly-in with a 15-degree counter-clockwise roll.",
+                "parameters_snippet": "motion_params: { 'camera': 'Fwd 3.5, Up 1.2, Roll -15', 'motion_strength': 4, 'cfg_scale': 3.5 }",
+                "output_sample_url": "/assets/evidence/solaris_step2_motion_pass.mp4"
+            },
+            {
+                "step_order": 3,
+                "stage_name": "Temporal Consistency & Denoising via ComfyUI",
+                "tools_used": "ComfyUI, AnimateDiff LoRA",
+                "description": "Passed generation clips through a custom ComfyUI node pipeline to lock glass edge contrast and remove background sand flickering.",
+                "parameters_snippet": "nodes: ['LoadLatent', 'IPAdapter_FaceID', 'TemporalDenoise', 'VAEDecode']",
+                "output_sample_url": "/assets/evidence/solaris_step3_node_graph.png"
+            },
+            {
+                "step_order": 4,
+                "stage_name": "4K Neural Upscale & ACES Color Grading",
+                "tools_used": "Topaz Video AI 5, DaVinci Resolve",
+                "description": "Upscaled from 1080p native render to 3840x2160 60fps with Iris LQ model to restore micro-textures in glass reflection. Mastered in ACEScc.",
+                "parameters_snippet": "topaz_model: 'Iris LQ v2', grain: 1.5, fps_target: 60",
+                "output_sample_url": "/assets/evidence/solaris_step4_final_upscale.jpg"
+            }
+        ],
+        "evidence_records": [
+            {
+                "id": "ev-elena-1",
+                "evidence_type": "WORKFLOW_NODE_GRAPH",
+                "file_url": "/assets/evidence/elena_comfy_node_tree.png",
+                "title": "ComfyUI Multi-Pass Latent Inpainting Node Schematic",
+                "description": "Raw screenshot and exported JSON of custom node pipeline maintaining glass surface stability during motion camera flight.",
+                "verification": {
+                    "id": "ver-elena-1",
+                    "target_type": "PORTFOLIO_PROJECT",
+                    "verification_scope": "Audited ComfyUI Node Graph Reproducibility & Authenticity",
+                    "status": "APPROVED",
+                    "reviewed_by": "Kivora Lead Curator (Auditor #04)",
+                    "reviewer_notes": "Examined custom latent node connections. Node graph proves genuine generation pipeline with valid seed logs and IP-Adapter setup."
+                }
+            },
+            {
+                "id": "ev-elena-2",
+                "evidence_type": "PROCESS_SCREENSHOT",
+                "file_url": "/assets/evidence/runway_gen3_camera_timeline.png",
+                "title": "Runway Gen-3 Camera Trajectory Motion Controller UI",
+                "description": "Timestamped studio UI capture displaying custom camera vector coordinates and prompt iteration timeline.",
+                "verification": {
+                    "id": "ver-elena-2",
+                    "target_type": "CREATOR_TOOL",
+                    "verification_scope": "Runway Gen-3 Alpha Tool Proficiency Audit",
+                    "status": "APPROVED",
+                    "reviewed_by": "Kivora Technical Reviewer (Auditor #02)",
+                    "reviewer_notes": "Camera trajectory vector settings verified against delivered output motion arc."
+                }
+            }
+        ]
+    },
+    {
+        "id": "proj-marcus-lumina-bottle",
+        "creator_id": "creator-marcus-vance",
+        "title": "Aura Droplet: Photorealistic Serum Dispenser",
+        "slug": "aura-droplet-photorealistic-serum-dispenser",
+        "description": "A still product visualization study analyzing caustic light transmission through a bespoke frosted quartz cosmetic bottle resting on volcanic gravel.",
+        "content_type": "PRODUCT_VIZ",
+        "primary_asset_url": "/assets/portfolio/marcus_aura_droplet.jpg",
+        "thumbnail_url": "/assets/portfolio/marcus_aura_droplet_thumb.jpg",
+        "aspect_ratio": "1:1",
+        "resolution": "4K UHD",
+        "duration_seconds": None,
+        "commercial_rights_held": True,
+        "commercial_license_type": "Full Commercial Buyout",
+        "featured": True,
+        "created_at": fmt_dt(T0 - timedelta(days=30)),
+        "workflow_steps": [
+            {
+                "step_order": 1,
+                "stage_name": "Bespoke Packaging Prompt Architecture",
+                "tools_used": "Flux.1 Pro",
+                "description": "Formulated structured JSON-based prompts detailing index of refraction (IOR 1.45), frosted gradient transmission, and rim specular hot spots.",
+                "parameters_snippet": "prompt: 'luxury skincare serum bottle, frosted silica glass, pipette dropper, caustic light refraction on basalt stone, 8k resolution, photorealistic studio lighting', steps: 40, guidance_scale: 3.5",
+                "output_sample_url": "/assets/evidence/marcus_step1_render.jpg"
+            },
+            {
+                "step_order": 2,
+                "stage_name": "Magnific AI Micro-Texture Synthesis Pass",
+                "tools_used": "Magnific AI",
+                "description": "Sub-surface micro-fracture injection and condensation droplet generation to provide realistic tactile macro surface details.",
+                "parameters_snippet": "hallucination: 1.2, creativity: 1.0, HDR: 1.8",
+                "output_sample_url": "/assets/evidence/marcus_step2_magnific.jpg"
+            }
+        ],
+        "evidence_records": [
+            {
+                "id": "ev-marcus-1",
+                "evidence_type": "INTERMEDIATE_OUTPUT",
+                "file_url": "/assets/evidence/marcus_raw_vs_magnific.jpg",
+                "title": "Raw Generation vs Magnific Enhanced Pass Comparison",
+                "description": "Side-by-side pixel inspection confirming no loss of brand label geometry while enhancing micro-dermal water droplets.",
+                "verification": {
+                    "id": "ver-marcus-1",
+                    "target_type": "PORTFOLIO_PROJECT",
+                    "verification_scope": "Flux.1 Pro + Magnific Product Fidelity Audit",
+                    "status": "APPROVED",
+                    "reviewed_by": "Kivora Product Reviewer (Auditor #01)",
+                    "reviewer_notes": "Passed side-by-side inspection. Brand typography remains clean with no artifacts."
+                }
+            }
+        ]
+    },
+    {
+        "id": "proj-kai-neon-samurai",
+        "creator_id": "creator-kai-tanaka",
+        "title": "Shin-Tokyo Cyber Blades: 2.5D Anime Teaser",
+        "slug": "shin-tokyo-cyber-blades-anime-teaser",
+        "description": "Cel-shaded dynamic anime combat scene featuring fluid sword trails and sakuga animation timing in a rain-drenched Shinjuku backalley.",
+        "content_type": "ANIMATION",
+        "primary_asset_url": "/assets/portfolio/kai_neon_samurai.mp4",
+        "thumbnail_url": "/assets/portfolio/kai_neon_samurai_thumb.jpg",
+        "aspect_ratio": "16:9",
+        "resolution": "1080p",
+        "duration_seconds": 22,
+        "commercial_rights_held": True,
+        "commercial_license_type": "Non-Exclusive Digital Rights",
+        "featured": True,
+        "created_at": fmt_dt(T0 - timedelta(days=60)),
+        "workflow_steps": [
+            {
+                "step_order": 1,
+                "stage_name": "Niji 6 Keyframe Generation & Inpainting",
+                "tools_used": "Midjourney Niji 6",
+                "description": "Generated character pose sheets with clean lines and flat cel shading.",
+                "parameters_snippet": "prompt: 'anime sakuga combat, neon katana slash, cinematic action --niji 6 --ar 16:9'",
+                "output_sample_url": "/assets/evidence/kai_step1_pose.jpg"
+            },
+            {
+                "step_order": 2,
+                "stage_name": "Kling 1.5 Motion Interpolation",
+                "tools_used": "Kling AI 1.5",
+                "description": "Fed consecutive keyframes into Kling to generate fast 24fps in-betweens for sword swing dynamics.",
+                "parameters_snippet": "motion_level: high, camera: dynamic pan",
+                "output_sample_url": "/assets/evidence/kai_step2_motion.mp4"
+            }
+        ],
+        "evidence_records": [
+            {
+                "id": "ev-kai-1",
+                "evidence_type": "PROCESS_SCREENSHOT",
+                "file_url": "/assets/evidence/kai_kling_job_history.png",
+                "title": "Kling AI Generation Job History",
+                "description": "Unverified screenshot of Kling web dashboard showing anime video generation jobs.",
+                "verification": {
+                    "id": "ver-kai-1",
+                    "target_type": "PORTFOLIO_PROJECT",
+                    "verification_scope": "Anime Pipeline Verification",
+                    "status": "PENDING",
+                    "reviewed_by": "Pending Review",
+                    "reviewer_notes": "Awaiting export of source keyframe metadata and raw generation tokens."
+                }
+            }
+        ]
+    },
+    {
+        "id": "proj-maya-metamorphic",
+        "creator_id": "creator-maya-lin",
+        "title": "Liquid Organza: Virtual Couture Metamorphosis",
+        "slug": "liquid-organza-virtual-couture-metamorphosis",
+        "description": "Digital fashion film capturing a gown morphing from iridescent crystal origami into undulating deep purple velvet in zero gravity.",
+        "content_type": "VIDEO",
+        "primary_asset_url": "/assets/portfolio/maya_liquid_organza.mp4",
+        "thumbnail_url": "/assets/portfolio/maya_liquid_organza_thumb.jpg",
+        "aspect_ratio": "9:16",
+        "resolution": "4K UHD",
+        "duration_seconds": 25,
+        "commercial_rights_held": True,
+        "commercial_license_type": "Full Commercial Buyout",
+        "featured": True,
+        "created_at": fmt_dt(T0 - timedelta(days=20)),
+        "workflow_steps": [
+            {
+                "step_order": 1,
+                "stage_name": "Fabric Latent Space Interpolation",
+                "tools_used": "Flux.1 Pro, ComfyUI",
+                "description": "Blended latent checkpoints of glass textures and crushed silk fabric using ComfyUI latent blend nodes.",
+                "parameters_snippet": "latent_blend_weight: 0.65, model: 'Flux.1 Pro'",
+                "output_sample_url": "/assets/evidence/maya_step1_blend.jpg"
+            },
+            {
+                "step_order": 2,
+                "stage_name": "Runway Gen-3 Runway Walk Synthesis",
+                "tools_used": "Runway Gen-3 Alpha",
+                "description": "Applied motion prompt directing fluid drapery simulation reacting to rhythmic high-fashion runway stride.",
+                "parameters_snippet": "prompt: 'slow motion runway walk, flowing organza silk gown floating in gentle wind', motion: 5",
+                "output_sample_url": "/assets/evidence/maya_step2_motion.mp4"
+            }
+        ],
+        "evidence_records": [
+            {
+                "id": "ev-maya-1",
+                "evidence_type": "PROMPT_REFINEMENT_LOG",
+                "file_url": "/assets/evidence/maya_prompt_refinement_log.txt",
+                "title": "Latent Blend Iteration Log & Seed History",
+                "description": "Comprehensive 12-page iteration log tracking seed variations and prompt engineering to avoid fabric tearing artifacts.",
+                "verification": {
+                    "id": "ver-maya-1",
+                    "target_type": "PORTFOLIO_PROJECT",
+                    "verification_scope": "Virtual Fabric Simulation Authenticity",
+                    "status": "APPROVED",
+                    "reviewed_by": "Kivora Senior Fashion Auditor",
+                    "reviewer_notes": "Flawless documentation. Prompts, seed histories, and latent blend weights fully verified against video frames."
+                }
+            }
+        ]
+    },
+    {
+        "id": "proj-hassan-spectre",
+        "creator_id": "creator-hassan-khalil",
+        "title": "Apex GT: Midnight Autobahn High-Speed Run",
+        "slug": "apex-gt-midnight-autobahn-run",
+        "description": "Cinematic automotive commercial capturing a hypercar slicing through rain on a night highway, headlights carving golden tunnels through mist.",
+        "content_type": "VIDEO",
+        "primary_asset_url": "/assets/portfolio/hassan_apex_gt.mp4",
+        "thumbnail_url": "/assets/portfolio/hassan_apex_gt_thumb.jpg",
+        "aspect_ratio": "16:9",
+        "resolution": "4K UHD",
+        "duration_seconds": 45,
+        "commercial_rights_held": True,
+        "commercial_license_type": "Worldwide Perpetual Commercial Buyout",
+        "featured": True,
+        "created_at": fmt_dt(T0 - timedelta(days=15)),
+        "workflow_steps": [
+            {
+                "step_order": 1,
+                "stage_name": "Car Model ControlNet Depth & Normal Pass",
+                "tools_used": "Flux.1 Pro, ComfyUI",
+                "description": "Extracted 3D normal passes to ensure car proportions and aerodynamic carbon-fiber contours remain locked across lighting shifts.",
+                "parameters_snippet": "controlnet: 'Depth_XL + Normal_XL', strength: 0.85",
+                "output_sample_url": "/assets/evidence/hassan_step1_normal.png"
+            },
+            {
+                "step_order": 2,
+                "stage_name": "High-Speed Dynamic Camera Tracking",
+                "tools_used": "Runway Gen-3 Alpha, Topaz Video AI",
+                "description": "Motion synthesis with low-angle chase car trajectory at virtual 140km/h with realistic tire spray and lens flare bokeh.",
+                "parameters_snippet": "camera: 'Follow Low Fwd 8.0', motion_strength: 7",
+                "output_sample_url": "/assets/evidence/hassan_step2_spray.mp4"
+            }
+        ],
+        "evidence_records": [
+            {
+                "id": "ev-hassan-1",
+                "evidence_type": "WORKFLOW_NODE_GRAPH",
+                "file_url": "/assets/evidence/hassan_controlnet_pipeline.png",
+                "title": "Automotive Multi-ControlNet Lighting Rig",
+                "description": "Full ComfyUI schematic demonstrating how reflection maps are mathematically anchored to car bodywork during camera rotation.",
+                "verification": {
+                    "id": "ver-hassan-1",
+                    "target_type": "PORTFOLIO_PROJECT",
+                    "verification_scope": "Automotive CGI Pipeline Integrity Audit",
+                    "status": "APPROVED",
+                    "reviewed_by": "Kivora 3D/CGI Auditor",
+                    "reviewer_notes": "Exceptional precision in reflection alignment and ControlNet weighting. Approved for Top Studio status."
+                }
+            }
+        ]
+    },
+    {
+        "id": "proj-sophia-dew",
+        "creator_id": "creator-sophia-dubois",
+        "title": "Cellular Hydration: Micro Dermal Droplet Spec",
+        "slug": "cellular-hydration-micro-dermal-droplet-spec",
+        "description": "Ultra-macro 1000fps slow-motion sequence tracing a crystal water droplet bursting across a radiant skin surface, releasing botanical micro-beads.",
+        "content_type": "VIDEO",
+        "primary_asset_url": "/assets/portfolio/sophia_cellular_dew.mp4",
+        "thumbnail_url": "/assets/portfolio/sophia_cellular_dew_thumb.jpg",
+        "aspect_ratio": "16:9",
+        "resolution": "4K UHD",
+        "duration_seconds": 28,
+        "commercial_rights_held": True,
+        "commercial_license_type": "Full Commercial Buyout",
+        "featured": True,
+        "created_at": fmt_dt(T0 - timedelta(days=25)),
+        "workflow_steps": [
+            {
+                "step_order": 1,
+                "stage_name": "Microscopic Fluid Dynamics Prompting",
+                "tools_used": "Midjourney v6, ComfyUI",
+                "description": "Generated photorealistic skin pores and liquid meniscus surface tension at 100x optical magnification.",
+                "parameters_snippet": "prompt: 'ultra macro photography of skin pore hydration, water droplet bursting in slow motion, clinical clean aesthetic --v 6.0'",
+                "output_sample_url": "/assets/evidence/sophia_step1_macro.jpg"
+            },
+            {
+                "step_order": 2,
+                "stage_name": "Runway Gen-3 Fluid Motion Interpolation",
+                "tools_used": "Runway Gen-3 Alpha",
+                "description": "Synthesized splash dispersal with high fluid surface viscosity parameters.",
+                "parameters_snippet": "motion_brush: 'splash area, expansion +4.0', speed: 0.2",
+                "output_sample_url": "/assets/evidence/sophia_step2_burst.mp4"
+            }
+        ],
+        "evidence_records": [
+            {
+                "id": "ev-sophia-1",
+                "evidence_type": "PROCESS_SCREENSHOT",
+                "file_url": "/assets/evidence/sophia_motion_brush_screen.png",
+                "title": "Runway Motion Brush Masking Workflow Capture",
+                "description": "Screen capture showing targeted motion brush vector mapping across droplet contours to eliminate skin distortion.",
+                "verification": {
+                    "id": "ver-sophia-1",
+                    "target_type": "CREATOR_TOOL",
+                    "verification_scope": "Runway Motion Brush & Fluid Dynamics Mastery",
+                    "status": "APPROVED",
+                    "reviewed_by": "Kivora Beauty & Commercial Auditor",
+                    "reviewer_notes": "Clean motion masking with zero hallucinated skin artifacts. Verified."
+                }
+            }
+        ]
+    }
+]
+
+# APPLICATIONS & ENGAGEMENTS
+applications_def = [
+    {
+        "id": "app-elena-lumina",
+        "brief_id": "brief-lumina-dewdrop",
+        "creator_id": "creator-elena-rostova",
+        "pitch_text": "Having directed spec commercials for celestial fragrances with verified fluid dynamics pipelines, I can execute your 4K Dewdrop Launch within 14 days. My ComfyUI+Runway Gen-3 workflow guarantees pristine droplet physics without skin deformities.",
+        "proposed_rate": 4200.0,
+        "proposed_timeline_days": 14,
+        "attached_project_ids": "proj-elena-solaris",
+        "status": "ACCEPTED",
+        "submitted_at": fmt_dt(T0 + timedelta(days=1, hours=3)),
+        "reviewed_at": fmt_dt(T0 + timedelta(days=2, hours=1)),
+        "brand_feedback": "Stunning workflow documentation and verified fluid work. Exactly what we need for Lumina."
+    },
+    {
+        "id": "app-sophia-lumina",
+        "brief_id": "brief-lumina-dewdrop",
+        "creator_id": "creator-sophia-dubois",
+        "pitch_text": "I specialize specifically in cosmetics dermal macro photography. My 'Cellular Hydration' project matches your exact creative vision.",
+        "proposed_rate": 4500.0,
+        "proposed_timeline_days": 16,
+        "attached_project_ids": "proj-sophia-dew",
+        "status": "SHORTLISTED",
+        "submitted_at": fmt_dt(T0 + timedelta(days=1, hours=6)),
+        "reviewed_at": fmt_dt(T0 + timedelta(days=2, hours=4)),
+        "brand_feedback": "Strong contender with excellent macro evidence."
+    },
+    {
+        "id": "app-marcus-lumina",
+        "brief_id": "brief-lumina-dewdrop",
+        "creator_id": "creator-marcus-vance",
+        "pitch_text": "I can deliver high-resolution still product passes for this campaign, though my focus is 3D still packaging rather than generative video animation.",
+        "proposed_rate": 2200.0,
+        "proposed_timeline_days": 10,
+        "attached_project_ids": "proj-marcus-lumina-bottle",
+        "status": "REJECTED",
+        "submitted_at": fmt_dt(T0 + timedelta(days=2)),
+        "reviewed_at": fmt_dt(T0 + timedelta(days=3)),
+        "brand_feedback": "Your 3D still renders are gorgeous (and we want to hire you for our Still Render Series), but this brief specifically requires 4K generative video motion."
+    },
+    {
+        "id": "app-hassan-volt",
+        "brief_id": "brief-volt-hypercar",
+        "creator_id": "creator-hassan-khalil",
+        "pitch_text": "Automotive cinematic advertising is my entire studio specialization. My Multi-ControlNet normal lighting pipelines ensure the Volt Spectre's body lines and reflections remain 100% photorealistic at high virtual velocity.",
+        "proposed_rate": 6000.0,
+        "proposed_timeline_days": 21,
+        "attached_project_ids": "proj-hassan-spectre",
+        "status": "ACCEPTED",
+        "submitted_at": fmt_dt(T0 + timedelta(days=1, hours=8)),
+        "reviewed_at": fmt_dt(T0 + timedelta(days=2, hours=10)),
+        "brand_feedback": "Unbeatable automotive portfolio. Accepted without hesitation."
+    },
+    {
+        "id": "app-maya-aurora",
+        "brief_id": "brief-aurora-meta",
+        "creator_id": "creator-maya-lin",
+        "pitch_text": "Maison Aurora's Metamorphic Silk brief is the perfect match for my latent organza fabric pipeline. I can guarantee fluid digital silk movement with zero tearing.",
+        "proposed_rate": 4800.0,
+        "proposed_timeline_days": 12,
+        "attached_project_ids": "proj-maya-metamorphic",
+        "status": "ACCEPTED",
+        "submitted_at": fmt_dt(T0 + timedelta(days=2, hours=2)),
+        "reviewed_at": fmt_dt(T0 + timedelta(days=3, hours=1)),
+        "brand_feedback": "The latent blend evidence convinced our atelier directors immediately."
+    },
+    {
+        "id": "app-marcus-lumina-stills",
+        "brief_id": "brief-lumina-packaging",
+        "creator_id": "creator-marcus-vance",
+        "pitch_text": "This is tailor-made for my Flux.1 Pro + Magnific workflow. I have already produced frosted silica bottles on basalt stone with complete typographic sharpness.",
+        "proposed_rate": 1800.0,
+        "proposed_timeline_days": 7,
+        "attached_project_ids": "proj-marcus-lumina-bottle",
+        "status": "ACCEPTED",
+        "submitted_at": fmt_dt(T0 + timedelta(days=1, hours=4)),
+        "reviewed_at": fmt_dt(T0 + timedelta(days=1, hours=9)),
+        "brand_feedback": "Perfect match for our 1:1 still render series. Let's start immediately."
+    }
+]
+
+# ENGAGEMENTS (Active production tracking)
+engagements_def = [
+    {
+        "id": "eng-lumina-elena",
+        "brief_id": "brief-lumina-dewdrop",
+        "creator_id": "creator-elena-rostova",
+        "application_id": "app-elena-lumina",
+        "status": "DRAFT_SUBMITTED",
+        "agreed_amount": 4200.0,
+        "start_date": fmt_dt(T0 + timedelta(days=2, hours=2)),
+        "completion_deadline": fmt_dt(T0 + timedelta(days=16)),
+        "final_deliverable_url": "/assets/deliverables/lumina_dewdrop_cut_v1.mp4",
+        "brand_rating": None,
+        "brand_review": None,
+        "created_at": fmt_dt(T0 + timedelta(days=2, hours=2)),
+        "updated_at": fmt_dt(T0 + timedelta(days=8))
+    },
+    {
+        "id": "eng-volt-hassan",
+        "brief_id": "brief-volt-hypercar",
+        "creator_id": "creator-hassan-khalil",
+        "application_id": "app-hassan-volt",
+        "status": "KICKOFF",
+        "agreed_amount": 6000.0,
+        "start_date": fmt_dt(T0 + timedelta(days=2, hours=11)),
+        "completion_deadline": fmt_dt(T0 + timedelta(days=23)),
+        "final_deliverable_url": None,
+        "brand_rating": None,
+        "brand_review": None,
+        "created_at": fmt_dt(T0 + timedelta(days=2, hours=11)),
+        "updated_at": fmt_dt(T0 + timedelta(days=2, hours=11))
+    },
+    {
+        "id": "eng-aurora-maya",
+        "brief_id": "brief-aurora-meta",
+        "creator_id": "creator-maya-lin",
+        "application_id": "app-maya-aurora",
+        "status": "FINAL_APPROVED",
+        "agreed_amount": 4800.0,
+        "start_date": fmt_dt(T0 + timedelta(days=3, hours=2)),
+        "completion_deadline": fmt_dt(T0 + timedelta(days=15)),
+        "final_deliverable_url": "/assets/deliverables/aurora_metamorphic_master_4k.mov",
+        "brand_rating": 5,
+        "brand_review": "Exceeded all expectations. The fluid fabric transitions looked genuinely tangible during Paris digital showcase.",
+        "created_at": fmt_dt(T0 + timedelta(days=3, hours=2)),
+        "updated_at": fmt_dt(T0 + timedelta(days=14))
+    }
+]
+
+# ASSEMBLE COMPLETE REPRODUCIBLE DATASET
+seed_dataset = {
+    "metadata": {
+        "version": "1.0.0",
+        "environment": "ByteXL HacXLerate 2026 / Kivora MVP",
+        "timestamp": fmt_dt(T0),
+        "counts": {
+            "creators": len(creators_def),
+            "brands": len(brands_def),
+            "briefs": len(briefs_def),
+            "skills": len(skills_data),
+            "tools": len(tools_data),
+            "portfolio_projects": len(portfolio_def),
+            "applications": len(applications_def),
+            "engagements": len(engagements_def)
+        }
+    },
+    "skills": skills_data,
+    "tools": tools_data,
+    "creators": creators_def,
+    "brands": brands_def,
+    "briefs": briefs_def,
+    "portfolios": portfolio_def,
+    "applications": applications_def,
+    "engagements": engagements_def
+}
+
+if __name__ == "__main__":
+    out_path = Path("backend/app/data/seed_data.json")
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(out_path, "w", encoding="utf-8") as f:
+        json.dump(seed_dataset, f, indent=2, ensure_ascii=False)
+    print(f"Successfully generated {out_path} with {len(creators_def)} creators, {len(brands_def)} brands, and {len(briefs_def)} briefs.")
