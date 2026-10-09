@@ -87,11 +87,28 @@ Tests all REST endpoints, filter parameters, explainable matching, and the AI br
 python backend/scripts/test_api_endpoints.py
 ```
 
-### 6. Start the FastAPI Development Server
+### 6. Run Real Users, Authentication & Persistence Verification Suite
+Tests the complete real-user lifecycle from registration, email OTP verification, profile creation, portfolio authoring, brief creation, application submission, acceptance, logout/re-login persistence, and security/unauthorized access checks:
+```bash
+python backend/scripts/test_real_users_persistence.py
+```
+
+### 7. Start the FastAPI Development Server
 ```bash
 uvicorn backend.app.main:app --reload --port 8000
 ```
 Interactive API documentation will be available at: `http://localhost:8000/docs`
+
+---
+
+## 🔐 Real Users, Authentication & Data Persistence
+
+Kivora is built from the ground up for **real, live users** with complete database persistence:
+- **Password Security:** Passwords are never stored in plain text. Salted **bcrypt** (12 rounds) hashes protect all credentials.
+- **Email OTP Verification:** Real registration dispatches a 6-digit OTP stored in the `otp_codes` table with a 15-minute expiration. Integrates **Resend** for live transactional emails with an automated fallback for offline judging.
+- **Stateless JWT Tokens:** Authentication returns signed PyJWT tokens with user ID and role claims (`CREATOR`, `BRAND`, `ADMIN`).
+- **Role-Based Access Control (RBAC):** Only `CREATOR` users can set up creator profiles or submit pitches. Only `BRAND` users can author briefs and review/accept applications.
+- **Non-Destructive Seeding:** Database seeding is completely idempotent. Existing real user profiles, portfolios, briefs, and applications are preserved and never erased or overwritten during re-seeding. Demo users are provisioned with real bcrypt hashes (`Password123!`) so evaluators can inspect existing demo workflows immediately.
 
 ### Validation Scenarios Tested:
 1. **Strong Match:** Elena Rostova (`creator-elena-rostova`) on Lumina Skincare 4K Video brief (16:9, Runway Gen-3 verified, within budget).
