@@ -19,7 +19,7 @@ services:
     name: kivora-backend
     env: python
     buildCommand: chmod +x start.sh && pip install -r backend/requirements.txt
-    startCommand: ./start.sh
+    startCommand: bash start.sh
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
