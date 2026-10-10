@@ -10,6 +10,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 import backend.app.core.config  # Ensures .env is loaded
+from backend.app.database import engine, Base
+import backend.app.models.models  # ensure models are registered
 from backend.app.api import auth, creators, brands, briefs, matching, ai, taxonomy, media, verification, engagements
 
 
@@ -18,6 +20,12 @@ app = FastAPI(
     description="The AI Content Creator Marketplace — ByteXL HacXLerate 2026",
     version="1.0.0"
 )
+
+
+@app.on_event("startup")
+def startup_event():
+    # Non-destructive table verification/creation on startup
+    Base.metadata.create_all(bind=engine)
 
 # Enable CORS for Vite frontend dev server
 app.add_middleware(

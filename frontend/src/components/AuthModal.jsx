@@ -22,6 +22,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
     setIsLoading(true);
     setError(null);
     try {
+      authService.logout();
       const data = await authService.login(email, password);
       if (onAuthSuccess) onAuthSuccess(data);
       onClose();
@@ -37,13 +38,19 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
     setIsLoading(true);
     setError(null);
     try {
-      await authService.register({
+      authService.logout();
+      const res = await authService.register({
         email,
         password,
         role,
         full_name: name || undefined,
       });
-      setSuccessInfo('Account created! Please enter the 6-digit OTP code sent to your email to verify.');
+      if (res?.dev_otp) {
+        setOtpCode(res.dev_otp);
+        setSuccessInfo(`Account created! (Email quota reached) Verification code: ${res.dev_otp}`);
+      } else {
+        setSuccessInfo(res?.message || 'Account created! Please enter the 6-digit OTP code sent to your email to verify.');
+      }
       setMode('otp');
     } catch (err) {
       setError(err.message || 'Registration failed.');
@@ -74,8 +81,13 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
     setError(null);
     setSuccessInfo(null);
     try {
-      await authService.resendOtp(email);
-      setSuccessInfo('A new verification code has been sent to your email.');
+      const res = await authService.resendOtp(email);
+      if (res?.dev_otp) {
+        setOtpCode(res.dev_otp);
+        setSuccessInfo(`New verification code: ${res.dev_otp}`);
+      } else {
+        setSuccessInfo(res?.message || 'A new verification code has been sent to your email.');
+      }
       setResendCooldown(60);
       const timer = setInterval(() => {
         setResendCooldown((prev) => {
@@ -97,6 +109,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
     setIsLoading(true);
     setError(null);
     try {
+      authService.logout();
       const data = await authService.login(demoEmail, 'Password123!');
       if (onAuthSuccess) onAuthSuccess(data);
       onClose();

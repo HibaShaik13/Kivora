@@ -57,10 +57,10 @@ def register_user(payload: UserRegisterRequest, db: Session = Depends(get_db)):
     # 1. Normalize and check uniqueness
     email = payload.email.lower().strip()
     existing_user = db.query(User).filter(User.email == email).first()
-    if existing_user:
+    if existing_user and existing_user.is_email_verified:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="An account with this email address already exists."
+            detail="An account with this email address already exists. Please sign in."
         )
 
     role = payload.role.upper().strip()
@@ -73,17 +73,25 @@ def register_user(payload: UserRegisterRequest, db: Session = Depends(get_db)):
     # 2. Hash password with bcrypt
     hashed = hash_password(payload.password)
 
-    # 3. Create real User record
-    user_id = f"user-{uuid.uuid4().hex[:12]}"
-    user = User(
-        id=user_id,
-        email=email,
-        hashed_password=hashed,
-        role=role,
-        is_email_verified=False,
-        created_at=datetime.utcnow()
-    )
-    db.add(user)
+    # 3. Create or reuse unverified User record
+    is_new_user = False
+    if existing_user and not existing_user.is_email_verified:
+        user = existing_user
+        user.hashed_password = hashed
+        user.role = role
+        user_id = user.id
+    else:
+        is_new_user = True
+        user_id = f"user-{uuid.uuid4().hex[:12]}"
+        user = User(
+            id=user_id,
+            email=email,
+            hashed_password=hashed,
+            role=role,
+            is_email_verified=False,
+            created_at=datetime.utcnow()
+        )
+        db.add(user)
 
     # 4. Generate & store 6-digit OTP code (15-min expiration)
     otp = generate_otp_code()
@@ -103,7 +111,8 @@ def register_user(payload: UserRegisterRequest, db: Session = Depends(get_db)):
         dispatch_result = send_otp_email(email, otp, purpose="REGISTRATION")
     except Exception as e:
         db.delete(otp_record)
-        db.delete(user)
+        if is_new_user:
+            db.delete(user)
         db.commit()
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -116,6 +125,9 @@ def register_user(payload: UserRegisterRequest, db: Session = Depends(get_db)):
         "email": email,
         "role": role,
     }
+    if dispatch_result and dispatch_result.get("dev_otp"):
+        response_data["dev_otp"] = dispatch_result["dev_otp"]
+        response_data["message"] = f"Account registered! Verification code: {dispatch_result['dev_otp']}"
 
     return response_data
 
@@ -236,6 +248,9 @@ def resend_otp(payload: ResendOtpRequest, db: Session = Depends(get_db)):
         )
         
     res = {"message": "Verification code resent successfully."}
+    if dispatch_result and dispatch_result.get("dev_otp"):
+        res["dev_otp"] = dispatch_result["dev_otp"]
+        res["message"] = f"New verification code: {dispatch_result['dev_otp']}"
     return res
 
 

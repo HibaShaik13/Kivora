@@ -16,6 +16,8 @@ from backend.app.models.models import (
     PortfolioProject,
     CreatorTool,
     CreatorSkill,
+    Skill,
+    Tool,
     WorkflowStep,
     EvidenceRecord,
     VerificationRecord,
@@ -312,8 +314,11 @@ def setup_or_update_creator_profile(
 
     db.flush()
 
-    # Link skills
-    for sk_id in payload.skill_ids:
+    # Link skills (filtering to existing skills in DB to prevent foreign key errors)
+    valid_skill_ids = {s.id for s in db.query(Skill).all()}
+    for sk_id in (payload.skill_ids or []):
+        if sk_id not in valid_skill_ids:
+            continue
         exists = db.query(CreatorSkill).filter(
             CreatorSkill.creator_id == creator.id,
             CreatorSkill.skill_id == sk_id
@@ -326,8 +331,11 @@ def setup_or_update_creator_profile(
                 proficiency_level="ADVANCED"
             ))
 
-    # Link tools
-    for tl_id in payload.tool_ids:
+    # Link tools (filtering to existing tools in DB to prevent foreign key errors)
+    valid_tool_ids = {t.id for t in db.query(Tool).all()}
+    for tl_id in (payload.tool_ids or []):
+        if tl_id not in valid_tool_ids:
+            continue
         exists = db.query(CreatorTool).filter(
             CreatorTool.creator_id == creator.id,
             CreatorTool.tool_id == tl_id
@@ -341,7 +349,12 @@ def setup_or_update_creator_profile(
                 is_claim_verified=False
             ))
 
-    db.commit()
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Failed to save profile: {str(e)}")
+
     db.refresh(creator)
     base_read = format_creator_list_item(creator)
     return CreatorProfileDetailRead(

@@ -42,7 +42,10 @@ from backend.app.models.models import (
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger("seed_db")
 
-DEMO_DEFAULT_PASSWORD = "Password123!"
+import os
+
+DEMO_DEFAULT_PASSWORD = os.getenv("DEMO_DEFAULT_PASSWORD", "Password123!")
+ADMIN_DEFAULT_PASSWORD = os.getenv("ADMIN_DEFAULT_PASSWORD", DEMO_DEFAULT_PASSWORD)
 
 
 def parse_dt(dt_str):
@@ -52,7 +55,12 @@ def parse_dt(dt_str):
 
 
 def seed_database():
-    seed_file = Path("backend/app/data/seed_data.json")
+    base_dir = Path(__file__).resolve().parent.parent
+    seed_file = base_dir / "data" / "seed_data.json"
+    if not seed_file.exists():
+        # Fallback to root-relative path if applicable
+        seed_file = Path("backend/app/data/seed_data.json")
+
     if not seed_file.exists():
         logger.error(f"Seed file not found at {seed_file}")
         sys.exit(1)
@@ -66,6 +74,7 @@ def seed_database():
 
     session = SessionLocal()
     demo_hashed_pwd = hash_password(DEMO_DEFAULT_PASSWORD)
+    admin_hashed_pwd = hash_password(ADMIN_DEFAULT_PASSWORD)
 
     try:
         # 1. SKILLS
@@ -82,10 +91,32 @@ def seed_database():
                 session.add(Tool(id=t["id"], name=t["name"], category=t["category"], vendor=t["vendor"]))
         session.flush()
 
-        # 3. CREATORS & DEMO USERS
+        # 3. DEMO ADMIN USER (Admin Desk • Lead Reviewer)
+        admin_email = "admin@kivora.demo"
+        admin_user = session.query(User).filter(
+            (User.id == "user-admin-seed") | (User.email == admin_email)
+        ).first()
+        if not admin_user:
+            admin_user = User(
+                id="user-admin-seed",
+                email=admin_email,
+                hashed_password=admin_hashed_pwd,
+                role="ADMIN",
+                is_email_verified=True,
+                created_at=datetime.utcnow()
+            )
+            session.add(admin_user)
+            session.flush()
+            logger.info("Provisioned verified demo admin user (admin@kivora.demo)")
+        elif admin_user.hashed_password.startswith("demo_"):
+            admin_user.hashed_password = admin_hashed_pwd
+
+        # 4. CREATORS & DEMO USERS
         for c in data["creators"]:
             # User
-            u = session.query(User).filter(User.id == c["user_id"]).first()
+            u = session.query(User).filter(
+                (User.id == c["user_id"]) | (User.email == c["email"])
+            ).first()
             if not u:
                 u = User(
                     id=c["user_id"],
@@ -139,9 +170,11 @@ def seed_database():
                     session.add(CreatorTool(id=ct_id, creator_id=c["creator_id"], tool_id=tl_id, proficiency_level=prof, is_claim_verified=ver))
         session.flush()
 
-        # 4. BRANDS & DEMO USERS
+        # 5. BRANDS & DEMO USERS
         for b in data["brands"]:
-            u = session.query(User).filter(User.id == b["user_id"]).first()
+            u = session.query(User).filter(
+                (User.id == b["user_id"]) | (User.email == b["email"])
+            ).first()
             if not u:
                 u = User(
                     id=b["user_id"],

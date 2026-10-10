@@ -19,10 +19,10 @@ export default function EditCreatorProfileModal({ isOpen, onClose, onProfileUpda
   const [availableSkills, setAvailableSkills] = useState([]);
   const [availableTools, setAvailableTools] = useState([]);
   const [selectedSkillIds, setSelectedSkillIds] = useState(
-    currentProfile?.skills?.map((s) => s.skill_id) || ['sk-cinematic-direction', 'sk-prompt-architecture']
+    currentProfile?.skills?.map((s) => s.skill_id) || []
   );
   const [selectedToolIds, setSelectedToolIds] = useState(
-    currentProfile?.tools?.map((t) => t.tool_id) || ['tool-runway-gen3', 'tool-comfyui', 'tool-midjourney']
+    currentProfile?.tools?.map((t) => t.tool_id) || []
   );
 
   const [isLoading, setIsLoading] = useState(false);
@@ -34,12 +34,40 @@ export default function EditCreatorProfileModal({ isOpen, onClose, onProfileUpda
         const [skills, tools] = await Promise.all([api.getSkills(), api.getTools()]);
         setAvailableSkills(skills || []);
         setAvailableTools(tools || []);
+        if ((!currentProfile?.skills || currentProfile.skills.length === 0) && skills?.length) {
+          setSelectedSkillIds(skills.slice(0, 2).map((s) => s.id));
+        }
+        if ((!currentProfile?.tools || currentProfile.tools.length === 0) && tools?.length) {
+          setSelectedToolIds(tools.slice(0, 2).map((t) => t.id));
+        }
       } catch (err) {
         console.error('Failed to load taxonomy:', err);
       }
     }
     loadTaxonomy();
-  }, []);
+  }, [currentProfile]);
+
+  useEffect(() => {
+    if (currentProfile) {
+      setDisplayName(currentProfile.display_name || '');
+      setHandle(currentProfile.handle || '');
+      setBio(currentProfile.bio || '');
+      setAvatarUrl(currentProfile.avatar_url || '/assets/avatars/elena.jpg');
+      setBannerUrl(currentProfile.banner_url || '/assets/banners/elena_banner.jpg');
+      setLocation(currentProfile.location || 'Tokyo / Global');
+      setYearsExperience(currentProfile.years_experience || 4);
+      setPrimarySpecialization(currentProfile.primary_specialization || 'Cinematic Generative Video');
+      setWebsiteUrl(currentProfile.website_url || 'https://kivora.dev/@creator');
+      setMinBudget(currentProfile.min_budget || 2500);
+      setHourlyRate(currentProfile.hourly_rate || 150);
+      if (currentProfile.skills?.length) {
+        setSelectedSkillIds(currentProfile.skills.map((s) => s.skill_id));
+      }
+      if (currentProfile.tools?.length) {
+        setSelectedToolIds(currentProfile.tools.map((t) => t.tool_id));
+      }
+    }
+  }, [currentProfile]);
 
   if (!isOpen) return null;
 
