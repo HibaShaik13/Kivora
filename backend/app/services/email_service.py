@@ -116,6 +116,8 @@ def _build_email_content(otp_code: str, purpose: str = "REGISTRATION") -> tuple[
 
 def _dispatch_via_smtp(email: str, subject: str, plain_text: str, html_content: str) -> bool:
     """Attempts SMTP transmission with fallback between STARTTLS (587) and SSL (465)."""
+    import ssl
+
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
     msg["From"] = f"{SMTP_FROM_NAME} <{SMTP_FROM_EMAIL}>"
@@ -126,33 +128,40 @@ def _dispatch_via_smtp(email: str, subject: str, plain_text: str, html_content: 
     msg.attach(part_text)
     msg.attach(part_html)
 
-    # 1. If configured on port 465, use direct SSL
+    # Sanitize username and password (strip spaces, e.g. from 16-char app passwords)
+    clean_username = (SMTP_USERNAME or "").strip()
+    clean_password = (SMTP_PASSWORD or "").replace(" ", "").strip()
+
+    # 1. If explicitly configured on port 465, use direct SSL
     if SMTP_PORT == 465:
-        server = smtplib.SMTP_SSL(SMTP_HOST, 465, timeout=12)
+        context = ssl.create_default_context()
+        server = smtplib.SMTP_SSL(SMTP_HOST, 465, context=context, timeout=12)
         server.ehlo()
-        server.login(SMTP_USERNAME, SMTP_PASSWORD)
+        server.login(clean_username, clean_password)
         server.send_message(msg)
         server.quit()
         return True
 
     # 2. Try configured port (e.g. 587 with STARTTLS)
     try:
-        server = smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=6)
+        server = smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=8)
         server.ehlo()
         if SMTP_USE_TLS:
-            server.starttls()
+            context = ssl.create_default_context()
+            server.starttls(context=context)
             server.ehlo()
-        server.login(SMTP_USERNAME, SMTP_PASSWORD)
+        server.login(clean_username, clean_password)
         server.send_message(msg)
         server.quit()
         return True
     except (TimeoutError, smtplib.SMTPConnectError, OSError) as e:
-        logger.info(f"Port {SMTP_PORT} connection timed out; attempting SSL fallback on port 465...")
+        logger.info(f"Port {SMTP_PORT} connection timed out/failed; attempting SSL fallback on port 465...")
 
-    # 3. Fallback to Port 465 (SSL) if port 587 is blocked by local network/ISP
-    server = smtplib.SMTP_SSL(SMTP_HOST, 465, timeout=12)
+    # 3. Fallback to Port 465 (SSL) if port 587 is blocked
+    context = ssl.create_default_context()
+    server = smtplib.SMTP_SSL(SMTP_HOST, 465, context=context, timeout=12)
     server.ehlo()
-    server.login(SMTP_USERNAME, SMTP_PASSWORD)
+    server.login(clean_username, clean_password)
     server.send_message(msg)
     server.quit()
     return True

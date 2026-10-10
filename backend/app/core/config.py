@@ -53,7 +53,7 @@ GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
 
 # Email settings
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
-SENDER_EMAIL = os.getenv("SENDER_EMAIL", "shaikhibatharunnum@gmail.com")
+SENDER_EMAIL = os.getenv("SENDER_EMAIL", "vu.241fa04495@gmail.com")
 
 # SMTP Configuration (e.g. Gmail SMTP)
 SMTP_HOST = os.getenv("SMTP_HOST", os.getenv("SMTP_SERVER", "smtp.gmail.com"))
@@ -61,9 +61,9 @@ try:
     SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 except ValueError:
     SMTP_PORT = 587
-SMTP_USERNAME = os.getenv("SMTP_USERNAME")
+SMTP_USERNAME = os.getenv("SMTP_USERNAME", "vu.241fa04495@gmail.com")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
-SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", os.getenv("SENDER_EMAIL", "shaikhibatharunnum@gmail.com"))
+SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", os.getenv("SENDER_EMAIL", "vu.241fa04495@gmail.com"))
 SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "Kivora Platform")
 SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "true").lower() in ("true", "1", "t", "yes")
 

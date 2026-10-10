@@ -80,7 +80,8 @@ def cleanup_test_fixtures(db):
     db.commit()
 
 
-def run_persistence_and_auth_tests():
+@patch("backend.app.api.auth.send_otp_email", return_value={"sent": True, "provider": "mock", "delivery_status": "DELIVERED"})
+def run_persistence_and_auth_tests(mock_email):
     print("\n=======================================================")
     print("  KIVORA COMPLETE BACKEND REGRESSION & VERIFICATION SUITE")
     print("=======================================================\n")
