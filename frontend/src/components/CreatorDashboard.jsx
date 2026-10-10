@@ -133,6 +133,17 @@ export default function CreatorDashboard({
                 src={profile?.avatar_url || '/assets/avatars/elena.jpg'}
                 alt={profile?.display_name || 'Creator'}
                 className="w-12 h-12 rounded-full object-cover border-2 border-purple-400 shadow-sm"
+                style={{
+                  width: '48px',
+                  height: '48px',
+                  minWidth: '48px',
+                  maxWidth: '48px',
+                  minHeight: '48px',
+                  maxHeight: '48px',
+                  borderRadius: '50%',
+                  objectFit: 'cover',
+                  flexShrink: 0,
+                }}
               />
               <div className="overflow-hidden">
                 <h3 className="text-sm font-bold text-neutral-900 truncate">
@@ -400,6 +411,17 @@ export default function CreatorDashboard({
                       src={profile?.avatar_url || '/assets/avatars/elena.jpg'}
                       alt={profile?.display_name}
                       className="w-20 h-20 rounded-2xl object-cover border-2 border-purple-400 shadow-md"
+                      style={{
+                        width: '72px',
+                        height: '72px',
+                        minWidth: '72px',
+                        maxWidth: '72px',
+                        minHeight: '72px',
+                        maxHeight: '72px',
+                        borderRadius: '16px',
+                        objectFit: 'cover',
+                        flexShrink: 0,
+                      }}
                     />
                     <div>
                       <h2 className="text-xl font-serif font-bold text-neutral-900">

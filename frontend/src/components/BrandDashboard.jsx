@@ -130,7 +130,8 @@ export default function BrandDashboard({
               <img
                 src={profile?.logo_url || '/assets/brands/lumina.png'}
                 alt={profile?.company_name || 'Brand'}
-                className="w-12 h-12 rounded-xl object-contain bg-white border border-black/10 p-1 shadow-sm"
+                className="brand-sidebar-logo"
+                style={{ width: '44px', height: '44px', minWidth: '44px', maxWidth: '44px', minHeight: '44px', maxHeight: '44px', borderRadius: '12px', objectFit: 'contain', flexShrink: 0, background: '#fff', border: '1px solid rgba(0,0,0,0.1)', padding: '2px' }}
               />
               <div className="overflow-hidden">
                 <h3 className="text-sm font-bold text-neutral-900 truncate">
@@ -299,37 +300,40 @@ export default function BrandDashboard({
                       <div
                         key={app.id}
                         className="p-4 rounded-xl border border-black/5 bg-white/60 flex flex-col md:flex-row items-start md:items-center justify-between gap-3"
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', padding: '0.875rem 1rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.75)', border: '1px solid rgba(19,19,22,0.06)' }}
                       >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3" style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', minWidth: 0, flex: 1 }}>
                           <img
                             src={app.creator_avatar_url || '/assets/avatars/elena.jpg'}
                             alt={app.creator_display_name}
-                            className="w-10 h-10 rounded-full object-cover border border-purple-300"
+                            className="pitch-creator-avatar"
+                            style={{ width: '48px', height: '48px', minWidth: '48px', maxWidth: '48px', minHeight: '48px', maxHeight: '48px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '2px solid rgba(121,82,236,0.25)' }}
                           />
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <h4 className="text-sm font-bold text-neutral-900">
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div className="flex items-center gap-2" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                              <h4 className="text-sm font-bold text-neutral-900" style={{ fontSize: '0.875rem', fontWeight: 700, margin: 0, color: '#131316' }}>
                                 {app.creator_display_name}
                               </h4>
-                              <span className="text-xs text-purple-700 font-mono">
+                              <span className="text-xs text-purple-700 font-mono" style={{ fontSize: '0.75rem', color: '#7952EC', fontFamily: 'monospace' }}>
                                 @{app.creator_handle}
                               </span>
                             </div>
-                            <p className="text-xs text-neutral-600 italic line-clamp-1">
+                            <p className="text-xs text-neutral-600 italic line-clamp-1" style={{ fontSize: '0.75rem', color: '#6C6C75', fontStyle: 'italic', margin: '0.2rem 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               "{app.pitch_text}"
                             </p>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-neutral-900">
+                        <div className="flex items-center gap-2" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
+                          <span className="text-xs font-bold text-neutral-900" style={{ fontSize: '0.75rem', fontWeight: 700, color: '#131316' }}>
                             ${app.proposed_rate?.toLocaleString()} ({app.proposed_timeline_days}d)
                           </span>
                           {app.status === 'SUBMITTED' ? (
-                            <div className="flex gap-1.5">
+                            <div className="flex gap-1.5" style={{ display: 'flex', gap: '0.35rem' }}>
                               <button
                                 type="button"
                                 className="btn-primary text-xs py-1 px-2.5"
+                                style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}
                                 onClick={() => handleApplicationStatus(app.id, 'ACCEPTED')}
                               >
                                 Accept & Hire
@@ -337,13 +341,14 @@ export default function BrandDashboard({
                               <button
                                 type="button"
                                 className="btn-secondary text-xs py-1 px-2.5"
+                                style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}
                                 onClick={() => handleApplicationStatus(app.id, 'REJECTED')}
                               >
                                 Decline
                               </button>
                             </div>
                           ) : (
-                            <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-neutral-100 text-neutral-700">
+                            <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-neutral-100 text-neutral-700" style={{ padding: '0.2rem 0.6rem', fontSize: '0.65rem', fontWeight: 700, borderRadius: '9999px', background: app.status === 'ACCEPTED' ? '#ECFDF5' : '#F3F4F6', color: app.status === 'ACCEPTED' ? '#065F46' : '#374151' }}>
                               {app.status}
                             </span>
                           )}
@@ -365,6 +370,17 @@ export default function BrandDashboard({
                     src={profile?.logo_url || '/assets/brands/lumina.png'}
                     alt={profile?.company_name}
                     className="w-20 h-20 rounded-2xl object-contain bg-white border border-black/10 p-2 shadow-md"
+                    style={{
+                      width: '72px',
+                      height: '72px',
+                      minWidth: '72px',
+                      maxWidth: '72px',
+                      minHeight: '72px',
+                      maxHeight: '72px',
+                      borderRadius: '16px',
+                      objectFit: 'contain',
+                      flexShrink: 0,
+                    }}
                   />
                   <div>
                     <h2 className="text-xl font-serif font-bold text-neutral-900">
@@ -569,6 +585,17 @@ export default function BrandDashboard({
                             src={app.creator_avatar_url || '/assets/avatars/elena.jpg'}
                             alt={app.creator_display_name}
                             className="w-12 h-12 rounded-full object-cover border border-purple-300 shadow-sm"
+                            style={{
+                              width: '48px',
+                              height: '48px',
+                              minWidth: '48px',
+                              maxWidth: '48px',
+                              minHeight: '48px',
+                              maxHeight: '48px',
+                              borderRadius: '50%',
+                              objectFit: 'cover',
+                              flexShrink: 0,
+                            }}
                           />
                           <div>
                             <h4

@@ -167,6 +167,18 @@ export default function BriefDetailModal({ brief, onClose, onSelectCreator, curr
                         src={m.avatar_url || '/assets/avatars/elena.jpg'}
                         alt={m.display_name}
                         className="match-avatar"
+                        style={{
+                          width: '48px',
+                          height: '48px',
+                          minWidth: '48px',
+                          maxWidth: '48px',
+                          minHeight: '48px',
+                          maxHeight: '48px',
+                          borderRadius: '50%',
+                          objectFit: 'cover',
+                          flexShrink: 0,
+                          border: '2px solid rgba(121, 82, 236, 0.3)',
+                        }}
                       />
                       <div className="match-meta">
                         <div className="match-name-row">

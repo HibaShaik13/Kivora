@@ -1862,6 +1862,218 @@
   margin-top: 0.5rem;
 }
 
+/* Proof-to-Brief Matching Engine & Column */
+.brief-spec-col,
+.brief-matching-col {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.brief-matching-col {
+  gap: 1.25rem;
+}
+
+.matching-header-box {
+  margin-bottom: 0.25rem;
+}
+
+.matching-header-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.matching-header-title .spark-icon {
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.matching-header-title h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.matching-header-sub {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.matches-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.match-card {
+  padding: 0.95rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(19, 19, 22, 0.07);
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 4px 16px -4px rgba(121, 82, 236, 0.06);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  overflow: hidden;
+}
+
+.match-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px -4px rgba(121, 82, 236, 0.12);
+  border-color: rgba(121, 82, 236, 0.25);
+}
+
+.match-card-top {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.6rem;
+}
+
+.match-avatar {
+  width: 48px !important;
+  height: 48px !important;
+  min-width: 48px !important;
+  max-width: 48px !important;
+  min-height: 48px !important;
+  max-height: 48px !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
+  flex-shrink: 0 !important;
+  border: 2px solid rgba(121, 82, 236, 0.3) !important;
+  background-color: #FAF7F2;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.match-meta {
+  min-width: 0;
+  flex: 1;
+}
+
+.match-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.match-name-row strong {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.match-handle {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--accent-purple);
+  font-family: var(--font-mono);
+  margin-top: 0.1rem;
+}
+
+.match-score-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  flex-shrink: 0;
+  background: rgba(121, 82, 236, 0.08);
+  border: 1px solid rgba(121, 82, 236, 0.2);
+  padding: 0.3rem 0.65rem;
+  border-radius: var(--radius-sm);
+  text-align: right;
+}
+
+.match-score-badge .score-num {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--accent-purple);
+  font-family: var(--font-mono);
+  line-height: 1.1;
+}
+
+.match-score-badge .score-lbl {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+
+.match-reasons-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0.4rem 0;
+  padding-top: 0.4rem;
+  border-top: 1px dashed rgba(19, 19, 22, 0.06);
+}
+
+.match-reason-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  color: var(--text-main);
+  line-height: 1.35;
+}
+
+.match-reason-item .reason-check {
+  color: #10B981;
+  font-weight: 700;
+  flex-shrink: 0;
+  font-size: 0.8rem;
+}
+
+.match-tools-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.4rem;
+}
+
+.match-tool-tag {
+  font-size: 0.68rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  background: rgba(121, 82, 236, 0.06);
+  border: 1px solid rgba(121, 82, 236, 0.15);
+  color: var(--accent-purple);
+  font-weight: 600;
+}
+
+/* Brand Portal Creator Proposals & Logos */
+.pitch-creator-avatar {
+  width: 48px !important;
+  height: 48px !important;
+  min-width: 48px !important;
+  max-width: 48px !important;
+  min-height: 48px !important;
+  max-height: 48px !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
+  flex-shrink: 0 !important;
+  border: 2px solid rgba(121, 82, 236, 0.25) !important;
+}
+
+.brand-sidebar-logo {
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  max-width: 44px !important;
+  min-height: 44px !important;
+  max-height: 44px !important;
+  border-radius: 12px !important;
+  object-fit: contain !important;
+  flex-shrink: 0 !important;
+}
+
 /* Form Inputs */
 .label-form {
   display: block;
