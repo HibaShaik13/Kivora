@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   Lightning,
-  Sparkle,
   Compass,
   CheckCircle,
   FileText,
@@ -16,7 +15,7 @@ export default function HowItWorksSection() {
     {
       num: '01',
       title: 'Synthesize your brief with AI',
-      desc: 'Input a raw campaign concept. Kivora’s assistant generates technical generative specs: aspect ratios, resolution, duration, tools, and usage rights.',
+      desc: 'Input a raw campaign concept. Kivora assists in generating technical generative specs: aspect ratios, resolution, duration, tools, and usage rights.',
       icon: Lightning,
     },
     {
@@ -27,8 +26,8 @@ export default function HowItWorksSection() {
     },
     {
       num: '03',
-      title: 'Manage milestones & commercial rights',
-      desc: 'Review draft versions, request structured revisions, approve master 4K deliverables, and receive signed commercial buyout certificates.',
+      title: 'Manage milestones and licensing',
+      desc: 'Review draft versions, request structured revisions, approve deliverables, and receive signed commercial buyout certificates.',
       icon: Package,
     },
   ];
@@ -57,45 +56,49 @@ export default function HowItWorksSection() {
   const currentSteps = activeTab === 'BRANDS' ? brandSteps : creatorSteps;
 
   return (
-    <section style={{ padding: '80px 0', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-subtle)' }}>
+    <section style={{ padding: '100px 0', background: '#080A18', borderBottom: '1px solid var(--border-subtle)' }}>
       <div className="container">
         {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: '36px' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <span className="badge badge-neutral">
-              <Sparkle weight="fill" size={13} style={{ color: 'var(--accent-coral)' }} />
-              Workflow Architecture
-            </span>
-          </div>
-          <h2 style={{ fontSize: 'clamp(1.75rem, 2.5vw + 0.5rem, 2.375rem)', letterSpacing: '-0.03em', marginBottom: '8px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+          <h2
+            className="font-serif"
+            style={{
+              fontSize: 'clamp(2rem, 3.5vw + 0.5rem, 3.25rem)',
+              letterSpacing: '-0.02em',
+              marginBottom: '12px',
+              color: 'var(--text-primary)',
+            }}
+          >
             How production moves on Kivora.
           </h2>
-          <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', maxWidth: '52ch', margin: '0 auto' }}>
+          <p style={{ fontSize: '1.0625rem', color: 'var(--text-secondary)', maxWidth: '54ch', margin: '0 auto', lineHeight: '1.6' }}>
             A transparent, deterministic production cycle from concept synthesis to commercial sign-off.
           </p>
         </div>
 
         {/* Dual-Track Tabs */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '40px' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '48px' }}>
           <div
             style={{
               display: 'inline-flex',
-              padding: '4px',
+              padding: '6px',
               borderRadius: 'var(--radius-pill)',
-              background: 'var(--bg-surface)',
-              border: '1px solid var(--border-medium)',
-              boxShadow: 'var(--shadow-sm)',
+              background: 'rgba(16, 21, 48, 0.85)',
+              border: '1px solid rgba(167, 139, 250, 0.25)',
+              backdropFilter: 'blur(12px)',
             }}
           >
             <button
               onClick={() => setActiveTab('BRANDS')}
               style={{
-                padding: '10px 24px',
+                padding: '10px 26px',
                 borderRadius: 'var(--radius-pill)',
                 fontSize: '0.875rem',
                 fontWeight: '700',
-                background: activeTab === 'BRANDS' ? 'var(--text-primary)' : 'transparent',
-                color: activeTab === 'BRANDS' ? 'var(--text-on-dark)' : 'var(--text-secondary)',
+                border: 'none',
+                cursor: 'pointer',
+                background: activeTab === 'BRANDS' ? '#A78BFA' : 'transparent',
+                color: activeTab === 'BRANDS' ? '#060813' : 'var(--text-secondary)',
                 transition: 'all var(--transition-fast)',
               }}
             >
@@ -104,12 +107,14 @@ export default function HowItWorksSection() {
             <button
               onClick={() => setActiveTab('CREATORS')}
               style={{
-                padding: '10px 24px',
+                padding: '10px 26px',
                 borderRadius: 'var(--radius-pill)',
                 fontSize: '0.875rem',
                 fontWeight: '700',
-                background: activeTab === 'CREATORS' ? 'var(--text-primary)' : 'transparent',
-                color: activeTab === 'CREATORS' ? 'var(--text-on-dark)' : 'var(--text-secondary)',
+                border: 'none',
+                cursor: 'pointer',
+                background: activeTab === 'CREATORS' ? '#A78BFA' : 'transparent',
+                color: activeTab === 'CREATORS' ? '#060813' : 'var(--text-secondary)',
                 transition: 'all var(--transition-fast)',
               }}
             >
@@ -119,7 +124,7 @@ export default function HowItWorksSection() {
         </div>
 
         {/* 3 Step Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
           {currentSteps.map((step, idx) => {
             const Icon = step.icon;
             return (
@@ -127,22 +132,24 @@ export default function HowItWorksSection() {
                 key={idx}
                 className="card-editorial"
                 style={{
-                  background: 'var(--bg-surface)',
-                  padding: '32px 24px',
+                  background: 'linear-gradient(145deg, #101530 0%, #0a0e23 100%)',
+                  padding: '36px 30px',
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  position: 'relative',
+                  borderRadius: '24px',
+                  border: '1px solid rgba(167, 139, 250, 0.2)',
+                  boxShadow: '0 16px 36px -10px rgba(0, 0, 0, 0.6)',
                 }}
               >
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '22px' }}>
                     <span
                       style={{
                         fontFamily: 'var(--font-family-mono)',
-                        fontSize: '1.5rem',
+                        fontSize: '1.625rem',
                         fontWeight: '800',
-                        color: 'var(--accent-lavender)',
+                        color: 'var(--accent-gold)',
                         letterSpacing: '-0.02em',
                       }}
                     >
@@ -150,25 +157,26 @@ export default function HowItWorksSection() {
                     </span>
                     <div
                       style={{
-                        width: '36px',
-                        height: '36px',
-                        borderRadius: '10px',
-                        background: 'var(--bg-secondary)',
+                        width: '42px',
+                        height: '42px',
+                        borderRadius: '12px',
+                        background: 'rgba(167, 139, 250, 0.12)',
+                        border: '1px solid rgba(167, 139, 250, 0.25)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        color: 'var(--text-primary)',
+                        color: '#A78BFA',
                       }}
                     >
-                      <Icon size={18} weight="duotone" />
+                      <Icon size={20} weight="bold" />
                     </div>
                   </div>
 
-                  <h3 style={{ fontSize: '1.125rem', marginBottom: '8px', color: 'var(--text-primary)' }}>
+                  <h3 style={{ fontSize: '1.25rem', marginBottom: '10px', color: 'var(--text-primary)', fontWeight: '700' }}>
                     {step.title}
                   </h3>
 
-                  <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
+                  <p style={{ fontSize: '0.9375rem', color: 'var(--text-secondary)', lineHeight: '1.65' }}>
                     {step.desc}
                   </p>
                 </div>
@@ -180,3 +188,5 @@ export default function HowItWorksSection() {
     </section>
   );
 }
+
+

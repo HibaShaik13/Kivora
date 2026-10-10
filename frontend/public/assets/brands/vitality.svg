@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <defs>
+    <linearGradient id="vitalityGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2ED573" />
+      <stop offset="100%" stop-color="#E9C77F" />
+    </linearGradient>
+    <radialGradient id="vitalityBg" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#151B35" />
+      <stop offset="100%" stop-color="#080B18" />
+    </radialGradient>
+  </defs>
+  <rect width="200" height="200" rx="36" fill="url(#vitalityBg)" stroke="rgba(46, 213, 115, 0.35)" stroke-width="3" />
+  <!-- Cellular Bio Helix -->
+  <circle cx="100" cy="100" r="56" fill="none" stroke="url(#vitalityGrad)" stroke-width="3" stroke-dasharray="6 4" />
+  <circle cx="80" cy="80" r="16" fill="rgba(46, 213, 115, 0.25)" stroke="#2ED573" stroke-width="2" />
+  <circle cx="120" cy="120" r="16" fill="rgba(233, 199, 127, 0.25)" stroke="#E9C77F" stroke-width="2" />
+  <circle cx="100" cy="100" r="8" fill="#F5F0E8" />
+</svg>

@@ -31,11 +31,20 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./kivora.db")
 UPLOAD_DIR = Path(os.getenv("KIVORA_UPLOAD_DIR", "uploads"))
 
 # CORS settings
-CORS_ORIGINS_RAW = os.getenv(
-    "KIVORA_CORS_ORIGINS",
-    "http://localhost:5173,http://localhost:5174,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:5174"
-)
-CORS_ORIGINS = [orig.strip() for orig in CORS_ORIGINS_RAW.split(",") if orig.strip()]
+DEFAULT_LOCAL_ORIGINS = [
+    "https://kivora-frontend.onrender.com",
+    "https://kivora.onrender.com",
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:5174",
+    "http://127.0.0.1:3000",
+]
+CORS_ORIGINS_RAW = os.getenv("KIVORA_CORS_ORIGINS", "")
+_custom_origins = [orig.strip() for orig in CORS_ORIGINS_RAW.split(",") if orig.strip()]
+# Merge custom origins with default local origins, preserving unique order
+CORS_ORIGINS = list(dict.fromkeys(DEFAULT_LOCAL_ORIGINS + _custom_origins))
 
 # Gemini AI settings
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")

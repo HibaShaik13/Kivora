@@ -18,7 +18,7 @@ services:
           name: kivora-postgres
           property: connectionString
       - key: KIVORA_CORS_ORIGINS
-        value: https://your-kivora-app.vercel.app
+        value: https://kivora-frontend.onrender.com,http://localhost:5173
       - key: KIVORA_UPLOAD_DIR
         value: uploads
       - key: GEMINI_API_KEY
@@ -39,6 +39,19 @@ services:
         value: "Kivora Platform"
       - key: SMTP_USE_TLS
         value: "true"
+
+  # Kivora React Static Frontend Service
+  - type: static
+    name: kivora-frontend
+    buildCommand: cd frontend && npm ci && npm run build
+    publishPath: frontend/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: https://kivora-api-n7m1.onrender.com
 
 databases:
   # Managed PostgreSQL Database

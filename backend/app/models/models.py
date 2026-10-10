@@ -107,7 +107,7 @@ class Skill(Base):
 class CreatorSkill(Base):
     __tablename__ = "creator_skills"
 
-    id = Column(String(36), primary_key=True)
+    id = Column(String(100), primary_key=True)
     creator_id = Column(String(36), ForeignKey("creator_profiles.id", ondelete="CASCADE"), nullable=False)
     skill_id = Column(String(36), ForeignKey("skills.id", ondelete="CASCADE"), nullable=False)
     proficiency_level = Column(String(30), nullable=False, default="ADVANCED")  # INTERMEDIATE, ADVANCED, EXPERT
@@ -135,7 +135,7 @@ class Tool(Base):
 class CreatorTool(Base):
     __tablename__ = "creator_tools"
 
-    id = Column(String(36), primary_key=True)
+    id = Column(String(100), primary_key=True)
     creator_id = Column(String(36), ForeignKey("creator_profiles.id", ondelete="CASCADE"), nullable=False)
     tool_id = Column(String(36), ForeignKey("tools.id", ondelete="CASCADE"), nullable=False)
     proficiency_level = Column(String(30), nullable=False, default="ADVANCED")  # COMPETENT, ADVANCED, MASTER
@@ -281,7 +281,7 @@ class Brief(Base):
     campaign_objective = Column(Text, nullable=False)
     target_audience = Column(Text, nullable=False)
     content_type = Column(String(50), nullable=False, index=True)  # VIDEO, ANIMATION, IMAGE, PRODUCT_VIZ
-    creative_style_mood = Column(String(100), nullable=False, index=True)
+    creative_style_mood = Column(String(255), nullable=False)
     aspect_ratio = Column(String(20), nullable=False, index=True)
     duration_seconds_min = Column(Integer, nullable=True)
     duration_seconds_max = Column(Integer, nullable=True)
@@ -311,7 +311,7 @@ class Brief(Base):
 class BriefSkill(Base):
     __tablename__ = "brief_skills"
 
-    id = Column(String(36), primary_key=True)
+    id = Column(String(100), primary_key=True)
     brief_id = Column(String(36), ForeignKey("briefs.id", ondelete="CASCADE"), nullable=False)
     skill_id = Column(String(36), ForeignKey("skills.id", ondelete="CASCADE"), nullable=False)
     is_required = Column(Boolean, nullable=False, default=True)
@@ -327,7 +327,7 @@ class BriefSkill(Base):
 class BriefTool(Base):
     __tablename__ = "brief_tools"
 
-    id = Column(String(36), primary_key=True)
+    id = Column(String(100), primary_key=True)
     brief_id = Column(String(36), ForeignKey("briefs.id", ondelete="CASCADE"), nullable=False)
     tool_id = Column(String(36), ForeignKey("tools.id", ondelete="CASCADE"), nullable=False)
     is_required = Column(Boolean, nullable=False, default=False)

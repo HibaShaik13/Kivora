@@ -17,6 +17,7 @@ import {
 } from '@phosphor-icons/react';
 import { creatorsApi } from '../api/creators';
 import { taxonomyApi } from '../api/taxonomy';
+import SafeImage from '../components/common/SafeImage';
 
 export default function CreatorDirectoryPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -556,16 +557,26 @@ export default function CreatorDirectoryPage() {
                               width: '48px',
                               height: '48px',
                               borderRadius: '14px',
-                              background: 'linear-gradient(135deg, #1A1715 0%, #3D3835 100%)',
-                              color: '#FAF8F5',
+                              background: 'linear-gradient(135deg, #101530 0%, #151C3F 100%)',
+                              border: '1px solid var(--accent-gold-border)',
+                              color: 'var(--accent-gold)',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
                               fontWeight: '700',
                               fontSize: '1.125rem',
+                              overflow: 'hidden',
                             }}
                           >
-                            {creator.display_name?.charAt(0) || 'C'}
+                            <SafeImage
+                              src={creator.avatar_url}
+                              alt={creator.display_name}
+                              fallbackInitials={creator.display_name?.charAt(0) || 'C'}
+                              fallbackBg="linear-gradient(135deg, #101530 0%, #151C3F 100%)"
+                              fallbackColor="var(--accent-gold)"
+                              style={{ width: '100%', height: '100%' }}
+                              objectFit="cover"
+                            />
                           </div>
                           <div>
                             <div style={{ fontWeight: '700', fontSize: '1rem', color: 'var(--text-primary)' }}>

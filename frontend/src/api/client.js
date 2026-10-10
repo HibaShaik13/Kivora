@@ -170,7 +170,16 @@ export async function apiRequest(endpoint, options = {}) {
     if (err instanceof ApiError) {
       throw err;
     }
-    throw new ApiError(err.message || 'Network connection failed', 0, null);
+    const isNetworkError =
+      err.name === 'TypeError' ||
+      (typeof err.message === 'string' &&
+        (err.message.toLowerCase().includes('failed to fetch') ||
+          err.message.toLowerCase().includes('network') ||
+          err.message.toLowerCase().includes('connection')));
+    const message = isNetworkError
+      ? `Unable to connect to Kivora API server at ${API_BASE_URL}. Please verify that the backend is running and accessible.`
+      : err.message || 'Network connection failed';
+    throw new ApiError(message, 0, null);
   }
 }
 

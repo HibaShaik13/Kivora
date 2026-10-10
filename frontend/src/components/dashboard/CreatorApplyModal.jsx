@@ -74,10 +74,11 @@ export default function CreatorApplyModal({ isOpen, onClose, brief, creatorProje
           maxHeight: '90vh',
           display: 'flex',
           flexDirection: 'column',
-          backgroundColor: '#FFFFFF',
+          backgroundColor: 'var(--bg-surface)',
           borderRadius: '16px',
           overflow: 'hidden',
           boxShadow: 'var(--shadow-xl)',
+          border: '1px solid var(--border-subtle)',
         }}
         onClick={(e) => e.stopPropagation()}
       >

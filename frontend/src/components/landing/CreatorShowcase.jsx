@@ -4,9 +4,11 @@ import {
   ShieldCheck,
   Star,
   ArrowRight,
-  Sparkle,
   ArrowsClockwise,
   WarningCircle,
+  VideoCamera,
+  Sparkle,
+  SlidersHorizontal,
 } from '@phosphor-icons/react';
 import { creatorsApi } from '../../api/creators';
 
@@ -66,32 +68,65 @@ export default function CreatorShowcase() {
     return true;
   });
 
+  const spotlightCreator = filteredCreators[0];
+  const gridCreators = filteredCreators.slice(1, 5);
+
+  const fallbackImages = [
+    '/assets/showcase_spatial.jpg',
+    '/assets/showcase_fluid.jpg',
+    '/assets/hero_cinematic.jpg',
+    '/assets/showcase_product_luxury.png',
+  ];
+
   return (
-    <section style={{ padding: '80px 0', borderBottom: '1px solid var(--border-subtle)' }}>
+    <section style={{ padding: '100px 0', borderBottom: '1px solid var(--border-subtle)', background: '#080A18' }}>
       <div className="container">
-        {/* Section Header */}
+        {/* Section Exhibition Header */}
         <div
           style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'flex-end',
-            marginBottom: '36px',
+            marginBottom: '44px',
             flexWrap: 'wrap',
-            gap: '20px',
+            gap: '24px',
           }}
         >
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-              <span className="badge badge-verified">
-                <Sparkle weight="fill" size={13} />
-                Verified Talent Pool
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '5px 12px',
+                  borderRadius: 'var(--radius-pill)',
+                  background: 'rgba(167, 139, 250, 0.1)',
+                  border: '1px solid rgba(167, 139, 250, 0.25)',
+                  fontSize: '0.75rem',
+                  fontFamily: 'var(--font-family-mono)',
+                  color: '#A78BFA',
+                  fontWeight: '600',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                <Sparkle weight="fill" size={12} />
+                CURATED EXHIBITION
               </span>
             </div>
-            <h2 style={{ fontSize: 'clamp(1.75rem, 2.5vw + 0.5rem, 2.375rem)', letterSpacing: '-0.03em' }}>
-              Top generative studios and directors.
+            <h2
+              className="font-serif"
+              style={{
+                fontSize: 'clamp(2rem, 3.5vw + 0.5rem, 3.25rem)',
+                fontWeight: '600',
+                letterSpacing: '-0.02em',
+                color: 'var(--text-primary)',
+              }}
+            >
+              Directors and studios shaping new realities.
             </h2>
-            <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', maxWidth: '54ch', marginTop: '6px' }}>
-              Every creator profile includes verifiable ComfyUI pipelines, LoRA checkpoints, and high-fidelity render history.
+            <p style={{ fontSize: '1.0625rem', color: 'var(--text-secondary)', maxWidth: '58ch', marginTop: '8px', lineHeight: '1.6' }}>
+              Verified ComfyUI pipelines, custom LoRA checkpoints, and inspectable production records.
             </p>
           </div>
 
@@ -102,19 +137,19 @@ export default function CreatorShowcase() {
         </div>
 
         {/* Category Filters */}
-        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '16px', marginBottom: '28px' }}>
+        <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '14px', marginBottom: '36px' }}>
           {categories.map((cat) => (
             <button
               key={cat.id}
               onClick={() => setActiveCategory(cat.id)}
               style={{
-                padding: '8px 16px',
+                padding: '9px 20px',
                 borderRadius: 'var(--radius-pill)',
                 fontSize: '0.8125rem',
                 fontWeight: '600',
-                border: activeCategory === cat.id ? '1px solid var(--text-primary)' : '1px solid var(--border-medium)',
-                background: activeCategory === cat.id ? 'var(--text-primary)' : 'var(--bg-surface)',
-                color: activeCategory === cat.id ? 'var(--text-on-dark)' : 'var(--text-secondary)',
+                border: activeCategory === cat.id ? '1px solid #A78BFA' : '1px solid var(--border-subtle)',
+                background: activeCategory === cat.id ? '#A78BFA' : 'rgba(16, 21, 48, 0.6)',
+                color: activeCategory === cat.id ? '#060813' : 'var(--text-secondary)',
                 transition: 'all var(--transition-fast)',
                 whiteSpace: 'nowrap',
                 cursor: 'pointer',
@@ -133,8 +168,8 @@ export default function CreatorShowcase() {
                 key={i}
                 className="card-editorial"
                 style={{
-                  height: '240px',
-                  background: 'var(--bg-surface-subtle)',
+                  height: '280px',
+                  background: 'var(--bg-surface)',
                   animation: 'pulse 1.5s infinite ease-in-out',
                 }}
               />
@@ -144,12 +179,12 @@ export default function CreatorShowcase() {
 
         {/* Error State with Retry */}
         {!loading && error && (
-          <div className="card-editorial" style={{ textAlign: 'center', padding: '40px 24px' }}>
-            <WarningCircle size={32} style={{ color: 'var(--accent-coral)', margin: '0 auto 12px' }} />
-            <p style={{ color: 'var(--text-primary)', fontWeight: '600', marginBottom: '6px' }}>
-              Catalog connection issue
+          <div className="card-editorial" style={{ textAlign: 'center', padding: '48px 24px' }}>
+            <WarningCircle size={36} style={{ color: 'var(--accent-coral)', margin: '0 auto 14px' }} />
+            <p style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '1.125rem', marginBottom: '8px' }}>
+              Exhibition Catalog Connection Issue
             </p>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '18px' }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '20px' }}>
               {error}
             </p>
             <button onClick={fetchCreators} className="btn btn-outline" style={{ fontSize: '0.875rem' }}>
@@ -161,52 +196,292 @@ export default function CreatorShowcase() {
 
         {/* Empty State */}
         {!loading && !error && filteredCreators.length === 0 && (
-          <div className="card-editorial" style={{ textAlign: 'center', padding: '48px 24px' }}>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: '16px' }}>No creators match this category yet.</p>
+          <div className="card-editorial" style={{ textAlign: 'center', padding: '56px 24px' }}>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '16px', fontSize: '1rem' }}>No creators match this category in the current showcase.</p>
             <button onClick={() => setActiveCategory('ALL')} className="btn btn-outline" style={{ fontSize: '0.875rem' }}>
               Reset Filters
             </button>
           </div>
         )}
 
-        {/* Creators Grid */}
+        {/* Exhibition Spotlight & Asymmetric Grid Layout */}
         {!loading && !error && filteredCreators.length > 0 && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' }}>
-            {filteredCreators.map((creator) => (
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(12, 1fr)',
+              gap: '28px',
+              alignItems: 'stretch',
+            }}
+          >
+            {/* Spotlight Feature Exhibition Card (7 Columns on Desktop) */}
+            {spotlightCreator && (
+              <Link
+                to={`/creators/${spotlightCreator.handle || spotlightCreator.id}`}
+                className="card-editorial"
+                style={{
+                  gridColumn: 'span 12',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  padding: '32px',
+                  textDecoration: 'none',
+                  color: 'inherit',
+                  background: 'linear-gradient(145deg, #101530 0%, #0a0e23 100%)',
+                  borderRadius: '24px',
+                  border: '1px solid rgba(167, 139, 250, 0.28)',
+                  boxShadow: '0 20px 48px -12px rgba(0, 0, 0, 0.7)',
+                }}
+              >
+                <div>
+                  {/* Spotlight Visual Asset */}
+                  <div
+                    style={{
+                      position: 'relative',
+                      width: '100%',
+                      aspectRatio: '16/9',
+                      borderRadius: '16px',
+                      overflow: 'hidden',
+                      marginBottom: '24px',
+                      background: '#060813',
+                    }}
+                  >
+                    <img
+                      src="/assets/showcase_fashion_couture.png"
+                      alt={spotlightCreator.display_name}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        objectPosition: 'center 20%',
+                        display: 'block',
+                      }}
+                    />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '14px',
+                        left: '14px',
+                        background: 'rgba(6, 8, 19, 0.88)',
+                        backdropFilter: 'blur(10px)',
+                        color: '#A78BFA',
+                        padding: '6px 12px',
+                        borderRadius: 'var(--radius-pill)',
+                        fontSize: '0.6875rem',
+                        fontFamily: 'var(--font-family-mono)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        border: '1px solid rgba(167, 139, 250, 0.35)',
+                      }}
+                    >
+                      <VideoCamera size={13} />
+                      <span>Featured Studio Exhibition</span>
+                    </div>
+
+                    <div
+                      style={{
+                        position: 'absolute',
+                        bottom: '14px',
+                        right: '14px',
+                        background: 'rgba(6, 8, 19, 0.88)',
+                        backdropFilter: 'blur(10px)',
+                        color: 'var(--accent-gold)',
+                        padding: '6px 12px',
+                        borderRadius: 'var(--radius-pill)',
+                        fontSize: '0.75rem',
+                        fontWeight: '700',
+                        border: '1px solid rgba(230, 198, 135, 0.3)',
+                      }}
+                    >
+                      ${spotlightCreator.min_budget?.toLocaleString() || '2,500'} min brief
+                    </div>
+                  </div>
+
+                  {/* Creator Info Row */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      <div
+                        style={{
+                          width: '48px',
+                          height: '48px',
+                          borderRadius: '14px',
+                          background: 'linear-gradient(135deg, rgba(167, 139, 250, 0.2) 0%, rgba(16, 21, 48, 1) 100%)',
+                          color: '#A78BFA',
+                          border: '1px solid rgba(167, 139, 250, 0.35)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: '700',
+                          fontSize: '1.125rem',
+                        }}
+                      >
+                        {spotlightCreator.display_name?.charAt(0) || 'C'}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: '700', fontSize: '1.25rem', color: 'var(--text-primary)' }}>
+                          {spotlightCreator.display_name}
+                        </div>
+                        <div style={{ fontSize: '0.8125rem', color: 'var(--text-tertiary)', fontFamily: 'var(--font-family-mono)' }}>
+                          @{spotlightCreator.handle}
+                        </div>
+                      </div>
+                    </div>
+
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '5px 12px',
+                        borderRadius: 'var(--radius-pill)',
+                        background: 'rgba(230, 198, 135, 0.1)',
+                        border: '1px solid rgba(230, 198, 135, 0.3)',
+                        color: 'var(--accent-gold)',
+                        fontSize: '0.75rem',
+                        fontWeight: '700',
+                      }}
+                    >
+                      <ShieldCheck weight="fill" size={14} />
+                      {spotlightCreator.verification_tier?.replace('_', ' ') || 'VERIFIED PRO'}
+                    </span>
+                  </div>
+
+                  <div style={{ fontWeight: '600', fontSize: '1rem', color: '#A78BFA', marginBottom: '10px' }}>
+                    {spotlightCreator.primary_specialization}
+                  </div>
+
+                  <p
+                    style={{
+                      fontSize: '0.9375rem',
+                      color: 'var(--text-secondary)',
+                      lineHeight: '1.65',
+                      marginBottom: '22px',
+                    }}
+                  >
+                    {spotlightCreator.bio}
+                  </p>
+
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '22px' }}>
+                    {spotlightCreator.tools?.map((t) => (
+                      <span
+                        key={t.tool_id || t.name}
+                        className="badge badge-neutral"
+                        style={{ fontSize: '0.75rem', padding: '5px 12px' }}
+                      >
+                        {t.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    paddingTop: '20px',
+                    borderTop: '1px solid var(--border-subtle)',
+                    fontSize: '0.9375rem',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600', color: 'var(--text-primary)' }}>
+                    <Star weight="fill" size={16} style={{ color: 'var(--accent-gold)' }} />
+                    <span>{spotlightCreator.average_rating ? Number(spotlightCreator.average_rating).toFixed(1) : '5.0'}</span>
+                    <span style={{ color: 'var(--text-tertiary)', fontWeight: '400', fontSize: '0.8125rem' }}>
+                      ({spotlightCreator.completed_projects_count || 0} production deliveries)
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#A78BFA', fontWeight: '700' }}>
+                    <span>View Exhibition Portfolio</span>
+                    <ArrowRight size={15} />
+                  </div>
+                </div>
+              </Link>
+            )}
+
+            {/* Supporting Exhibition Cards (Grid of 2 or 4) */}
+            {gridCreators.map((creator, idx) => (
               <Link
                 key={creator.id}
                 to={`/creators/${creator.handle || creator.id}`}
                 className="card-editorial"
                 style={{
+                  gridColumn: 'span 6',
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
                   textDecoration: 'none',
                   color: 'inherit',
+                  padding: '26px',
+                  borderRadius: '20px',
+                  background: 'var(--bg-surface)',
+                  border: '1px solid var(--border-subtle)',
                 }}
               >
                 <div>
-                  {/* Top Row: Avatar + Handle + Badge */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  {/* Thumbnail Banner */}
+                  <div
+                    style={{
+                      position: 'relative',
+                      width: '100%',
+                      height: '140px',
+                      borderRadius: '12px',
+                      overflow: 'hidden',
+                      marginBottom: '18px',
+                      background: '#060813',
+                    }}
+                  >
+                    <img
+                      src={fallbackImages[idx % fallbackImages.length]}
+                      alt={creator.display_name}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        objectPosition: 'center',
+                      }}
+                    />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '10px',
+                        right: '10px',
+                        background: 'rgba(6, 8, 19, 0.85)',
+                        backdropFilter: 'blur(6px)',
+                        color: 'var(--accent-gold)',
+                        padding: '3px 8px',
+                        borderRadius: 'var(--radius-pill)',
+                        fontSize: '0.6875rem',
+                        fontWeight: '700',
+                      }}
+                    >
+                      ${creator.min_budget?.toLocaleString()} min
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <div
                         style={{
-                          width: '46px',
-                          height: '46px',
-                          borderRadius: '12px',
-                          background: 'linear-gradient(135deg, #1A1715 0%, #3D3835 100%)',
-                          color: '#FAF8F5',
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '10px',
+                          background: 'rgba(167, 139, 250, 0.12)',
+                          color: '#A78BFA',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           fontWeight: '700',
-                          fontSize: '1rem',
+                          fontSize: '0.9375rem',
+                          border: '1px solid rgba(167, 139, 250, 0.25)',
                         }}
                       >
                         {creator.display_name?.charAt(0) || 'C'}
                       </div>
                       <div>
-                        <div style={{ fontWeight: '700', fontSize: '1rem', color: 'var(--text-primary)' }}>
+                        <div style={{ fontWeight: '700', fontSize: '1.0625rem', color: 'var(--text-primary)' }}>
                           {creator.display_name}
                         </div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', fontFamily: 'var(--font-family-mono)' }}>
@@ -215,30 +490,20 @@ export default function CreatorShowcase() {
                       </div>
                     </div>
 
-                    <span
-                      className={`badge ${
-                        creator.verification_tier === 'TOP_STUDIO'
-                          ? 'badge-verified'
-                          : creator.verification_tier === 'VERIFIED_PRO'
-                          ? 'badge-success'
-                          : 'badge-neutral'
-                      }`}
-                      style={{ fontSize: '0.625rem' }}
-                    >
-                      <ShieldCheck weight="fill" size={12} />
-                      {creator.verification_tier?.replace('_', ' ')}
+                    <span className="badge badge-neutral" style={{ fontSize: '0.6875rem', padding: '3px 8px' }}>
+                      {creator.verification_tier === 'TOP_STUDIO' ? 'TOP STUDIO' : 'PRO DIRECTOR'}
                     </span>
                   </div>
 
-                  {/* Specialization & Bio */}
-                  <div style={{ fontWeight: '600', fontSize: '0.875rem', color: 'var(--accent-lavender)', marginBottom: '6px' }}>
+                  <div style={{ fontWeight: '600', fontSize: '0.875rem', color: '#A78BFA', marginBottom: '8px' }}>
                     {creator.primary_specialization}
                   </div>
+
                   <p
                     style={{
-                      fontSize: '0.8125rem',
+                      fontSize: '0.875rem',
                       color: 'var(--text-secondary)',
-                      lineHeight: '1.5',
+                      lineHeight: '1.55',
                       marginBottom: '16px',
                       display: '-webkit-box',
                       WebkitLineClamp: 2,
@@ -248,43 +513,29 @@ export default function CreatorShowcase() {
                   >
                     {creator.bio}
                   </p>
-
-                  {/* Tool Chips */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '20px' }}>
-                    {creator.tools?.slice(0, 3).map((t) => (
-                      <span
-                        key={t.tool_id}
-                        className="badge badge-neutral"
-                        style={{ fontSize: '0.6875rem', padding: '3px 8px' }}
-                      >
-                        {t.name}
-                      </span>
-                    ))}
-                  </div>
                 </div>
 
-                {/* Footer Metrics */}
                 <div
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    paddingTop: '12px',
+                    paddingTop: '14px',
                     borderTop: '1px solid var(--border-subtle)',
                     fontSize: '0.8125rem',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontWeight: '600', color: 'var(--text-primary)' }}>
-                    <Star weight="fill" size={14} style={{ color: '#EAB308' }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontWeight: '600', color: 'var(--text-primary)' }}>
+                    <Star weight="fill" size={14} style={{ color: 'var(--accent-gold)' }} />
                     <span>{creator.average_rating ? Number(creator.average_rating).toFixed(1) : '5.0'}</span>
-                    <span style={{ color: 'var(--text-tertiary)', fontWeight: '400', fontSize: '0.75rem' }}>
-                      ({creator.completed_projects_count || 0} projects)
+                    <span style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem' }}>
+                      ({creator.completed_projects_count || 0})
                     </span>
                   </div>
 
-                  <div style={{ fontWeight: '700', color: 'var(--text-primary)' }}>
-                    ${creator.min_budget?.toLocaleString()}{' '}
-                    <span style={{ fontSize: '0.6875rem', color: 'var(--text-tertiary)', fontWeight: '400' }}>min</span>
+                  <div style={{ color: 'var(--text-primary)', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span>Profile</span>
+                    <ArrowRight size={13} />
                   </div>
                 </div>
               </Link>
@@ -295,3 +546,4 @@ export default function CreatorShowcase() {
     </section>
   );
 }
+

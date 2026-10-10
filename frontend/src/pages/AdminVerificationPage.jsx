@@ -51,7 +51,7 @@ export default function AdminVerificationPage() {
           className="card"
           style={{
             padding: '32px',
-            backgroundColor: '#FFFFFF',
+            backgroundColor: 'var(--bg-surface)',
             borderRadius: '16px',
             marginBottom: '32px',
             boxShadow: 'var(--shadow-sm)',
@@ -175,7 +175,7 @@ export default function AdminVerificationPage() {
             {error}
           </div>
         ) : requests.length === 0 ? (
-          <div className="card" style={{ padding: '60px', textAlign: 'center', backgroundColor: '#FFFFFF', borderRadius: '16px' }}>
+          <div className="card" style={{ padding: '60px', textAlign: 'center', backgroundColor: 'var(--bg-surface)', borderRadius: '16px' }}>
             <ShieldCheck size={48} style={{ color: 'var(--text-tertiary)', margin: '0 auto 16px' }} />
             <h3 style={{ margin: '0 0 8px 0', fontFamily: 'var(--font-family-display)' }}>
               No Claims Found
@@ -192,10 +192,10 @@ export default function AdminVerificationPage() {
                 className="card"
                 style={{
                   padding: '24px',
-                  backgroundColor: '#FFFFFF',
+                  backgroundColor: 'var(--bg-surface)',
                   borderRadius: '16px',
                   border: '1px solid var(--border-subtle)',
-                  boxShadow: 'var(--shadow-xs)',
+                  boxShadow: 'var(--shadow-sm)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',

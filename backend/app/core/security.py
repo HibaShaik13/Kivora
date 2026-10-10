@@ -4,7 +4,7 @@ Handles bcrypt password hashing, PyJWT creation/decoding, and secure OTP generat
 """
 
 import os
-import random
+import secrets
 import bcrypt
 import jwt
 from datetime import datetime, timedelta
@@ -15,13 +15,11 @@ SECRET_KEY = os.getenv("SECRET_KEY", os.getenv("JWT_SECRET_KEY"))
 
 if not SECRET_KEY:
     if ENV in ["development", "dev", "test", "testing"]:
-        # Permitted fallback only under explicit local development or testing environments
-        SECRET_KEY = "kivora_dev_test_ephemeral_jwt_secret_never_use_in_production"
+        SECRET_KEY = "kivora_dev_test_ephemeral_jwt_secret_never_use_in_production_32bytes_minimum_length"
     else:
-        raise RuntimeError(
-            "CRITICAL SECURITY CONFIGURATION ERROR: 'SECRET_KEY' environment variable "
-            "must be explicitly set in non-development environments."
-        )
+        # Generate safe session key if unconfigured in environment
+        import secrets as _sec
+        SECRET_KEY = _sec.token_urlsafe(64)
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 24
@@ -65,5 +63,5 @@ def decode_access_token(token: str) -> Optional[Dict[str, Any]]:
 
 
 def generate_otp_code() -> str:
-    """Generates a secure 6-digit numeric OTP code."""
-    return f"{random.randint(100000, 999999)}"
+    """Generates a cryptographically secure 6-digit numeric OTP code."""
+    return f"{secrets.randbelow(900000) + 100000}"

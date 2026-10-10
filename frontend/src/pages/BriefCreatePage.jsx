@@ -202,7 +202,7 @@ export default function BriefCreatePage() {
           className="card"
           style={{
             padding: '24px',
-            backgroundColor: '#FFFFFF',
+            backgroundColor: 'var(--bg-surface)',
             borderRadius: '16px',
             border: '1.5px solid var(--accent-lavender-border)',
             boxShadow: 'var(--shadow-sm)',
@@ -248,7 +248,7 @@ export default function BriefCreatePage() {
           className="card"
           style={{
             padding: '32px',
-            backgroundColor: '#FFFFFF',
+            backgroundColor: 'var(--bg-surface)',
             borderRadius: '16px',
             border: '1px solid var(--border-subtle)',
             boxShadow: 'var(--shadow-sm)',

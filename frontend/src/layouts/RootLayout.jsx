@@ -64,14 +64,15 @@ export default function RootLayout() {
                 width: '36px',
                 height: '36px',
                 borderRadius: '10px',
-                backgroundColor: 'var(--text-primary)',
+                backgroundColor: 'rgba(230, 198, 135, 0.12)',
+                border: '1px solid rgba(230, 198, 135, 0.28)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: 'var(--text-on-dark)',
+                color: 'var(--accent-gold)',
               }}
             >
-              <Sparkle weight="fill" size={20} style={{ color: 'var(--accent-coral)' }} />
+              <Sparkle weight="fill" size={20} style={{ color: 'var(--accent-gold)' }} />
             </div>
             <span
               style={{
@@ -107,7 +108,7 @@ export default function RootLayout() {
                     gap: '6px',
                     fontSize: '0.9375rem',
                     fontWeight: isActive ? '700' : '500',
-                    color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                    color: isActive ? 'var(--accent-gold)' : 'var(--text-secondary)',
                     transition: 'color var(--transition-fast)',
                   }}
                 >
@@ -157,7 +158,7 @@ export default function RootLayout() {
                 <Link to="/login" className="btn btn-ghost" style={{ padding: '8px 18px', fontSize: '0.875rem' }}>
                   Sign In
                 </Link>
-                <Link to="/register" className="btn btn-primary" style={{ padding: '8px 18px', fontSize: '0.875rem' }}>
+                <Link to="/register" className="btn btn-gold" style={{ padding: '8px 18px', fontSize: '0.875rem' }}>
                   Get Started
                 </Link>
               </div>

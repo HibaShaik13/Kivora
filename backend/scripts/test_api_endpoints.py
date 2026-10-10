@@ -19,10 +19,16 @@ def run_api_tests():
     print("  KIVORA FASTAPI ENDPOINT INTEGRATION AUDIT")
     print("=======================================================\n")
 
-    # 1. Health check
-    res = client.get("/api/health")
+    # 1. Health check & CORS verification
+    res = client.get("/api/health", headers={"Origin": "http://localhost:5174"})
     assert res.status_code == 200, f"Health check failed: {res.text}"
-    print("[PASS] GET /api/health -> 200 OK")
+    assert res.headers.get("access-control-allow-origin") == "http://localhost:5174", "CORS allow-origin for port 5174 failed"
+    print("[PASS] GET /api/health -> 200 OK (CORS verified for http://localhost:5174)")
+
+    res_5173 = client.get("/api/health", headers={"Origin": "http://localhost:5173"})
+    assert res_5173.status_code == 200
+    assert res_5173.headers.get("access-control-allow-origin") == "http://localhost:5173", "CORS allow-origin for port 5173 failed"
+    print("[PASS] GET /api/health -> 200 OK (CORS verified for http://localhost:5173)")
 
     # 2. Taxonomy endpoints
     res = client.get("/api/taxonomy/skills")

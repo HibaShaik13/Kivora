@@ -51,10 +51,11 @@ export default function RevisionRequestModal({ isOpen, onClose, engagement, onSu
         style={{
           width: '100%',
           maxWidth: '560px',
-          backgroundColor: '#FFFFFF',
+          backgroundColor: 'var(--bg-surface)',
           borderRadius: '16px',
           overflow: 'hidden',
           boxShadow: 'var(--shadow-xl)',
+          border: '1px solid var(--border-subtle)',
         }}
         onClick={(e) => e.stopPropagation()}
       >

@@ -136,7 +136,7 @@ export default function ProjectDeepDiveModal({ project, isOpen, onClose }) {
             height: '240px',
             borderRadius: 'var(--radius-lg)',
             overflow: 'hidden',
-            background: 'linear-gradient(135deg, #1A1715 0%, #2A2522 100%)',
+            background: 'linear-gradient(135deg, #0A0E23 0%, #101530 100%)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -144,7 +144,25 @@ export default function ProjectDeepDiveModal({ project, isOpen, onClose }) {
             border: '1px solid var(--border-subtle)',
           }}
         >
-          <div style={{ textAlign: 'center', color: '#FAF8F5', padding: '24px' }}>
+          {project.thumbnail_url && (
+            <img
+              src={project.thumbnail_url}
+              alt={project.title}
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = '/assets/showcase_spatial.jpg';
+              }}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                opacity: 0.35,
+              }}
+            />
+          )}
+          <div style={{ position: 'relative', zIndex: 2, textAlign: 'center', color: 'var(--text-primary)', padding: '24px' }}>
             <div
               style={{
                 display: 'inline-flex',
@@ -152,20 +170,22 @@ export default function ProjectDeepDiveModal({ project, isOpen, onClose }) {
                 gap: '8px',
                 padding: '6px 14px',
                 borderRadius: 'var(--radius-pill)',
-                background: 'rgba(255, 255, 255, 0.12)',
+                background: 'rgba(20, 25, 48, 0.85)',
+                border: '1px solid var(--border-subtle)',
                 backdropFilter: 'blur(8px)',
                 fontSize: '0.8125rem',
                 fontFamily: 'var(--font-family-mono)',
                 marginBottom: '12px',
+                color: 'var(--accent-gold)',
               }}
             >
               <VideoCamera size={16} />
               <span>Master Asset Stream • {project.resolution || '4K UHD'}</span>
             </div>
-            <div style={{ fontSize: '1.125rem', fontWeight: '700', marginBottom: '4px' }}>
+            <div style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '6px' }}>
               {project.title}
             </div>
-            <div style={{ fontSize: '0.75rem', color: 'rgba(250, 248, 245, 0.7)' }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
               Provenance Verified • {workflowSteps.length} Production Stages • {evidenceRecords.length} Audited Proof Items
             </div>
           </div>
@@ -277,8 +297,8 @@ export default function ProjectDeepDiveModal({ project, isOpen, onClose }) {
                       {step.parameters_snippet && (
                         <div
                           style={{
-                            background: '#1A1715',
-                            color: '#E6E1DC',
+                            background: '#060813',
+                            color: 'var(--text-primary)',
                             padding: '12px 16px',
                             borderRadius: 'var(--radius-md)',
                             fontFamily: 'var(--font-family-mono)',
@@ -286,6 +306,7 @@ export default function ProjectDeepDiveModal({ project, isOpen, onClose }) {
                             lineHeight: '1.5',
                             position: 'relative',
                             overflowX: 'auto',
+                            border: '1px solid var(--border-subtle)',
                           }}
                         >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', color: '#8C847E', fontSize: '0.6875rem' }}>

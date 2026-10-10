@@ -25,6 +25,7 @@ import { engagementsApi } from '../api/engagements';
 import ExplainableMatchDrawer from '../components/dashboard/ExplainableMatchDrawer';
 import RevisionRequestModal from '../components/dashboard/RevisionRequestModal';
 import EngagementReviewModal from '../components/dashboard/EngagementReviewModal';
+import SafeImage from '../components/common/SafeImage';
 
 export default function BrandDashboardPage() {
   const { user } = useAuth();
@@ -188,7 +189,7 @@ export default function BrandDashboardPage() {
             className="card"
             style={{
               padding: '32px',
-              backgroundColor: '#FFFFFF',
+              backgroundColor: 'var(--bg-surface)',
               borderRadius: '16px',
               marginBottom: '32px',
               border: '1.5px solid var(--accent-coral-border)',
@@ -223,7 +224,7 @@ export default function BrandDashboardPage() {
             className="card"
             style={{
               padding: '32px',
-              backgroundColor: '#FFFFFF',
+              backgroundColor: 'var(--bg-surface)',
               borderRadius: '16px',
               marginBottom: '32px',
               boxShadow: 'var(--shadow-sm)',
@@ -248,11 +249,15 @@ export default function BrandDashboardPage() {
                     overflow: 'hidden',
                   }}
                 >
-                  {profile.logo_url ? (
-                    <img src={profile.logo_url} alt={profile.company_name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                  ) : (
-                    profile.company_name?.charAt(0) || 'B'
-                  )}
+                  <SafeImage
+                    src={profile.logo_url}
+                    alt={profile.company_name}
+                    fallbackInitials={profile.company_name?.charAt(0) || 'B'}
+                    fallbackBg="var(--accent-coral-subtle)"
+                    fallbackColor="var(--accent-coral)"
+                    style={{ width: '100%', height: '100%' }}
+                    objectFit="contain"
+                  />
                 </div>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
@@ -410,7 +415,7 @@ export default function BrandDashboardPage() {
             </div>
 
             {filteredBriefs.length === 0 ? (
-              <div className="card" style={{ padding: '48px', textAlign: 'center', backgroundColor: '#FFF', borderRadius: '16px' }}>
+              <div className="card" style={{ padding: '48px', textAlign: 'center', backgroundColor: 'var(--bg-surface)', borderRadius: '16px' }}>
                 <FileText size={40} style={{ color: 'var(--text-tertiary)', margin: '0 auto 16px' }} />
                 <h3 style={{ margin: '0 0 8px 0', fontFamily: 'var(--font-family-display)' }}>
                   No Campaign Briefs in '{briefStatusFilter}' Status
@@ -430,10 +435,10 @@ export default function BrandDashboardPage() {
                     className="card"
                     style={{
                       padding: '24px',
-                      backgroundColor: '#FFFFFF',
+                      backgroundColor: 'var(--bg-surface)',
                       borderRadius: '16px',
                       border: '1px solid var(--border-subtle)',
-                      boxShadow: 'var(--shadow-xs)',
+                      boxShadow: 'var(--shadow-sm)',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '12px' }}>
@@ -569,7 +574,7 @@ export default function BrandDashboardPage() {
                 <p style={{ color: 'var(--text-secondary)' }}>Loading submitted applications...</p>
               </div>
             ) : applications.length === 0 ? (
-              <div className="card" style={{ padding: '48px', textAlign: 'center', backgroundColor: '#FFF', borderRadius: '16px' }}>
+              <div className="card" style={{ padding: '48px', textAlign: 'center', backgroundColor: 'var(--bg-surface)', borderRadius: '16px' }}>
                 <Users size={40} style={{ color: 'var(--text-tertiary)', margin: '0 auto 16px' }} />
                 <h3 style={{ margin: '0 0 8px 0', fontFamily: 'var(--font-family-display)' }}>
                   No Applications Received Yet
@@ -586,10 +591,10 @@ export default function BrandDashboardPage() {
                     className="card"
                     style={{
                       padding: '24px',
-                      backgroundColor: '#FFFFFF',
+                      backgroundColor: 'var(--bg-surface)',
                       borderRadius: '16px',
                       border: '1px solid var(--border-subtle)',
-                      boxShadow: 'var(--shadow-xs)',
+                      boxShadow: 'var(--shadow-sm)',
                     }}
                   >
                     {/* Applicant Info */}
@@ -601,15 +606,25 @@ export default function BrandDashboardPage() {
                             height: '48px',
                             borderRadius: '50%',
                             backgroundColor: 'var(--accent-lavender-subtle)',
-                            color: 'var(--accent-lavender)',
+                            border: '1px solid var(--accent-lavender)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             fontWeight: 700,
                             fontSize: '1.125rem',
+                            color: 'var(--accent-lavender)',
+                            overflow: 'hidden',
                           }}
                         >
-                          {app.creator_display_name?.charAt(0) || 'C'}
+                          <SafeImage
+                            src={app.creator_avatar_url || `/assets/avatars/${app.creator_handle?.replace(/^@/, '')}.jpg`}
+                            alt={app.creator_display_name}
+                            fallbackInitials={app.creator_display_name?.charAt(0) || 'C'}
+                            fallbackBg="var(--accent-lavender-subtle)"
+                            fallbackColor="var(--accent-lavender)"
+                            style={{ width: '100%', height: '100%' }}
+                            objectFit="cover"
+                          />
                         </div>
                         <div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -721,7 +736,7 @@ export default function BrandDashboardPage() {
             </div>
 
             {engagements.length === 0 ? (
-              <div className="card" style={{ padding: '48px', textAlign: 'center', backgroundColor: '#FFF', borderRadius: '16px' }}>
+              <div className="card" style={{ padding: '48px', textAlign: 'center', backgroundColor: 'var(--bg-surface)', borderRadius: '16px' }}>
                 <Sparkle size={40} style={{ color: 'var(--accent-lavender)', margin: '0 auto 16px' }} />
                 <h3 style={{ margin: '0 0 8px 0', fontFamily: 'var(--font-family-display)' }}>
                   No Active Productions
@@ -738,7 +753,7 @@ export default function BrandDashboardPage() {
                     className="card"
                     style={{
                       padding: '24px',
-                      backgroundColor: '#FFFFFF',
+                      backgroundColor: 'var(--bg-surface)',
                       borderRadius: '16px',
                       border: '1px solid var(--border-subtle)',
                       boxShadow: 'var(--shadow-sm)',
@@ -783,7 +798,7 @@ export default function BrandDashboardPage() {
                                 padding: '12px 16px',
                                 borderRadius: '8px',
                                 border: '1px solid var(--border-subtle)',
-                                backgroundColor: '#FAFAF8',
+                                backgroundColor: 'var(--bg-surface-subtle)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'space-between',
@@ -791,8 +806,21 @@ export default function BrandDashboardPage() {
                               }}
                             >
                               <div>
-                                <span style={{ fontWeight: 700, marginRight: '8px' }}>v{d.version}: {d.title}</span>
-                                <span className={`badge badge-${d.status === 'APPROVED' ? 'verified' : d.status === 'REVISION_REQUESTED' ? 'coral' : 'neutral'}`} style={{ fontSize: '0.625rem' }}>
+                                <span style={{ fontWeight: 700, marginRight: '8px', color: 'var(--text-primary)' }}>
+                                  v{d.version}: {d.title}
+                                </span>
+                                <span
+                                  className={`badge badge-${
+                                    d.status === 'APPROVED'
+                                      ? 'verified'
+                                      : d.status === 'REVISION_REQUESTED'
+                                      ? 'coral'
+                                      : d.status === 'SUBMITTED'
+                                      ? 'submitted'
+                                      : 'neutral'
+                                  }`}
+                                  style={{ fontSize: '0.625rem' }}
+                                >
                                   {d.status}
                                 </span>
                                 {d.notes && <div style={{ color: 'var(--text-secondary)', marginTop: '4px' }}>Notes: {d.notes}</div>}
@@ -802,7 +830,7 @@ export default function BrandDashboardPage() {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="btn btn-outline"
-                                style={{ fontSize: '0.75rem', padding: '4px 10px' }}
+                                style={{ fontSize: '0.75rem', padding: '6px 12px', color: 'var(--text-primary)' }}
                               >
                                 Open Asset Package &rarr;
                               </a>

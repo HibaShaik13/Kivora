@@ -239,8 +239,20 @@ def get_my_creator_profile(
 
 @router.get("/{slug_or_id}", response_model=CreatorProfileDetailRead)
 def get_creator_detail(slug_or_id: str, db: Session = Depends(get_db)):
+    clean = slug_or_id.lower().strip().lstrip('@')
+    clean_underscore = clean.replace("-", "_")
+    clean_dash = clean.replace("_", "-")
+
     creator = db.query(CreatorProfile).filter(
-        or_(CreatorProfile.id == slug_or_id, CreatorProfile.handle == slug_or_id)
+        or_(
+            CreatorProfile.id == slug_or_id,
+            CreatorProfile.id == clean,
+            CreatorProfile.handle == slug_or_id,
+            CreatorProfile.handle == clean,
+            CreatorProfile.handle == clean_underscore,
+            CreatorProfile.handle == clean_dash,
+            CreatorProfile.handle.ilike(f"%{clean}%")
+        )
     ).first()
 
     if not creator:

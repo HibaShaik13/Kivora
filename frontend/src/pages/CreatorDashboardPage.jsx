@@ -27,6 +27,7 @@ import CreatorAddProjectModal from '../components/dashboard/CreatorAddProjectMod
 import CreatorApplyModal from '../components/dashboard/CreatorApplyModal';
 import DeliverableSubmissionModal from '../components/dashboard/DeliverableSubmissionModal';
 import ProjectDeepDiveModal from '../components/creator/ProjectDeepDiveModal';
+import SafeImage from '../components/common/SafeImage';
 
 export default function CreatorDashboardPage() {
   const { user, refreshSession } = useAuth();
@@ -141,7 +142,7 @@ export default function CreatorDashboardPage() {
             className="card"
             style={{
               padding: '32px',
-              backgroundColor: '#FFFFFF',
+              backgroundColor: 'var(--bg-surface)',
               borderRadius: '16px',
               marginBottom: '32px',
               border: '1.5px solid var(--accent-coral-border)',
@@ -176,7 +177,7 @@ export default function CreatorDashboardPage() {
             className="card"
             style={{
               padding: '32px',
-              backgroundColor: '#FFFFFF',
+              backgroundColor: 'var(--bg-surface)',
               borderRadius: '16px',
               marginBottom: '32px',
               boxShadow: 'var(--shadow-sm)',
@@ -201,11 +202,15 @@ export default function CreatorDashboardPage() {
                     overflow: 'hidden',
                   }}
                 >
-                  {profile.avatar_url ? (
-                    <img src={profile.avatar_url} alt={profile.display_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    profile.display_name?.charAt(0) || 'C'
-                  )}
+                  <SafeImage
+                    src={profile.avatar_url}
+                    alt={profile.display_name}
+                    fallbackInitials={profile.display_name?.charAt(0) || 'C'}
+                    fallbackBg="var(--accent-lavender-subtle)"
+                    fallbackColor="var(--accent-lavender)"
+                    style={{ width: '100%', height: '100%' }}
+                    objectFit="cover"
+                  />
                 </div>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
@@ -391,7 +396,7 @@ export default function CreatorDashboardPage() {
                 style={{
                   padding: '48px',
                   textAlign: 'center',
-                  backgroundColor: '#FFFFFF',
+                  backgroundColor: 'var(--bg-surface)',
                   borderRadius: '16px',
                 }}
               >
@@ -414,7 +419,7 @@ export default function CreatorDashboardPage() {
                     key={project.id}
                     className="card"
                     style={{
-                      backgroundColor: '#FFFFFF',
+                      backgroundColor: 'var(--bg-surface)',
                       borderRadius: '16px',
                       overflow: 'hidden',
                       boxShadow: 'var(--shadow-sm)',
@@ -428,23 +433,19 @@ export default function CreatorDashboardPage() {
                       style={{
                         position: 'relative',
                         height: '180px',
-                        backgroundColor: '#000',
+                        backgroundColor: '#060813',
                         overflow: 'hidden',
                         cursor: 'pointer',
                       }}
                       onClick={() => setSelectedDeepDiveProject(project)}
                     >
-                      {project.thumbnail_url ? (
-                        <img
-                          src={project.thumbnail_url}
-                          alt={project.title}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        />
-                      ) : (
-                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF' }}>
-                          <Sparkle size={32} />
-                        </div>
-                      )}
+                      <SafeImage
+                        src={project.thumbnail_url}
+                        alt={project.title}
+                        fallbackSrc="/assets/showcase_spatial.jpg"
+                        style={{ width: '100%', height: '100%' }}
+                        objectFit="cover"
+                      />
                       <div
                         style={{
                           position: 'absolute',
@@ -455,10 +456,10 @@ export default function CreatorDashboardPage() {
                         }}
                       >
                         <span className="badge badge-coral" style={{ fontSize: '0.6875rem' }}>
-                          {project.content_type}
+                          {project.content_type || 'VIDEO'}
                         </span>
                         <span className="badge badge-neutral" style={{ fontSize: '0.6875rem' }}>
-                          {project.aspect_ratio}
+                          {project.aspect_ratio || '16:9'}
                         </span>
                       </div>
                     </div>
@@ -551,7 +552,7 @@ export default function CreatorDashboardPage() {
                 style={{
                   padding: '48px',
                   textAlign: 'center',
-                  backgroundColor: '#FFFFFF',
+                  backgroundColor: 'var(--bg-surface)',
                   borderRadius: '16px',
                 }}
               >
@@ -574,10 +575,10 @@ export default function CreatorDashboardPage() {
                     className="card"
                     style={{
                       padding: '20px 24px',
-                      backgroundColor: '#FFFFFF',
+                      backgroundColor: 'var(--bg-surface)',
                       borderRadius: '16px',
                       border: '1px solid var(--border-subtle)',
-                      boxShadow: 'var(--shadow-xs)',
+                      boxShadow: 'var(--shadow-sm)',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '12px' }}>
@@ -659,7 +660,7 @@ export default function CreatorDashboardPage() {
                 style={{
                   padding: '48px',
                   textAlign: 'center',
-                  backgroundColor: '#FFFFFF',
+                  backgroundColor: 'var(--bg-surface)',
                   borderRadius: '16px',
                 }}
               >
@@ -679,7 +680,7 @@ export default function CreatorDashboardPage() {
                     className="card"
                     style={{
                       padding: '24px',
-                      backgroundColor: '#FFFFFF',
+                      backgroundColor: 'var(--bg-surface)',
                       borderRadius: '16px',
                       border: '1px solid var(--border-subtle)',
                       boxShadow: 'var(--shadow-sm)',
@@ -756,10 +757,10 @@ export default function CreatorDashboardPage() {
                             <div
                               key={d.id}
                               style={{
-                                padding: '10px 14px',
+                                padding: '12px 16px',
                                 borderRadius: '8px',
                                 border: '1px solid var(--border-subtle)',
-                                backgroundColor: '#FAFAF8',
+                                backgroundColor: 'var(--bg-surface-subtle)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'space-between',
@@ -767,8 +768,21 @@ export default function CreatorDashboardPage() {
                               }}
                             >
                               <div>
-                                <span style={{ fontWeight: 700, marginRight: '8px' }}>v{d.version}: {d.title}</span>
-                                <span className={`badge badge-${d.status === 'APPROVED' ? 'verified' : d.status === 'REVISION_REQUESTED' ? 'coral' : 'neutral'}`} style={{ fontSize: '0.625rem' }}>
+                                <span style={{ fontWeight: 700, marginRight: '8px', color: 'var(--text-primary)' }}>
+                                  v{d.version}: {d.title}
+                                </span>
+                                <span
+                                  className={`badge badge-${
+                                    d.status === 'APPROVED'
+                                      ? 'verified'
+                                      : d.status === 'REVISION_REQUESTED'
+                                      ? 'coral'
+                                      : d.status === 'SUBMITTED'
+                                      ? 'submitted'
+                                      : 'neutral'
+                                  }`}
+                                  style={{ fontSize: '0.625rem' }}
+                                >
                                   {d.status}
                                 </span>
                                 {d.feedback && (
@@ -782,7 +796,7 @@ export default function CreatorDashboardPage() {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="btn btn-outline"
-                                style={{ fontSize: '0.75rem', padding: '4px 8px' }}
+                                style={{ fontSize: '0.75rem', padding: '6px 12px', color: 'var(--text-primary)' }}
                               >
                                 View Asset &rarr;
                               </a>
@@ -837,7 +851,7 @@ export default function CreatorDashboardPage() {
                 style={{
                   padding: '48px',
                   textAlign: 'center',
-                  backgroundColor: '#FFFFFF',
+                  backgroundColor: 'var(--bg-surface)',
                   borderRadius: '16px',
                 }}
               >
@@ -857,7 +871,7 @@ export default function CreatorDashboardPage() {
                     className="card"
                     style={{
                       padding: '24px',
-                      backgroundColor: '#FFFFFF',
+                      backgroundColor: 'var(--bg-surface)',
                       borderRadius: '16px',
                       border: '1px solid var(--border-subtle)',
                       boxShadow: 'var(--shadow-sm)',
@@ -941,7 +955,7 @@ export default function CreatorDashboardPage() {
                 style={{
                   padding: '48px',
                   textAlign: 'center',
-                  backgroundColor: '#FFFFFF',
+                  backgroundColor: 'var(--bg-surface)',
                   borderRadius: '16px',
                 }}
               >
@@ -964,10 +978,10 @@ export default function CreatorDashboardPage() {
                     className="card"
                     style={{
                       padding: '20px 24px',
-                      backgroundColor: '#FFFFFF',
+                      backgroundColor: 'var(--bg-surface)',
                       borderRadius: '16px',
                       border: '1px solid var(--border-subtle)',
-                      boxShadow: 'var(--shadow-xs)',
+                      boxShadow: 'var(--shadow-sm)',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '10px' }}>

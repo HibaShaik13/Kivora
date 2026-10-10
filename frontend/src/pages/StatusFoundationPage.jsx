@@ -45,9 +45,9 @@ export default function StatusFoundationPage() {
     { path: '/verify-otp', label: 'OTP Email Verification', status: 'Configured' },
     { path: '/onboarding', label: 'First-time Profile Onboarding', status: 'Configured' },
     { path: '/creators', label: 'Creator Discovery Marketplace', status: 'Configured' },
-    { path: '/creators/elena-rostova', label: 'Creator Profile Deep-Dive', status: 'Configured' },
+    { path: '/creators/elena_creative', label: 'Creator Profile Deep-Dive', status: 'Configured' },
     { path: '/briefs', label: 'Campaign Briefs Directory', status: 'Configured' },
-    { path: '/briefs/luma-skincare-fluid-macro-reveal', label: 'Brief Detail & Creator Pitch', status: 'Configured' },
+    { path: '/briefs/lumina-botanicals-serum-reveal', label: 'Brief Detail & Creator Pitch', status: 'Configured' },
     { path: '/briefs/create', label: 'AI Brief Builder & Authoring', status: 'Configured' },
     { path: '/creator/dashboard', label: 'Creator Dashboard & Milestones', status: 'Configured' },
     { path: '/brand/dashboard', label: 'Brand Dashboard & Applications', status: 'Configured' },
@@ -120,17 +120,18 @@ export default function StatusFoundationPage() {
                 <Palette size={24} style={{ color: 'var(--accent-coral)' }} />
                 <h3 style={{ fontSize: '1.125rem' }}>Design System Tokens</h3>
               </div>
-              <span className="badge badge-neutral">Warm Editorial</span>
+              <span className="badge badge-gold">Cinematic Universe</span>
             </div>
             <p style={{ fontSize: '0.875rem', marginBottom: '16px' }}>
-              Warm Ivory (<code>#FAF8F5</code>), Charcoal (<code>#1A1715</code>), Lavender (<code>#7C6EE6</code>), and Coral (<code>#FF6B57</code>).
+              Midnight Navy (<code>#060813</code>), Exhibition Surface (<code>#101530</code>), Starlight Ivory (<code>#F7F5F0</code>), and Champagne Gold (<code>#E6C687</code>).
             </p>
             {/* Color Swatches */}
             <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-              <div style={{ flex: 1, height: '32px', borderRadius: 'var(--radius-sm)', background: '#FAF8F5', border: '1px solid var(--border-subtle)' }} title="Warm Ivory #FAF8F5" />
-              <div style={{ flex: 1, height: '32px', borderRadius: 'var(--radius-sm)', background: '#1A1715' }} title="Charcoal #1A1715" />
-              <div style={{ flex: 1, height: '32px', borderRadius: 'var(--radius-sm)', background: '#7C6EE6' }} title="Lavender #7C6EE6" />
-              <div style={{ flex: 1, height: '32px', borderRadius: 'var(--radius-sm)', background: '#FF6B57' }} title="Coral #FF6B57" />
+              <div style={{ flex: 1, height: '32px', borderRadius: 'var(--radius-sm)', background: '#060813', border: '1px solid var(--border-subtle)' }} title="Midnight Canvas #060813" />
+              <div style={{ flex: 1, height: '32px', borderRadius: 'var(--radius-sm)', background: '#101530', border: '1px solid var(--border-subtle)' }} title="Surface Card #101530" />
+              <div style={{ flex: 1, height: '32px', borderRadius: 'var(--radius-sm)', background: '#F7F5F0' }} title="Starlight Ivory #F7F5F0" />
+              <div style={{ flex: 1, height: '32px', borderRadius: 'var(--radius-sm)', background: '#E6C687' }} title="Champagne Gold #E6C687" />
+              <div style={{ flex: 1, height: '32px', borderRadius: 'var(--radius-sm)', background: '#8E7CFF' }} title="Atmospheric Violet #8E7CFF" />
             </div>
           </div>
 

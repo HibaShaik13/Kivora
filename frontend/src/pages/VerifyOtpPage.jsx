@@ -22,7 +22,11 @@ export default function VerifyOtpPage() {
   const { showToast } = useToast();
 
   const queryEmail = searchParams.get('email') || '';
-  const initialDevOtp = location.state?.devOtp || null;
+  const isDevOrStaging = !import.meta.env.PROD;
+  const initialDevOtp = isDevOrStaging ? (location.state?.devOtp || searchParams.get('dev_otp') || null) : null;
+  const initialDeliveryStatus = location.state?.deliveryStatus || (initialDevOtp ? 'SIMULATED' : 'DELIVERED');
+  const [deliveryStatus, setDeliveryStatus] = useState(initialDeliveryStatus);
+  const [deliveryNotice, setDeliveryNotice] = useState(location.state?.deliveryNotice || null);
 
   const [email, setEmail] = useState(queryEmail);
   const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
@@ -135,12 +139,19 @@ export default function VerifyOtpPage() {
 
     try {
       const response = await authApi.resendOtp({ email: email.trim().toLowerCase() });
-      showToast('New verification code sent to your email.', 'success');
+      const toastMsg = response?.message || 'New verification code generated.';
+      showToast(toastMsg, response?.delivery_status === 'FAILED' ? 'warning' : 'success');
       setOtpDigits(['', '', '', '', '', '']);
       if (inputRefs.current[0]) inputRefs.current[0].focus();
 
-      if (response?.dev_otp) {
+      if (response?.dev_otp && isDevOrStaging) {
         setDevOtpHint(response.dev_otp);
+      }
+      if (response?.delivery_status) {
+        setDeliveryStatus(response.delivery_status);
+      }
+      if (response?.delivery_notice) {
+        setDeliveryNotice(response.delivery_notice);
       }
     } catch (err) {
       console.error('Resend OTP error:', err);
@@ -188,13 +199,52 @@ export default function VerifyOtpPage() {
             Verify your email
           </h1>
 
-          <p style={{ fontSize: '0.9375rem', color: 'var(--text-secondary)', marginBottom: '28px', lineHeight: '1.5' }}>
-            We’ve sent a 6-digit verification code to{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>{email || 'your email'}</strong>. Enter the code below to activate your account.
+          <p style={{ fontSize: '0.9375rem', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: '1.5' }}>
+            {deliveryStatus === 'DELIVERED' ? (
+              <>
+                We’ve sent a 6-digit verification code to{' '}
+                <strong style={{ color: 'var(--text-primary)' }}>{email || 'your email'}</strong>. Please check your inbox.
+              </>
+            ) : deliveryStatus === 'FAILED' ? (
+              <>
+                Verification email could not be delivered to{' '}
+                <strong style={{ color: 'var(--text-primary)' }}>{email || 'your email'}</strong>. You can enter a valid code below or request a resend.
+              </>
+            ) : (
+              <>
+                A 6-digit verification code was generated for{' '}
+                <strong style={{ color: 'var(--text-primary)' }}>{email || 'your email'}</strong>. Enter the code below to activate your account.
+              </>
+            )}
           </p>
 
+          {/* Development Mode Notice Banner */}
+          {deliveryStatus === 'SIMULATED' && deliveryNotice && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '8px',
+                padding: '10px 14px',
+                borderRadius: 'var(--radius-md)',
+                background: 'rgba(245, 158, 11, 0.1)',
+                color: '#D97706',
+                border: '1px solid rgba(245, 158, 11, 0.25)',
+                fontSize: '0.8125rem',
+                marginBottom: '20px',
+                textAlign: 'left',
+                lineHeight: '1.4',
+              }}
+            >
+              <WarningCircle size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
+              <div>
+                <strong>Notice:</strong> {deliveryNotice}
+              </div>
+            </div>
+          )}
+
           {/* Development Mode OTP Helper Hint */}
-          {devOtpHint && (
+          {isDevOrStaging && devOtpHint && (
             <div
               style={{
                 display: 'inline-flex',

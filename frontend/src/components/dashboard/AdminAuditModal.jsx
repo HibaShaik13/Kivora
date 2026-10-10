@@ -84,10 +84,11 @@ export default function AdminAuditModal({ isOpen, onClose, request, onSuccess })
           maxHeight: '92vh',
           display: 'flex',
           flexDirection: 'column',
-          backgroundColor: '#FFFFFF',
+          backgroundColor: 'var(--bg-surface)',
           borderRadius: '16px',
           overflow: 'hidden',
           boxShadow: 'var(--shadow-xl)',
+          border: '1px solid var(--border-subtle)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -201,7 +202,7 @@ export default function AdminAuditModal({ isOpen, onClose, request, onSuccess })
           <div
             style={{
               padding: '16px',
-              backgroundColor: '#FAFAF8',
+              backgroundColor: 'var(--bg-surface-subtle)',
               borderRadius: '12px',
               border: '1px solid var(--border-subtle)',
               marginBottom: '24px',

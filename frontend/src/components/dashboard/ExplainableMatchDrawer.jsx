@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { X, Sparkle, ShieldCheck, CheckCircle, WarningCircle, User, ArrowRight } from '@phosphor-icons/react';
 import { matchingApi } from '../../api/matching';
 import { Link } from 'react-router-dom';
+import SafeImage from '../common/SafeImage';
 
 export default function ExplainableMatchDrawer({ isOpen, onClose, brief }) {
   const [loading, setLoading] = useState(false);
@@ -48,7 +49,8 @@ export default function ExplainableMatchDrawer({ isOpen, onClose, brief }) {
           width: '100%',
           maxWidth: '560px',
           height: '100%',
-          backgroundColor: '#FFFFFF',
+          backgroundColor: 'var(--bg-surface)',
+          borderLeft: '1px solid var(--border-subtle)',
           boxShadow: 'var(--shadow-xl)',
           display: 'flex',
           flexDirection: 'column',
@@ -140,8 +142,8 @@ export default function ExplainableMatchDrawer({ isOpen, onClose, brief }) {
                         padding: '16px',
                         borderRadius: '12px',
                         border: '1px solid var(--border-subtle)',
-                        backgroundColor: '#FFFFFF',
-                        boxShadow: 'var(--shadow-xs)',
+                        backgroundColor: 'var(--bg-surface-subtle)',
+                        boxShadow: 'var(--shadow-sm)',
                       }}
                     >
                       {/* Creator Header */}
@@ -153,14 +155,24 @@ export default function ExplainableMatchDrawer({ isOpen, onClose, brief }) {
                               height: '40px',
                               borderRadius: '50%',
                               backgroundColor: 'var(--accent-lavender-subtle)',
+                              border: '1px solid var(--accent-lavender)',
                               color: 'var(--accent-lavender)',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
                               fontWeight: 700,
+                              overflow: 'hidden',
                             }}
                           >
-                            {m.display_name?.charAt(0) || 'C'}
+                            <SafeImage
+                              src={m.avatar_url || `/assets/avatars/${m.handle?.replace(/^@/, '')}.jpg`}
+                              alt={m.display_name}
+                              fallbackInitials={m.display_name?.charAt(0) || 'C'}
+                              fallbackBg="var(--accent-lavender-subtle)"
+                              fallbackColor="var(--accent-lavender)"
+                              style={{ width: '100%', height: '100%' }}
+                              objectFit="cover"
+                            />
                           </div>
                           <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>

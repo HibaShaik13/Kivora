@@ -19,6 +19,7 @@ import {
 } from '@phosphor-icons/react';
 import { creatorsApi } from '../api/creators';
 import ProjectDeepDiveModal from '../components/creator/ProjectDeepDiveModal';
+import SafeImage from '../components/common/SafeImage';
 
 export default function CreatorProfilePage() {
   const { slug } = useParams();
@@ -136,9 +137,10 @@ export default function CreatorProfilePage() {
           style={{
             padding: '36px',
             marginBottom: '40px',
-            background: 'linear-gradient(180deg, #FFFFFF 0%, #FAF8F5 100%)',
-            border: '1px solid var(--border-medium)',
+            background: 'linear-gradient(145deg, #10152B 0%, #0A0E23 100%)',
+            border: '1px solid rgba(167, 139, 250, 0.25)',
             borderRadius: 'var(--radius-xl)',
+            boxShadow: 'var(--shadow-lg)',
           }}
         >
           <div
@@ -157,22 +159,32 @@ export default function CreatorProfilePage() {
                   width: '84px',
                   height: '84px',
                   borderRadius: '20px',
-                  background: 'linear-gradient(135deg, #1A1715 0%, #3D3835 100%)',
-                  color: '#FAF8F5',
+                  background: 'linear-gradient(135deg, rgba(167, 139, 250, 0.25) 0%, rgba(16, 21, 48, 1) 100%)',
+                  color: '#A78BFA',
+                  border: '1px solid rgba(167, 139, 250, 0.35)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontWeight: '800',
                   fontSize: '2rem',
                   boxShadow: 'var(--shadow-md)',
+                  overflow: 'hidden',
                 }}
               >
-                {creator.display_name?.charAt(0) || 'C'}
+                <SafeImage
+                  src={creator.avatar_url}
+                  alt={creator.display_name}
+                  fallbackInitials={creator.display_name?.charAt(0) || 'C'}
+                  fallbackBg="linear-gradient(135deg, rgba(167, 139, 250, 0.25) 0%, rgba(16, 21, 48, 1) 100%)"
+                  fallbackColor="#A78BFA"
+                  style={{ width: '100%', height: '100%' }}
+                  objectFit="cover"
+                />
               </div>
 
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '6px' }}>
-                  <h1 style={{ fontSize: 'clamp(1.75rem, 2.5vw + 0.5rem, 2.25rem)', letterSpacing: '-0.03em' }}>
+                  <h1 className="font-serif" style={{ fontSize: 'clamp(1.75rem, 2.5vw + 0.5rem, 2.5rem)', color: 'var(--text-primary)', letterSpacing: '-0.02em', margin: 0 }}>
                     {creator.display_name}
                   </h1>
                   <span
@@ -180,7 +192,7 @@ export default function CreatorProfilePage() {
                       creator.verification_tier === 'TOP_STUDIO'
                         ? 'badge-verified'
                         : creator.verification_tier === 'VERIFIED_PRO'
-                        ? 'badge-success'
+                        ? 'badge-gold'
                         : 'badge-neutral'
                     }`}
                   >
@@ -190,16 +202,16 @@ export default function CreatorProfilePage() {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap', color: 'var(--text-tertiary)', fontSize: '0.875rem', marginBottom: '14px' }}>
-                  <span style={{ fontFamily: 'var(--font-family-mono)', color: 'var(--text-secondary)', fontWeight: '600' }}>
+                  <span style={{ fontFamily: 'var(--font-family-mono)', color: 'var(--accent-gold)', fontWeight: '600' }}>
                     @{creator.handle}
                   </span>
                   <span>•</span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-secondary)' }}>
                     <MapPin size={15} />
                     {creator.location}
                   </span>
                   <span>•</span>
-                  <span>{creator.years_experience} yrs generative production</span>
+                  <span style={{ color: 'var(--text-secondary)' }}>{creator.years_experience} yrs generative production</span>
                   {creator.website_url && (
                     <>
                       <span>•</span>
@@ -207,7 +219,7 @@ export default function CreatorProfilePage() {
                         href={creator.website_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--accent-lavender)' }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#A78BFA' }}
                       >
                         <Globe size={15} />
                         <span>Website</span>
@@ -216,7 +228,7 @@ export default function CreatorProfilePage() {
                   )}
                 </div>
 
-                <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', lineHeight: '1.6', maxWidth: '64ch' }}>
+                <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', lineHeight: '1.65', maxWidth: '64ch' }}>
                   {creator.bio}
                 </p>
               </div>
@@ -229,33 +241,33 @@ export default function CreatorProfilePage() {
                 flexDirection: 'column',
                 alignItems: 'flex-start',
                 gap: '16px',
-                background: 'var(--bg-surface)',
+                background: 'rgba(6, 8, 19, 0.8)',
                 border: '1px solid var(--border-subtle)',
                 borderRadius: 'var(--radius-lg)',
-                padding: '20px',
-                minWidth: '240px',
+                padding: '22px',
+                minWidth: '260px',
               }}
             >
               <div>
-                <div style={{ fontSize: '0.6875rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', fontFamily: 'var(--font-family-mono)' }}>
+                <div style={{ fontSize: '0.6875rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', fontFamily: 'var(--font-family-mono)', letterSpacing: '0.04em' }}>
                   Starting Minimum Fee
                 </div>
-                <div style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--text-primary)' }}>
+                <div style={{ fontSize: '1.625rem', fontWeight: '800', color: 'var(--text-primary)' }}>
                   ${creator.min_budget?.toLocaleString()}{' '}
-                  <span style={{ fontSize: '0.75rem', fontWeight: '500', color: 'var(--text-tertiary)' }}>USD / brief</span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--accent-gold)' }}>USD / brief</span>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '0.8125rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontSize: '0.8125rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontWeight: '700', color: 'var(--text-primary)' }}>
-                  <Star weight="fill" size={15} style={{ color: '#EAB308' }} />
+                  <Star weight="fill" size={15} style={{ color: 'var(--accent-gold)' }} />
                   <span>{creator.average_rating ? Number(creator.average_rating).toFixed(1) : '5.0'}</span>
                 </div>
                 <span style={{ color: 'var(--text-tertiary)' }}>•</span>
                 <span style={{ color: 'var(--text-secondary)' }}>{creator.completed_projects_count || 0} completed projects</span>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span
                   style={{
                     width: '8px',
@@ -271,8 +283,8 @@ export default function CreatorProfilePage() {
 
               <Link
                 to="/briefs/create"
-                className="btn btn-primary"
-                style={{ width: '100%', fontSize: '0.875rem', padding: '10px 16px' }}
+                className="btn btn-gold"
+                style={{ width: '100%', fontSize: '0.875rem', padding: '11px 16px', fontWeight: '700' }}
               >
                 <span>Invite to Campaign Brief</span>
               </Link>
@@ -433,21 +445,36 @@ export default function CreatorProfilePage() {
                         height: '200px',
                         borderRadius: 'var(--radius-md)',
                         overflow: 'hidden',
-                        background: 'linear-gradient(135deg, #1A1715 0%, #302B27 100%)',
+                        background: 'linear-gradient(135deg, #0A0E23 0%, #151C3F 100%)',
+                        border: '1px solid var(--border-subtle)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         marginBottom: '16px',
                       }}
                     >
-                      <div style={{ textAlign: 'center', color: '#FAF8F5', padding: '16px' }}>
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.12)', padding: '4px 10px', borderRadius: 'var(--radius-pill)', fontSize: '0.6875rem', marginBottom: '8px' }}>
-                          <VideoCamera size={13} />
-                          {project.content_type} • {project.aspect_ratio}
-                        </div>
-                        <div style={{ fontSize: '1rem', fontWeight: '700' }}>
-                          {project.title}
-                        </div>
+                      <SafeImage
+                        src={project.thumbnail_url}
+                        alt={project.title}
+                        fallbackSrc="/assets/showcase_spatial.jpg"
+                        style={{ width: '100%', height: '100%' }}
+                        objectFit="cover"
+                      />
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: '10px',
+                          left: '10px',
+                          display: 'flex',
+                          gap: '6px',
+                        }}
+                      >
+                        <span className="badge badge-coral" style={{ fontSize: '0.6875rem' }}>
+                          {project.content_type || 'VIDEO'}
+                        </span>
+                        <span className="badge badge-neutral" style={{ fontSize: '0.6875rem' }}>
+                          {project.aspect_ratio || '16:9'}
+                        </span>
                       </div>
                     </div>
 

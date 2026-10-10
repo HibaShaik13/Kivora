@@ -158,32 +158,66 @@ def _dispatch_via_smtp(email: str, subject: str, plain_text: str, html_content: 
     return True
 
 
+def _mask_email(email: str) -> str:
+    """Safely masks an email address for non-sensitive logging (e.g. j***@example.com)."""
+    if not email or "@" not in email:
+        return "***"
+    parts = email.split("@", 1)
+    username = parts[0]
+    domain = parts[1]
+    masked_user = username[0] + "***" if len(username) > 1 else "***"
+    return f"{masked_user}@{domain}"
+
+
 def send_otp_email(email: str, otp_code: str, purpose: str = "REGISTRATION") -> Dict[str, Any]:
     """
     Dispatches a 6-digit OTP code to the recipient's email address.
     Priority order:
-    1. Real Gmail SMTP if configured in backend/.env
+    1. Real SMTP (e.g. Gmail SMTP with STARTTLS / SSL)
     2. Resend REST API if RESEND_API_KEY is configured
     3. Safe development terminal logger (disabled in production)
     """
     subject, plain_text, html_content = _build_email_content(otp_code, purpose)
+    masked = _mask_email(email)
+    delivery_errors = []
 
     # 1. Primary: SMTP Delivery (e.g. Gmail SMTP)
     if is_smtp_configured():
         try:
             _dispatch_via_smtp(email, subject, plain_text, html_content)
-            logger.info(f"OTP email successfully dispatched via SMTP ({SMTP_HOST}) to {email}")
+            logger.info(f"[EMAIL DISPATCH] Delivered via SMTP ({SMTP_HOST}) to {masked}")
             return {
                 "sent": True,
                 "provider": "smtp",
-                "status": "delivered",
+                "delivery_status": "DELIVERED",
+                "message": f"Verification code sent to {email}.",
             }
         except smtplib.SMTPAuthenticationError:
-            logger.error(f"SMTP authentication failed for user {SMTP_USERNAME}. Please verify Google App Password.")
+            err_msg = f"SMTP authentication failed for user {SMTP_USERNAME}. Please verify your 16-character Google App Password."
+            logger.error(f"[EMAIL DISPATCH ERROR] {err_msg}")
+            delivery_errors.append("Gmail authentication failed (check App Password)")
+        except smtplib.SMTPDataError as e:
+            error_text = e.smtp_error.decode("utf-8", errors="ignore") if isinstance(e.smtp_error, bytes) else str(e.smtp_error)
+            if "Daily user sending limit exceeded" in error_text or e.smtp_code == 550:
+                err_msg = "Gmail SMTP: Daily user sending limit exceeded (550). Google limits free Gmail accounts after frequent sending."
+            else:
+                err_msg = f"Gmail SMTP data error ({e.smtp_code}): {error_text.strip()}"
+            logger.error(f"[EMAIL DISPATCH ERROR] {err_msg}")
+            delivery_errors.append(err_msg)
+        except smtplib.SMTPRecipientsRefused:
+            err_msg = f"Recipient email address was refused by SMTP server: {masked}"
+            logger.error(f"[EMAIL DISPATCH ERROR] {err_msg}")
+            delivery_errors.append("Recipient email address refused by mail server")
         except smtplib.SMTPException as e:
-            logger.error(f"SMTP error during dispatch to {email}: {type(e).__name__}")
+            err_msg = f"SMTP error during dispatch to {masked}: {type(e).__name__}"
+            logger.error(f"[EMAIL DISPATCH ERROR] {err_msg}")
+            delivery_errors.append(f"SMTP error: {type(e).__name__}")
         except Exception as e:
-            logger.error(f"Unexpected error during SMTP connection: {type(e).__name__}")
+            err_msg = f"Unexpected error during SMTP connection: {type(e).__name__}"
+            logger.error(f"[EMAIL DISPATCH ERROR] {err_msg}")
+            delivery_errors.append(f"SMTP connection error: {type(e).__name__}")
+    else:
+        delivery_errors.append("SMTP credentials not configured")
 
     # 2. Secondary: Resend REST API Fallback
     if RESEND_API_KEY:
@@ -204,24 +238,37 @@ def send_otp_email(email: str, otp_code: str, purpose: str = "REGISTRATION") -> 
                 timeout=10,
             )
             if res.status_code in [200, 201]:
-                logger.info(f"Resend email dispatched successfully to {email}")
-                return {"sent": True, "provider": "resend", "status": "delivered"}
+                logger.info(f"[EMAIL DISPATCH] Delivered via Resend API to {masked}")
+                return {
+                    "sent": True,
+                    "provider": "resend",
+                    "delivery_status": "DELIVERED",
+                    "message": f"Verification code sent to {email}.",
+                }
             else:
-                logger.warning(f"Resend API error status={res.status_code}")
+                logger.warning(f"[EMAIL DISPATCH ERROR] Resend API error status={res.status_code}")
+                delivery_errors.append(f"Resend API error status={res.status_code}")
         except Exception as e:
-            logger.warning(f"Failed to connect to Resend API: {type(e).__name__}")
+            logger.warning(f"[EMAIL DISPATCH ERROR] Failed to connect to Resend API: {type(e).__name__}")
+            delivery_errors.append(f"Resend connection failed: {type(e).__name__}")
 
     # 3. Development / Test Fallback
     if KIVORA_ENV not in ["production", "prod"]:
-        logger.info(f"===> [DEV OTP DISPATCH] To: {email} | Code: {otp_code} | Purpose: {purpose}")
+        logger.info(f"===> [DEV OTP DISPATCH] To: {masked} | Code: {otp_code} | Purpose: {purpose}")
         return {
             "sent": True,
             "provider": "dev_logger",
+            "delivery_status": "SIMULATED",
             "dev_otp": otp_code,
+            "message": "Development mode: OTP generated and logged to console.",
+            "delivery_notice": "; ".join(delivery_errors),
         }
 
     return {
         "sent": False,
         "provider": "none",
-        "error": "Failed to deliver verification email. Please check SMTP configuration.",
+        "delivery_status": "FAILED",
+        "error": "Failed to deliver verification email. Please check SMTP configuration or contact support.",
+        "delivery_notice": "; ".join(delivery_errors),
     }
+

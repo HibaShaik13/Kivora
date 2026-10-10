@@ -5,6 +5,7 @@ all newly registered real users, their profiles, portfolios, briefs, and applica
 Uses real bcrypt password hashes for all demo users.
 """
 
+import os
 import sys
 import json
 import logging

@@ -1,76 +1,91 @@
 /**
- * Kivora Design System Tokens
- * Palette: Warm Ivory, Charcoal Typography, Lavender & Coral Accents
- * Aesthetic: Light editorial luxury, generous whitespace, refined micro-motion
+ * Kivora Cinematic Design System Tokens
+ * Palette: Deep Midnight Navy, Atmospheric Indigo, Warm Starlight Ivory, Restrained Champagne Gold & Violet
+ * Aesthetic: Cinematic film opening, luxury digital art exhibition, crisp optical contrast
  */
 
 :root {
-  /* Core Brand Colors */
-  --bg-primary: #FAF8F5;          /* Warm Ivory Background */
-  --bg-secondary: #F3EFEA;        /* Soft Linen / Paper Tint */
-  --bg-surface: #FFFFFF;          /* Pure White Card Surface */
-  --bg-surface-subtle: #FDFBF7;   /* Subtle Inset / Elevated Tint */
-  --bg-elevated: rgba(255, 255, 255, 0.85);
+  /* Core Cinematic Canvas */
+  --bg-primary: #080B18;          /* Deep Midnight Navy Canvas */
+  --bg-secondary: #0D1226;        /* Atmospheric Dark Navy Layer */
+  --bg-surface: #10152B;          /* Dark Navy Card Surface */
+  --bg-surface-subtle: #151B35;   /* Elevated Surface Inset */
+  --bg-elevated: #151B35;
+  --bg-glass: rgba(20, 25, 48, 0.78);
+  --bg-subtle: #151B35;
+  --bg-warm: #151B35;
+  --bg-main: var(--bg-primary);
+  --bg-card: var(--bg-surface);
+  --bg-card-elevated: var(--bg-surface-subtle);
+  --bg-input: var(--bg-secondary);
+  --bg-panel: var(--bg-surface);
 
-  /* Foreground / Typography */
-  --text-primary: #1A1715;        /* Deep Charcoal Headline & Body */
-  --text-secondary: #57524E;      /* Refined Warm Gray Subtext */
-  --text-tertiary: #8C847E;       /* Muted Caption / Metadata */
-  --text-on-dark: #FAF8F5;
+  /* Typography / Foreground */
+  --text-primary: #F5F0E8;        /* Warm Ivory */
+  --text-secondary: #C0C2D1;      /* Lavender-Gray Secondary */
+  --text-tertiary: #969BB4;       /* Muted Metadata */
+  --text-on-dark: #FFFFFF;
   --text-on-accent: #FFFFFF;
 
-  /* Accent Colors */
-  --accent-lavender: #7C6EE6;     /* Primary Brand Lavender Accent */
-  --accent-lavender-hover: #6858DC;
-  --accent-lavender-subtle: rgba(124, 110, 230, 0.10);
-  --accent-lavender-border: rgba(124, 110, 230, 0.25);
+  /* Luxury Champagne Gold & Violet */
+  --accent-gold: #E9C77F;         /* Champagne Gold */
+  --accent-gold-hover: #F3D99E;
+  --accent-gold-subtle: rgba(233, 199, 127, 0.12);
+  --accent-gold-border: rgba(233, 199, 127, 0.32);
 
-  --accent-coral: #FF6B57;        /* Energetic Coral Accent */
-  --accent-coral-hover: #F05540;
-  --accent-coral-subtle: rgba(255, 107, 87, 0.10);
-  --accent-coral-border: rgba(255, 107, 87, 0.25);
+  --accent-violet: #A78BFA;       /* Atmospheric Violet */
+  --accent-lavender: #A78BFA;
+  --accent-lavender-hover: #906DF7;
+  --accent-lavender-subtle: rgba(167, 139, 250, 0.14);
+  --accent-lavender-border: rgba(167, 139, 250, 0.32);
+
+  --accent-coral: #FF6B57;
+  --accent-coral-subtle: rgba(255, 107, 87, 0.12);
+  --accent-coral-border: rgba(255, 107, 87, 0.28);
 
   /* Semantic Status Colors */
-  --status-success: #1E8E5A;
-  --status-success-bg: #E8F7EE;
-  --status-success-border: #A3E3BE;
+  --status-success: #2ED573;
+  --status-success-bg: rgba(46, 213, 115, 0.12);
+  --status-success-border: rgba(46, 213, 115, 0.30);
 
-  --status-warning: #D97706;
-  --status-warning-bg: #FEF3C7;
-  --status-warning-border: #FCD34D;
+  --status-warning: #FFA502;
+  --status-warning-bg: rgba(255, 165, 2, 0.12);
+  --status-warning-border: rgba(255, 165, 2, 0.30);
 
-  --status-error: #DC2626;
-  --status-error-bg: #FEE2E2;
-  --status-error-border: #FCA5A5;
+  --status-error: #FF4757;
+  --status-error-bg: rgba(255, 71, 87, 0.12);
+  --status-error-border: rgba(255, 71, 87, 0.30);
 
-  --status-info: #7C6EE6;
-  --status-info-bg: #EEEDFC;
-  --status-info-border: #C8C3F5;
+  --status-info: #A78BFA;
+  --status-info-bg: rgba(167, 139, 250, 0.12);
+  --status-info-border: rgba(167, 139, 250, 0.30);
 
   /* Borders & Dividers */
-  --border-subtle: #E8E3DC;       /* Warm Hairline Divider */
-  --border-medium: #D4CDC3;
-  --border-strong: #1A1715;
-  --border-glass: rgba(26, 23, 21, 0.08);
+  --border-subtle: rgba(180, 170, 220, 0.18);
+  --border-medium: rgba(180, 170, 220, 0.28);
+  --border-strong: rgba(180, 170, 220, 0.40);
+  --border-gold: rgba(233, 199, 127, 0.32);
+  --border-glass: rgba(180, 170, 220, 0.18);
 
-  /* Elevation & Shadows (Warm Toned) */
-  --shadow-sm: 0 1px 2px rgba(26, 23, 21, 0.04);
-  --shadow-md: 0 4px 12px rgba(26, 23, 21, 0.06), 0 1px 3px rgba(26, 23, 21, 0.03);
-  --shadow-lg: 0 12px 32px rgba(26, 23, 21, 0.08), 0 2px 6px rgba(26, 23, 21, 0.04);
-  --shadow-xl: 0 24px 48px -12px rgba(26, 23, 21, 0.12);
-  --shadow-glow-lavender: 0 0 24px rgba(124, 110, 230, 0.18);
-  --shadow-glow-coral: 0 0 24px rgba(255, 107, 87, 0.18);
+  /* Elevation & Atmospheric Shadows */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.25);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.55), 0 4px 12px rgba(0, 0, 0, 0.30);
+  --shadow-xl: 0 28px 72px -12px rgba(0, 0, 0, 0.75);
+  --shadow-glow-gold: 0 0 32px rgba(230, 198, 135, 0.15);
+  --shadow-glow-lavender: 0 0 32px rgba(142, 124, 255, 0.18);
 
   /* Typography Scale */
+  --font-family-serif: 'Cormorant Garamond', Georgia, serif;
   --font-family-display: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   --font-family-body: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   --font-family-mono: 'JetBrains Mono', monospace;
 
   /* Corner Radii */
   --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 26px;
   --radius-pill: 9999px;
 
   /* Spacing Scale */
@@ -87,16 +102,24 @@
   --space-20: 80px;
 
   /* Layout Containers */
-  --container-max-width: 1280px;
-  --container-narrow-width: 960px;
+  --container-max-width: 1320px;
+  --container-narrow-width: 980px;
   --nav-height: 72px;
 
   /* Motion & Transitions */
   --transition-fast: 150ms cubic-bezier(0.16, 1, 0.3, 1);
   --transition-base: 250ms cubic-bezier(0.16, 1, 0.3, 1);
   --transition-slow: 400ms cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 
   /* Focus Ring */
-  --focus-ring: 0 0 0 3px rgba(124, 110, 230, 0.35);
+  --focus-ring: 0 0 0 3px rgba(230, 198, 135, 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

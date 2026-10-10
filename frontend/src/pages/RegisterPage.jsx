@@ -76,11 +76,16 @@ export default function RegisterPage() {
         role,
       });
 
-      showToast('Registration successful! Please verify your email via OTP.', 'success');
+      const toastMsg = response?.message || 'Registration successful! Please verify your email via OTP.';
+      showToast(toastMsg, response?.delivery_status === 'FAILED' ? 'warning' : 'success');
 
-      // Navigate to OTP verification with email and optional dev_otp in state
+      // Navigate to OTP verification with email and delivery metadata in state
       navigate(`/verify-otp?email=${encodeURIComponent(email.trim().toLowerCase())}&role=${role}`, {
-        state: { devOtp: response?.dev_otp },
+        state: {
+          devOtp: response?.dev_otp,
+          deliveryStatus: response?.delivery_status,
+          deliveryNotice: response?.delivery_notice,
+        },
       });
     } catch (err) {
       console.error('Registration failed:', err);

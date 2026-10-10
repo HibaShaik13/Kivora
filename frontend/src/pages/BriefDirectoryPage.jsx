@@ -98,11 +98,11 @@ export default function BriefDirectoryPage() {
           className="card"
           style={{
             padding: '20px',
-            backgroundColor: '#FFFFFF',
+            backgroundColor: 'var(--bg-surface)',
             borderRadius: '16px',
             border: '1px solid var(--border-subtle)',
             marginBottom: '32px',
-            boxShadow: 'var(--shadow-xs)',
+            boxShadow: 'var(--shadow-sm)',
           }}
         >
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
@@ -187,7 +187,7 @@ export default function BriefDirectoryPage() {
             {error}
           </div>
         ) : briefs.length === 0 ? (
-          <div className="card" style={{ padding: '60px', textAlign: 'center', backgroundColor: '#FFF', borderRadius: '16px' }}>
+          <div className="card" style={{ padding: '60px', textAlign: 'center', backgroundColor: 'var(--bg-surface)', borderRadius: '16px' }}>
             <FileText size={48} style={{ color: 'var(--text-tertiary)', margin: '0 auto 16px' }} />
             <h3 style={{ margin: '0 0 8px 0', fontFamily: 'var(--font-family-display)' }}>
               No Briefs Match Criteria
@@ -204,7 +204,7 @@ export default function BriefDirectoryPage() {
                 className="card"
                 style={{
                   padding: '28px',
-                  backgroundColor: '#FFFFFF',
+                  backgroundColor: 'var(--bg-surface)',
                   borderRadius: '16px',
                   border: '1px solid var(--border-subtle)',
                   boxShadow: 'var(--shadow-sm)',
