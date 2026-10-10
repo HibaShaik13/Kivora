@@ -118,48 +118,94 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {/* Quick Demo Credentials Bar (Development & Hackathon evaluation) */}
-          {isDevOrStaging && (
+          {/* Quick Demo Credentials Bar for Hackathon Evaluation */}
+          <div
+            style={{
+              padding: '16px',
+              borderRadius: 'var(--radius-lg)',
+              background: 'var(--bg-elevated)',
+              border: '1px solid var(--border-subtle)',
+              marginBottom: '24px',
+            }}
+          >
             <div
               style={{
-                padding: '14px',
-                borderRadius: 'var(--radius-lg)',
-                background: 'var(--bg-secondary)',
-                border: '1px solid var(--border-subtle)',
-                marginBottom: '24px',
+                fontSize: '0.75rem',
+                fontWeight: '700',
+                color: 'var(--accent-gold)',
+                marginBottom: '10px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                letterSpacing: '0.04em',
+                textTransform: 'uppercase',
               }}
             >
-              <div style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-tertiary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Key size={14} /> Quick Demo Accounts (Click to Fill):
-              </div>
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                <button
-                  type="button"
-                  onClick={() => handleQuickDemo('elena.rostova@kivora.demo', 'Password123!')}
-                  className="btn btn-outline"
-                  style={{ padding: '4px 10px', fontSize: '0.6875rem', background: 'var(--bg-surface)' }}
-                >
-                  Creator: Elena
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickDemo('atelier@maisonaurora.demo', 'Password123!')}
-                  className="btn btn-outline"
-                  style={{ padding: '4px 10px', fontSize: '0.6875rem', background: 'var(--bg-surface)' }}
-                >
-                  Brand: Sarah
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickDemo('admin@kivora.internal', 'Password123!')}
-                  className="btn btn-outline"
-                  style={{ padding: '4px 10px', fontSize: '0.6875rem', background: 'var(--bg-surface)' }}
-                >
-                  Admin: Reviewer
-                </button>
-              </div>
+              <Key size={14} weight="bold" /> Quick Demo Accounts (1-Click Fill):
             </div>
-          )}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={() => handleQuickDemo('elena.rostova@kivora.demo', 'Password123!')}
+                className="btn btn-outline"
+                style={{
+                  padding: '8px 6px',
+                  fontSize: '0.75rem',
+                  fontWeight: '600',
+                  background: 'var(--bg-surface)',
+                  borderColor: 'var(--border-subtle)',
+                  color: 'var(--text-primary)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '2px',
+                }}
+              >
+                <span style={{ color: 'var(--accent-lavender)', fontSize: '0.6875rem' }}>Creator</span>
+                <span>Elena</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleQuickDemo('atelier@maisonaurora.demo', 'Password123!')}
+                className="btn btn-outline"
+                style={{
+                  padding: '8px 6px',
+                  fontSize: '0.75rem',
+                  fontWeight: '600',
+                  background: 'var(--bg-surface)',
+                  borderColor: 'var(--border-subtle)',
+                  color: 'var(--text-primary)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '2px',
+                }}
+              >
+                <span style={{ color: 'var(--accent-gold)', fontSize: '0.6875rem' }}>Brand</span>
+                <span>Aurora</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleQuickDemo('admin@kivora.internal', 'Password123!')}
+                className="btn btn-outline"
+                style={{
+                  padding: '8px 6px',
+                  fontSize: '0.75rem',
+                  fontWeight: '600',
+                  background: 'var(--bg-surface)',
+                  borderColor: 'var(--border-subtle)',
+                  color: 'var(--text-primary)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '2px',
+                }}
+              >
+                <span style={{ color: '#38BDF8', fontSize: '0.6875rem' }}>Admin</span>
+                <span>Reviewer</span>
+              </button>
+            </div>
+          </div>
 
           {/* Error Banner */}
           {error && (

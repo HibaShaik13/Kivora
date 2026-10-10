@@ -19,14 +19,9 @@ from backend.app.core.security import hash_password
 
 DEMO_PASSWORD = "Password123!"
 
-def provision_demo_accounts():
-    env = os.getenv("KIVORA_ENV", os.getenv("ENV", "development")).lower()
-    if env in ["production", "prod"]:
-        print("SECURITY ABORT: ensure_demo_accounts.py is strictly restricted from executing in production environments.")
-        return
-
+def provision_demo_accounts(session_override=None):
     Base.metadata.create_all(bind=engine)
-    session = SessionLocal()
+    session = session_override or SessionLocal()
     hashed_pwd = hash_password(DEMO_PASSWORD)
 
     try:
@@ -175,28 +170,29 @@ def provision_demo_accounts():
             )
             session.add(bp_alias)
 
-        # 3. Admin Demo: Platform Reviewer (admin@kivora.internal)
-        admin = session.query(User).filter(User.email == "admin@kivora.internal").first()
-        if not admin:
-            admin = User(
-                id="user-admin-default",
-                email="admin@kivora.internal",
-                hashed_password=hashed_pwd,
-                role="ADMIN",
-                is_email_verified=True,
-                created_at=datetime.utcnow()
-            )
-            session.add(admin)
-        else:
-            admin.hashed_password = hashed_pwd
-            admin.role = "ADMIN"
-            admin.is_email_verified = True
+        # 3. Admin Demo: Platform Reviewer (admin@kivora.internal & admin@kivora.demo)
+        for admin_email in ["admin@kivora.internal", "admin@kivora.demo"]:
+            admin = session.query(User).filter(User.email == admin_email).first()
+            if not admin:
+                admin = User(
+                    id=f"user-admin-{admin_email.split('@')[0]}",
+                    email=admin_email,
+                    hashed_password=hashed_pwd,
+                    role="ADMIN",
+                    is_email_verified=True,
+                    created_at=datetime.utcnow()
+                )
+                session.add(admin)
+            else:
+                admin.hashed_password = hashed_pwd
+                admin.role = "ADMIN"
+                admin.is_email_verified = True
 
         session.commit()
         print("Demo accounts successfully provisioned and verified:")
         print("  - Creator: elena.rostova@kivora.demo / elena@kivorastudios.com [Password123!]")
         print("  - Brand:   atelier@maisonaurora.demo / sarah@auroracosmetics.com [Password123!]")
-        print("  - Admin:   admin@kivora.internal [Password123!]")
+        print("  - Admin:   admin@kivora.internal / admin@kivora.demo [Password123!]")
 
     except Exception as e:
         session.rollback()
