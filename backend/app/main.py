@@ -355,6 +355,7 @@ def on_startup():
                         created_at=datetime.utcnow()
                     ))
                 else:
+                    admin_user.hashed_password = demo_hashed_pwd
                     admin_user.role = "ADMIN"
                     admin_user.is_email_verified = True
             db.commit()
