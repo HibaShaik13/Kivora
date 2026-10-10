@@ -34,8 +34,12 @@ app = FastAPI(
 
 @app.on_event("startup")
 def startup_event():
-    # Non-destructive table verification/creation on startup
-    Base.metadata.create_all(bind=engine)
+    try:
+        # Non-destructive table verification/creation on startup
+        Base.metadata.create_all(bind=engine)
+        print("Kivora database tables verified successfully.")
+    except Exception as e:
+        print(f"Warning: Database startup verification failed (will retry on demand): {e}")
 
 # Enable CORS for Vite frontend dev server
 app.add_middleware(
