@@ -2,10 +2,14 @@
 __pycache__/
 *.py[cod]
 *$py.class
+.env
+.env.*
+!.env.example
 *.env
 .venv/
 env/
 venv/
+.pytest_cache/
 
 # Database
 *.db
@@ -15,3 +19,8 @@ venv/
 node_modules/
 dist/
 .DS_Store
+
+# Local media uploads
+uploads/
+backend/uploads/
+

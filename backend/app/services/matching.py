@@ -4,8 +4,9 @@ Deterministic, two-phase algorithm scoring creator fit for creative briefs.
 Provides granular score breakdowns, matched criteria reasons, and missing gaps.
 """
 
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from sqlalchemy.orm import Session
+
 from backend.app.models.models import CreatorProfile, Brief, PortfolioProject, CreatorSkill, CreatorTool
 from backend.app.schemas.schemas import CreatorMatchResult, MatchScoreBreakdown
 
@@ -172,6 +173,12 @@ def evaluate_creator_for_brief(creator: CreatorProfile, brief: Brief) -> Creator
         match_level=match_level
     )
 
+    # Collect matched skills and tools
+    matched_skills = [bs.skill.name for bs in brief_skills if bs.skill_id in creator_skill_ids]
+    matched_tools = [bt.tool.name for bt in brief_tools if bt.tool_id in creator_tool_map]
+    strengths = [r for r in reasons if any(k in r.lower() for k in ["mastery", "proficient", "verified", "top studio", "alignment", "available", "fits"])]
+    missing_requirements = [g for g in gaps if any(k in g.lower() for k in ["missing required", "no proven", "exceeds"])]
+
     return CreatorMatchResult(
         creator_id=creator.id,
         display_name=creator.display_name,
@@ -184,14 +191,37 @@ def evaluate_creator_for_brief(creator: CreatorProfile, brief: Brief) -> Creator
         match_level=match_level,
         breakdown=breakdown,
         reasons=reasons,
-        gaps=gaps
+        gaps=gaps,
+        matched_skills=matched_skills,
+        matched_tools=matched_tools,
+        strengths=strengths,
+        missing_requirements=missing_requirements,
+        compatibility_disclaimer="Scores represent estimated compatibility based on declared and verified portfolio evidence, not a guarantee of outcome.",
+        hard_requirements_met=hard_filter_passed,
     )
 
 
-def match_creators_for_brief(db: Session, brief: Brief, min_score: float = 0.0) -> List[CreatorMatchResult]:
+def match_creators_for_brief(
+    db: Session,
+    brief: Brief,
+    min_score: float = 0.0,
+    enforce_hard_filters: bool = False,
+    limit: Optional[int] = None,
+) -> List[CreatorMatchResult]:
+    from typing import Optional
     creators = db.query(CreatorProfile).all()
     results = [evaluate_creator_for_brief(c, brief) for c in creators]
+    
+    # Filter by hard filters if requested
+    if enforce_hard_filters:
+        results = [r for r in results if r.breakdown.hard_filter_passed]
+
     # Filter by min_score and sort descending by match score
     filtered = [r for r in results if r.score >= min_score]
     filtered.sort(key=lambda r: r.score, reverse=True)
+
+    if limit is not None and limit > 0:
+        filtered = filtered[:limit]
+
     return filtered
+

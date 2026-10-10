@@ -75,22 +75,27 @@ def run_api_tests():
     print(f"       Top Match: {top_match['display_name']} ({top_match['score']}% - {top_match['match_level']})")
     print(f"       Reasons: {top_match['reasons'][:2]}")
 
-    # 7. AI-Assisted Brief Builder Endpoint
+    # 7. AI-Assisted Brief Builder Endpoint (Deterministic Offline Isolation)
+    import os
+    from unittest.mock import patch
     ai_payload = {
         "raw_prompt": "We need a 30s luxury ethereal commercial for our hydrating glow serum on Instagram and YouTube 4K with slow motion fluid droplets.",
         "target_budget": 4500.0
     }
-    res = client.post("/api/ai/generate-brief", json=ai_payload)
-    assert res.status_code == 200, f"AI Brief Builder failed: {res.text}"
-    ai_brief = res.json()
-    assert ai_brief["content_type"] in ["VIDEO", "PRODUCT_VIZ"]
-    assert ai_brief["aspect_ratio"] in ["16:9", "9:16"]
-    assert len(ai_brief["recommended_tools"]) > 0
+    with patch.dict(os.environ, {"GEMINI_API_KEY": ""}):
+        res = client.post("/api/ai/generate-brief", json=ai_payload)
+        assert res.status_code == 200, f"AI Brief Builder failed: {res.text}"
+        ai_brief = res.json()
+        assert ai_brief["content_type"] in ["VIDEO", "PRODUCT_VIZ"]
+        assert ai_brief["aspect_ratio"] in ["16:9", "9:16"]
+        assert len(ai_brief["recommended_tools"]) > 0
+        assert ai_brief["generation_engine"] == "HEURISTIC_FALLBACK_ENGINE"
     print(f"[PASS] POST /api/ai/generate-brief -> 200 OK")
     print(f"       Generated Title: '{ai_brief['title']}'")
     print(f"       Format: {ai_brief['aspect_ratio']} | Resolution: {ai_brief['resolution_min']}")
     print(f"       Recommended Tools: {ai_brief['recommended_tools']}")
     print(f"       Engine: {ai_brief['generation_engine']}")
+
 
     print("\n=======================================================")
     print("[SUCCESS] ALL FASTAPI ENDPOINTS & LOGIC VERIFIED (100%)")

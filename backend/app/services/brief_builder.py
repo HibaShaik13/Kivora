@@ -7,8 +7,11 @@ Supports modular LLM integration (Gemini / OpenAI) with a robust heuristic fallb
 import os
 import json
 import re
+from abc import ABC, abstractmethod
 from typing import Optional
+import backend.app.core.config  # Ensures .env is loaded
 from backend.app.schemas.schemas import BriefGenerationRequest, StructuredBriefOutput
+
 
 
 def extract_heuristic_brief(req: BriefGenerationRequest) -> StructuredBriefOutput:
@@ -125,39 +128,91 @@ def extract_heuristic_brief(req: BriefGenerationRequest) -> StructuredBriefOutpu
     )
 
 
+class BaseBriefProvider(ABC):
+    """Abstract base class for brief generation providers."""
+    @abstractmethod
+    def generate(self, req: BriefGenerationRequest) -> StructuredBriefOutput:
+        pass
+
+
+class HeuristicFallbackProvider(BaseBriefProvider):
+    """Deterministic, domain-aware heuristic generator that operates without external keys."""
+    def generate(self, req: BriefGenerationRequest) -> StructuredBriefOutput:
+        return extract_heuristic_brief(req)
+
+
+class GeminiBriefProvider(BaseBriefProvider):
+    """Production Google Gemini LLM provider using the modern google.genai SDK."""
+    def __init__(self, api_key: str, model_name: str = "gemini-3.8-flash"):
+        self.api_key = api_key
+        self.model_name = model_name
+
+    def generate(self, req: BriefGenerationRequest) -> StructuredBriefOutput:
+        from google import genai
+        client = genai.Client(api_key=self.api_key)
+        prompt_instruction = (
+            f"You are Kivora's AI Campaign Brief Architect. Convert the following campaign concept into a technical, "
+            f"production-ready creative brief for generative AI creators.\n\nConcept: {req.raw_prompt}\n"
+            f"Target Budget: {req.target_budget or 'Standard commercial rate'}\n\n"
+            f"Output strictly valid JSON with fields:\n"
+            f"- title (string)\n"
+            f"- campaign_objective (string)\n"
+            f"- target_audience (string)\n"
+            f"- content_type (string: VIDEO, ANIMATION, IMAGE, PRODUCT_VIZ, or CONCEPT_ART)\n"
+            f"- creative_style_mood (string)\n"
+            f"- aspect_ratio (string: 16:9, 9:16, 1:1, etc.)\n"
+            f"- duration_seconds_min (int or null)\n"
+            f"- duration_seconds_max (int or null)\n"
+            f"- resolution_min (string: 4K UHD or 1080p)\n"
+            f"- deliverables_description (string)\n"
+            f"- revision_allowance (int, default 2)\n"
+            f"- budget_amount (float)\n"
+            f"- budget_currency (string: USD)\n"
+            f"- recommended_skills (list of skill id strings e.g. skill-4k-video)\n"
+            f"- recommended_tools (list of tool id strings e.g. tool-runway-gen3)\n"
+            f"- commercial_use_requirements (string)\n"
+            f"- usage_channels (string)\n"
+            f"- usage_duration (string)\n"
+            f"- usage_territories (string)\n"
+            f"- restrictions_and_guidelines (string)\n"
+            f"- disclosure_requirements (string)"
+        )
+        response = client.models.generate_content(
+            model=self.model_name,
+            contents=prompt_instruction,
+            config={'response_mime_type': 'application/json'}
+        )
+        parsed = json.loads(response.text)
+        parsed["generation_engine"] = f"GEMINI ({self.model_name})"
+        return StructuredBriefOutput(**parsed)
+
+
+def get_brief_provider(api_key: Optional[str] = None, force_fallback: bool = False) -> BaseBriefProvider:
+    """Factory creating the appropriate AI brief provider based on environment and parameters."""
+    key = api_key or os.getenv("GEMINI_API_KEY")
+    if force_fallback or not key:
+        return HeuristicFallbackProvider()
+    model = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+    return GeminiBriefProvider(api_key=key, model_name=model)
+
+
+
 def generate_structured_brief(req: BriefGenerationRequest) -> StructuredBriefOutput:
     """
     Primary brief builder entrypoint.
-    Executes LLM synthesis if API key is present; otherwise triggers the heuristic engine.
+    Dispatches to Google Gemini if GEMINI_API_KEY is present;
+    safely falls back to the deterministic heuristic engine if key is absent or provider fails.
     """
     gemini_key = os.getenv("GEMINI_API_KEY")
-    openai_key = os.getenv("OPENAI_API_KEY")
 
-    # If LLM key configured, attempt model call; fallback safely on failure
     if gemini_key:
         try:
-            # Modular Google GenAI SDK execution
-            from google import genai
-            client = genai.Client(api_key=gemini_key)
-            prompt_instruction = (
-                f"You are Kivora's AI Campaign Brief Architect. Convert the following campaign idea into a structured JSON "
-                f"matching the exact schema with technical camera/generative requirements:\n\nIdea: {req.raw_prompt}\n"
-                f"Output strictly valid JSON with fields: title, campaign_objective, target_audience, content_type, "
-                f"creative_style_mood, aspect_ratio, resolution_min, deliverables_description, revision_allowance, "
-                f"budget_amount, budget_currency, recommended_skills, recommended_tools, commercial_use_requirements, "
-                f"usage_channels, usage_duration, usage_territories, restrictions_and_guidelines, disclosure_requirements."
-            )
-            response = client.models.generate_content(
-                model='gemini-2.5-flash',
-                contents=prompt_instruction,
-                config={'response_mime_type': 'application/json'}
-            )
-            parsed = json.loads(response.text)
-            parsed["generation_engine"] = "LLM_SYNTHESIZER (Gemini)"
-            return StructuredBriefOutput(**parsed)
+            provider = get_brief_provider(api_key=gemini_key)
+            return provider.generate(req)
         except Exception:
-            # Graceful degrade to heuristic engine without crashing
+            # Fall back safely without crashing
             pass
 
-    # Standard production fallback
-    return extract_heuristic_brief(req)
+    # Clearly labelled deterministic fallback engine
+    fallback_provider = HeuristicFallbackProvider()
+    return fallback_provider.generate(req)

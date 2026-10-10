@@ -29,12 +29,15 @@ from backend.app.models.models import (
     WorkflowStep,
     EvidenceRecord,
     VerificationRecord,
+    VerificationAiAnalysis,
     Brief,
     BriefSkill,
     BriefTool,
     Application,
     Engagement,
+    EngagementDeliverable,
 )
+
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger("seed_db")

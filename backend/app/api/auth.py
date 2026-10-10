@@ -99,8 +99,16 @@ def register_user(payload: UserRegisterRequest, db: Session = Depends(get_db)):
     db.add(otp_record)
     db.commit()
 
-    # 5. Dispatch OTP via email service
-    dispatch_result = send_otp_email(email, otp, purpose="REGISTRATION")
+    try:
+        dispatch_result = send_otp_email(email, otp, purpose="REGISTRATION")
+    except Exception as e:
+        db.delete(otp_record)
+        db.delete(user)
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(e)
+        )
 
     response_data = {
         "message": "User registered successfully. Please verify your account using the OTP sent to your email.",
@@ -108,8 +116,6 @@ def register_user(payload: UserRegisterRequest, db: Session = Depends(get_db)):
         "email": email,
         "role": role,
     }
-    if dispatch_result.get("dev_otp"):
-        response_data["dev_otp"] = dispatch_result["dev_otp"]
 
     return response_data
 
@@ -126,14 +132,35 @@ def verify_otp(payload: VerifyOtpRequest, db: Session = Depends(get_db)):
             detail="No account associated with this email address."
         )
 
-    # Find the latest active OTP code for this email
+    # Find the latest active OTP code for this email regardless of code
     otp_record = db.query(OtpCode).filter(
         OtpCode.email == email,
-        OtpCode.code == code,
         OtpCode.is_used == False,
     ).order_by(OtpCode.created_at.desc()).first()
 
     if not otp_record:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No active verification code found for this email."
+        )
+
+    if datetime.utcnow() > otp_record.expires_at:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Verification code has expired. Please request a new code."
+        )
+
+    if otp_record.attempts >= 5:
+        otp_record.is_used = True
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Too many failed attempts. Please request a new verification code."
+        )
+
+    if otp_record.code != code:
+        otp_record.attempts += 1
+        db.commit()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid verification code."
@@ -174,12 +201,23 @@ def resend_otp(payload: ResendOtpRequest, db: Session = Depends(get_db)):
             detail="No account associated with this email address."
         )
 
+    # Check for resend cooldown (60 seconds)
+    recent_otp = db.query(OtpCode).filter(
+        OtpCode.email == email
+    ).order_by(OtpCode.created_at.desc()).first()
+    
+    if recent_otp and datetime.utcnow() < recent_otp.created_at + timedelta(seconds=60):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Please wait 60 seconds before requesting a new verification code."
+        )
+
     otp = generate_otp_code()
     otp_record = OtpCode(
         id=f"otp-{uuid.uuid4().hex[:10]}",
         email=email,
         code=otp,
-        purpose="REGISTRATION",
+        purpose="RESEND",
         expires_at=datetime.utcnow() + timedelta(minutes=15),
         is_used=False,
         created_at=datetime.utcnow()
@@ -187,10 +225,17 @@ def resend_otp(payload: ResendOtpRequest, db: Session = Depends(get_db)):
     db.add(otp_record)
     db.commit()
 
-    dispatch_result = send_otp_email(email, otp, purpose="RESEND")
+    try:
+        dispatch_result = send_otp_email(email, otp, purpose="RESEND")
+    except Exception as e:
+        db.delete(otp_record)
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(e)
+        )
+        
     res = {"message": "Verification code resent successfully."}
-    if dispatch_result.get("dev_otp"):
-        res["dev_otp"] = dispatch_result["dev_otp"]
     return res
 
 

@@ -10,7 +10,7 @@ from sqlalchemy import or_
 
 from backend.app.database import get_db
 from backend.app.models.models import BrandProfile, User
-from backend.app.schemas.schemas import BrandProfileRead, BrandProfileSetupRequest
+from backend.app.schemas.schemas import BrandProfileRead, BrandProfileSetupRequest, BrandProfileUpdateRequest
 from backend.app.core.deps import require_role, get_current_user
 
 router = APIRouter(prefix="/api/brands", tags=["Brands"])
@@ -64,6 +64,51 @@ def setup_or_update_brand_profile(
     db.commit()
     db.refresh(brand)
     return brand
+
+
+@router.put("/profile", response_model=BrandProfileRead)
+def update_brand_profile_put(
+    payload: BrandProfileUpdateRequest,
+    current_user: User = Depends(require_role(["BRAND"])),
+    db: Session = Depends(get_db)
+):
+    """Authenticated brand updates their own profile with ownership enforcement."""
+    brand = current_user.brand_profile
+    if not brand:
+        raise HTTPException(
+            status_code=404,
+            detail="Brand profile not yet configured. Please create your profile first."
+        )
+
+    if payload.slug is not None:
+        clean_slug = payload.slug.lower().strip().replace(" ", "-")
+        existing_slug = db.query(BrandProfile).filter(
+            BrandProfile.slug == clean_slug,
+            BrandProfile.user_id != current_user.id
+        ).first()
+        if existing_slug:
+            raise HTTPException(status_code=400, detail="This company slug is already registered.")
+        brand.slug = clean_slug
+
+    for field in [
+        "company_name", "industry", "website_url", "logo_url",
+        "description", "company_size", "headquarters"
+    ]:
+        val = getattr(payload, field, None)
+        if val is not None:
+            setattr(brand, field, val)
+
+    brand.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(brand)
+    return brand
+
+
+@router.get("", response_model=list[BrandProfileRead])
+def list_brands(db: Session = Depends(get_db)):
+    """Public listing of all verified brands."""
+    brands = db.query(BrandProfile).order_by(BrandProfile.company_name).all()
+    return brands
 
 
 @router.get("/me", response_model=BrandProfileRead)
