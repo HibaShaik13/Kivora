@@ -31,11 +31,14 @@ export default function App() {
   const [isAdminDeskOpen, setIsAdminDeskOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
-  // Sync auth state
+  // Sync auth state & path routing
   useEffect(() => {
     const unsubscribe = addAuthListener((user) => {
       setCurrentUser(user);
     });
+    if (window.location.pathname === '/login' || window.location.hash === '#login') {
+      setIsAuthModalOpen(true);
+    }
     return unsubscribe;
   }, []);
 
