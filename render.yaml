@@ -18,8 +18,8 @@ services:
   - type: web
     name: kivora-backend
     env: python
-    buildCommand: chmod +x start.sh && pip install -r backend/requirements.txt
-    startCommand: bash start.sh
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: python3 -c "import os, uvicorn; uvicorn.run('backend.app.main:app', host='0.0.0.0', port=int(os.environ.get('PORT', 8000)))"
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
