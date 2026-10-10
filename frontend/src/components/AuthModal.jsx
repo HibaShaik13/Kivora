@@ -45,13 +45,12 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
         role,
         full_name: name || undefined,
       });
-      if (res?.dev_otp) {
-        setOtpCode(res.dev_otp);
-        setSuccessInfo(`Account created! (Email quota reached) Verification code: ${res.dev_otp}`);
-      } else {
-        setSuccessInfo(res?.message || 'Account created! Please enter the 6-digit OTP code sent to your email to verify.');
+      if (res?.access_token) {
+        if (onAuthSuccess) onAuthSuccess(res);
+        onClose();
+        return;
       }
-      setMode('otp');
+      setSuccessInfo(res?.message || 'Account created successfully! Welcome to Kivora.');
     } catch (err) {
       setError(err.message || 'Registration failed.');
     } finally {

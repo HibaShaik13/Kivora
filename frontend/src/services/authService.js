@@ -46,10 +46,21 @@ export const authService = {
   },
 
   register: async (payload) => {
-    return fetchApi('/api/auth/register', {
+    const data = await fetchApi('/api/auth/register', {
       method: 'POST',
       body: JSON.stringify(payload),
     });
+    if (data.access_token) {
+      localStorage.setItem('kivora_token', data.access_token);
+      const user = data.user || {
+        id: data.user_id,
+        email: data.email,
+        role: data.role,
+      };
+      localStorage.setItem('kivora_user', JSON.stringify(user));
+      notifyAuthListeners(user);
+    }
+    return data;
   },
 
   verifyOtp: async (email, otpCode) => {

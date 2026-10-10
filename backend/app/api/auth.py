@@ -57,7 +57,7 @@ def register_user(payload: UserRegisterRequest, db: Session = Depends(get_db)):
     # 1. Normalize and check uniqueness
     email = payload.email.lower().strip()
     existing_user = db.query(User).filter(User.email == email).first()
-    if existing_user and existing_user.is_email_verified:
+    if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="An account with this email address already exists. Please sign in."
@@ -73,63 +73,76 @@ def register_user(payload: UserRegisterRequest, db: Session = Depends(get_db)):
     # 2. Hash password with bcrypt
     hashed = hash_password(payload.password)
 
-    # 3. Create or reuse unverified User record
-    is_new_user = False
-    if existing_user and not existing_user.is_email_verified:
-        user = existing_user
-        user.hashed_password = hashed
-        user.role = role
-        user_id = user.id
-    else:
-        is_new_user = True
-        user_id = f"user-{uuid.uuid4().hex[:12]}"
-        user = User(
-            id=user_id,
-            email=email,
-            hashed_password=hashed,
-            role=role,
-            is_email_verified=False,
-            created_at=datetime.utcnow()
-        )
-        db.add(user)
-
-    # 4. Generate & store 6-digit OTP code (15-min expiration)
-    otp = generate_otp_code()
-    otp_record = OtpCode(
-        id=f"otp-{uuid.uuid4().hex[:10]}",
+    # 3. Create verified User record directly
+    user_id = f"user-{uuid.uuid4().hex[:12]}"
+    user = User(
+        id=user_id,
         email=email,
-        code=otp,
-        purpose="REGISTRATION",
-        expires_at=datetime.utcnow() + timedelta(minutes=15),
-        is_used=False,
+        hashed_password=hashed,
+        role=role,
+        is_email_verified=True,
         created_at=datetime.utcnow()
     )
-    db.add(otp_record)
-    db.commit()
+    db.add(user)
 
-    try:
-        dispatch_result = send_otp_email(email, otp, purpose="REGISTRATION")
-    except Exception as e:
-        db.delete(otp_record)
-        if is_new_user:
-            db.delete(user)
-        db.commit()
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=str(e)
+    # 4. Create corresponding Profile record
+    display_name = (payload.full_name or email.split("@")[0]).strip()
+    clean_handle = "".join(c for c in display_name.lower().replace(" ", "_") if c.isalnum() or c == "_")[:20] or "user"
+    handle = f"{clean_handle}_{uuid.uuid4().hex[:4]}"
+
+    if role == "CREATOR":
+        creator_profile = CreatorProfile(
+            id=f"cr-{uuid.uuid4().hex[:12]}",
+            user_id=user_id,
+            display_name=display_name,
+            handle=handle,
+            bio="Generative AI Creator specializing in multi-modal synthesis and workflows.",
+            avatar_url=f"https://api.dicebear.com/7.x/bottts/svg?seed={handle}",
+            location="Remote / Global",
+            years_experience=1,
+            primary_specialization="Generative Video & Concept Art",
+            min_budget=200.0,
+            availability_status="AVAILABLE",
+            verification_tier="COMMUNITY",
+            verified_claims_count=0,
+            completed_projects_count=0,
+            average_rating=5.0,
+            created_at=datetime.utcnow()
         )
+        db.add(creator_profile)
+    elif role == "BRAND":
+        brand_profile = BrandProfile(
+            id=f"br-{uuid.uuid4().hex[:12]}",
+            user_id=user_id,
+            company_name=display_name,
+            slug=handle,
+            industry="Media & Generative AI",
+            logo_url=f"https://api.dicebear.com/7.x/identicon/svg?seed={handle}",
+            description="Brand commissioning generative content and creative workflows.",
+            company_size="1-10",
+            headquarters="Remote / Global",
+            is_verified_brand=False,
+            created_at=datetime.utcnow()
+        )
+        db.add(brand_profile)
 
-    response_data = {
-        "message": "User registered successfully. Please verify your account using the OTP sent to your email.",
-        "user_id": user_id,
-        "email": email,
-        "role": role,
+    db.commit()
+    db.refresh(user)
+
+    # 5. Issue JWT access token directly
+    access_token = create_access_token(
+        data={"sub": user.id, "email": user.email, "role": user.role}
+    )
+
+    return {
+        "message": "User registered successfully! Welcome to Kivora.",
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user_id": user.id,
+        "email": user.email,
+        "role": user.role,
+        "user": build_user_summary(user),
     }
-    if dispatch_result and dispatch_result.get("dev_otp"):
-        response_data["dev_otp"] = dispatch_result["dev_otp"]
-        response_data["message"] = f"Account registered! Verification code: {dispatch_result['dev_otp']}"
-
-    return response_data
 
 
 @router.post("/verify-otp", response_model=TokenResponse)
@@ -267,10 +280,8 @@ def login_user(payload: UserLoginRequest, db: Session = Depends(get_db)):
         )
 
     if not user.is_email_verified:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Email address not verified. Please complete OTP verification first."
-        )
+        user.is_email_verified = True
+        db.commit()
 
     access_token = create_access_token(
         data={"sub": user.id, "email": user.email, "role": user.role}
