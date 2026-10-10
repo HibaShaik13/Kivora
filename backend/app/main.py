@@ -344,21 +344,27 @@ def on_startup():
             # 3. Always ensure canonical admin accounts exist for hackathon evaluation
             demo_hashed_pwd = hash_password("Password123!")
             for admin_email in ["admin@kivora.internal", "admin@kivora.demo"]:
-                admin_user = db.query(User).filter(User.email == admin_email).first()
-                if not admin_user:
-                    db.add(User(
-                        id=f"user-admin-{admin_email.split('@')[0]}",
-                        email=admin_email,
-                        hashed_password=demo_hashed_pwd,
-                        role="ADMIN",
-                        is_email_verified=True,
-                        created_at=datetime.utcnow()
-                    ))
-                else:
-                    admin_user.hashed_password = demo_hashed_pwd
-                    admin_user.role = "ADMIN"
-                    admin_user.is_email_verified = True
-            db.commit()
+                try:
+                    admin_user = db.query(User).filter(User.email == admin_email).first()
+                    if not admin_user:
+                        slug_part = admin_email.replace("@", "-").replace(".", "-")[:20]
+                        db.add(User(
+                            id=f"user-admin-{slug_part}",
+                            email=admin_email,
+                            hashed_password=demo_hashed_pwd,
+                            role="ADMIN",
+                            is_email_verified=True,
+                            created_at=datetime.utcnow()
+                        ))
+                    else:
+                        admin_user.hashed_password = demo_hashed_pwd
+                        admin_user.role = "ADMIN"
+                        admin_user.is_email_verified = True
+                    db.commit()
+                except Exception as inner_err:
+                    db.rollback()
+                    import logging
+                    logging.getLogger("uvicorn.error").error(f"Admin seed error for {admin_email}: {inner_err}")
         except Exception as err:
             db.rollback()
             import logging
