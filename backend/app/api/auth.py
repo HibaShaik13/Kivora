@@ -97,7 +97,7 @@ def register_user(payload: UserRegisterRequest, db: Session = Depends(get_db)):
             display_name=display_name,
             handle=handle,
             bio="Generative AI Creator specializing in multi-modal synthesis and workflows.",
-            avatar_url=f"https://api.dicebear.com/7.x/bottts/svg?seed={handle}",
+            avatar_url="/assets/avatars/elena.jpg",
             location="Remote / Global",
             years_experience=1,
             primary_specialization="Generative Video & Concept Art",

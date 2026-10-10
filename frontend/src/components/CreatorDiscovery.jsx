@@ -1,9 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { creatorService } from '../services/creatorService';
 import CreatorCard from './CreatorCard';
 
+const DISCIPLINE_KEYWORDS = {
+  '3D & CGI': ['3d', 'cgi', 'render', 'spatial', 'architecture', 'cinema'],
+  'AI Art': ['ai', 'generative', 'concept', 'art', 'surreal', 'synthesis', 'matte'],
+  'Motion Design': ['motion', 'cinema', 'video', 'animation', 'camera', 'trajectory', 'arc'],
+  'Visual Effects': ['effect', 'vfx', 'fluid', 'particle', 'lighting', 'cinematic', 'macro'],
+  'Illustration': ['illustration', 'anime', 'stylized', 'world building', 'fashion'],
+  'Brand Design': ['brand', 'product', 'design', 'commercial', 'advertising', 'minimalist'],
+};
+
+const TOOL_KEYWORDS = {
+  'Runway Gen-3': ['runway', 'gen-3', 'gen3'],
+  'ComfyUI': ['comfyui', 'comfy'],
+  'Flux.1 Pro': ['flux'],
+  'Midjourney': ['midjourney'],
+  'Topaz Video AI': ['topaz'],
+};
+
+const POPULAR_LOCATIONS = ['London', 'Tokyo', 'Berlin', 'Paris', 'USA', 'Canada'];
+
 export default function CreatorDiscovery({ onSelectCreator, onInviteCreator }) {
-  const [creators, setCreators] = useState([]);
+  const [allCreators, setAllCreators] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -12,6 +31,7 @@ export default function CreatorDiscovery({ onSelectCreator, onInviteCreator }) {
   const [selectedDisciplines, setSelectedDisciplines] = useState([]);
   const [selectedTools, setSelectedTools] = useState([]);
   const [selectedTiers, setSelectedTiers] = useState([]);
+  const [locationQuery, setLocationQuery] = useState('');
   const [maxBudget, setMaxBudget] = useState(10000);
 
   // Sidebar accordion states
@@ -19,6 +39,7 @@ export default function CreatorDiscovery({ onSelectCreator, onInviteCreator }) {
     discipline: true,
     tools: true,
     tier: true,
+    location: true,
     rate: true,
   });
 
@@ -34,46 +55,116 @@ export default function CreatorDiscovery({ onSelectCreator, onInviteCreator }) {
     }
   };
 
-  const fetchCreators = React.useCallback(async () => {
+  const loadCreators = async () => {
     try {
       setLoading(true);
       setError(null);
-      const params = {};
-      if (searchQuery) params.search = searchQuery;
-      if (selectedTools.length > 0) params.tool = selectedTools[0];
-      if (selectedTiers.length > 0) params.verification_tier = selectedTiers[0];
-
-      const data = await creatorService.getCreators(params);
-      let filtered = data || [];
-
-      // Filter by disciplines if selected
-      if (selectedDisciplines.length > 0) {
-        filtered = filtered.filter((c) =>
-          selectedDisciplines.some((disc) =>
-            c.primary_specialization?.toLowerCase().includes(disc.toLowerCase()) ||
-            c.skills?.some((s) => s.name?.toLowerCase().includes(disc.toLowerCase()))
-          )
-        );
-      }
-
-      setCreators(filtered);
+      const data = await creatorService.getCreators();
+      setAllCreators(data || []);
     } catch (err) {
       setError(err.message || 'Failed to load creators.');
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, selectedDisciplines, selectedTools, selectedTiers]);
+  };
 
   useEffect(() => {
-    fetchCreators();
-  }, [fetchCreators]);
+    loadCreators();
+  }, []);
 
   const handleResetFilters = () => {
     setSearchQuery('');
     setSelectedDisciplines([]);
     setSelectedTools([]);
     setSelectedTiers([]);
+    setLocationQuery('');
+    setMaxBudget(10000);
   };
+
+  // Composite multi-filter working in unison with actual creator data
+  const filteredCreators = useMemo(() => {
+    return allCreators.filter((c) => {
+      // Exclude test-only accounts from public creator discovery
+      const isTestUser = (
+        c.handle?.toLowerCase().startsWith('test_') ||
+        c.display_name?.toLowerCase().startsWith('test_') ||
+        c.display_name?.toLowerCase().startsWith('test user') ||
+        c.avatar_url?.includes('dicebear.com/7.x/bottts')
+      );
+      if (isTestUser) return false;
+
+      // 1. Search Query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const nameMatch = c.display_name?.toLowerCase().includes(q);
+        const handleMatch = c.handle?.toLowerCase().includes(q);
+        const bioMatch = c.bio?.toLowerCase().includes(q);
+        const specMatch = c.primary_specialization?.toLowerCase().includes(q);
+        const locMatch = c.location?.toLowerCase().includes(q);
+        const skillMatch = c.skills?.some((s) => s.name?.toLowerCase().includes(q));
+        const toolMatch = c.tools?.some((t) => (t.name || t.tool_id)?.toLowerCase().includes(q));
+        if (!nameMatch && !handleMatch && !bioMatch && !specMatch && !locMatch && !skillMatch && !toolMatch) {
+          return false;
+        }
+      }
+
+      // 2. Creative Discipline Filter
+      if (selectedDisciplines.length > 0) {
+        const matchesDiscipline = selectedDisciplines.some((disc) => {
+          const keywords = DISCIPLINE_KEYWORDS[disc] || [disc.toLowerCase()];
+          const spec = (c.primary_specialization || '').toLowerCase();
+          const bio = (c.bio || '').toLowerCase();
+          const skills = (c.skills || []).map((s) => (s.name || '').toLowerCase()).join(' ');
+          return keywords.some((kw) => spec.includes(kw) || bio.includes(kw) || skills.includes(kw));
+        });
+        if (!matchesDiscipline) return false;
+      }
+
+      // 3. Tools & Models Filter
+      if (selectedTools.length > 0) {
+        const matchesTool = selectedTools.some((toolKey) => {
+          const keywords = TOOL_KEYWORDS[toolKey] || [toolKey.toLowerCase()];
+          const toolsStr = (c.tools || []).map((t) => (t.name || t.tool_id || '').toLowerCase()).join(' ');
+          return keywords.some((kw) => toolsStr.includes(kw));
+        });
+        if (!matchesTool) return false;
+      }
+
+      // 4. Role / Tier Filter
+      if (selectedTiers.length > 0) {
+        const matchesTier = selectedTiers.some((tier) => {
+          if (tier === 'COMMUNITY') {
+            return c.verification_tier === 'COMMUNITY' || c.verification_tier === 'UNVERIFIED' || !c.verification_tier;
+          }
+          return c.verification_tier === tier;
+        });
+        if (!matchesTier) return false;
+      }
+
+      // 5. Location Filter
+      if (locationQuery.trim()) {
+        const lq = locationQuery.toLowerCase().trim();
+        const matchesLocation = c.location && c.location.toLowerCase().includes(lq);
+        if (!matchesLocation) return false;
+      }
+
+      // 6. Rate Range Filter
+      if (maxBudget < 10000) {
+        const creatorBudget = c.min_budget !== undefined && c.min_budget !== null ? c.min_budget : 0;
+        if (creatorBudget > maxBudget) return false;
+      }
+
+      return true;
+    });
+  }, [allCreators, searchQuery, selectedDisciplines, selectedTools, selectedTiers, locationQuery, maxBudget]);
+
+  const hasActiveFilters =
+    Boolean(searchQuery) ||
+    selectedDisciplines.length > 0 ||
+    selectedTools.length > 0 ||
+    selectedTiers.length > 0 ||
+    Boolean(locationQuery) ||
+    maxBudget < 10000;
 
   return (
     <div className="kivora-discovery-layout">
@@ -152,7 +243,7 @@ export default function CreatorDiscovery({ onSelectCreator, onInviteCreator }) {
           )}
         </div>
 
-        {/* Section 3: Rate / Tier */}
+        {/* Section 3: Role / Tier */}
         <div className="filter-accordion-group">
           <button
             type="button"
@@ -183,7 +274,46 @@ export default function CreatorDiscovery({ onSelectCreator, onInviteCreator }) {
           )}
         </div>
 
-        {/* Section 4: Rate Range */}
+        {/* Section 4: Location */}
+        <div className="filter-accordion-group">
+          <button
+            type="button"
+            className="filter-accordion-header"
+            onClick={() => toggleSection('location')}
+          >
+            <span>Location</span>
+            <span className="accordion-chevron">{openSections.location ? '∧' : '∨'}</span>
+          </button>
+          {openSections.location && (
+            <div className="filter-location-block mt-2">
+              <input
+                type="text"
+                placeholder="Search city, country..."
+                value={locationQuery}
+                onChange={(e) => setLocationQuery(e.target.value)}
+                className="w-full text-xs p-2 rounded-lg border border-black/10 bg-white/80 focus:bg-white focus:outline-none"
+              />
+              <div className="flex flex-wrap gap-1 mt-2">
+                {POPULAR_LOCATIONS.map((loc) => (
+                  <button
+                    key={loc}
+                    type="button"
+                    onClick={() => setLocationQuery(locationQuery === loc ? '' : loc)}
+                    className={`text-[11px] px-2 py-0.5 rounded-full transition ${
+                      locationQuery.toLowerCase() === loc.toLowerCase()
+                        ? 'bg-purple-600 text-white font-semibold'
+                        : 'bg-white/80 text-neutral-600 hover:bg-white border border-black/5'
+                    }`}
+                  >
+                    {loc}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Section 5: Rate Range */}
         <div className="filter-accordion-group">
           <button
             type="button"
@@ -202,20 +332,22 @@ export default function CreatorDiscovery({ onSelectCreator, onInviteCreator }) {
                 step="500"
                 value={maxBudget}
                 onChange={(e) => setMaxBudget(Number(e.target.value))}
-                className="w-full"
+                className="w-full accent-purple-600 cursor-pointer"
               />
               <div className="flex justify-between text-xs text-neutral-500 mt-1 font-mono">
                 <span>$500</span>
-                <span className="font-bold text-purple-700">Up to ${maxBudget.toLocaleString()}</span>
+                <span className="font-bold text-purple-700">
+                  {maxBudget >= 10000 ? 'Any rate ($10k+)' : `Up to $${maxBudget.toLocaleString()}`}
+                </span>
               </div>
             </div>
           )}
         </div>
 
-        {(selectedDisciplines.length > 0 || selectedTools.length > 0 || selectedTiers.length > 0 || searchQuery) && (
+        {hasActiveFilters && (
           <button
             type="button"
-            className="w-full mt-4 py-2 text-xs font-semibold rounded-full bg-neutral-200 hover:bg-neutral-300 text-neutral-800 transition"
+            className="w-full mt-4 py-2 text-xs font-semibold rounded-full bg-neutral-200 hover:bg-neutral-300 text-neutral-800 transition shadow-sm"
             onClick={handleResetFilters}
           >
             Clear All Filters
@@ -227,9 +359,14 @@ export default function CreatorDiscovery({ onSelectCreator, onInviteCreator }) {
       <main className="kivora-discovery-main">
         {/* Headline Row */}
         <div className="discovery-headline-row">
-          <h2 className="discovery-main-title">
-            Creators worth a closer look.
-          </h2>
+          <div>
+            <h2 className="discovery-main-title">
+              Creators worth a closer look.
+            </h2>
+            <p className="text-xs text-neutral-500 mt-0.5 font-medium">
+              Showing {filteredCreators.length} of {allCreators.length} verified creators
+            </p>
+          </div>
           <button
             type="button"
             className="view-all-link-btn"
@@ -248,22 +385,22 @@ export default function CreatorDiscovery({ onSelectCreator, onInviteCreator }) {
         ) : error ? (
           <div className="kivora-error-card glass-panel">
             <p className="text-red">Error: {error}</p>
-            <button className="btn btn-secondary btn-sm" onClick={fetchCreators}>
+            <button className="btn btn-secondary btn-sm" onClick={loadCreators}>
               Retry Query
             </button>
           </div>
-        ) : creators.length === 0 ? (
+        ) : filteredCreators.length === 0 ? (
           <div className="kivora-empty-card glass-panel">
             <div className="empty-icon text-3xl">🎨</div>
             <h3 className="font-serif text-lg font-bold">No creators match your filter</h3>
-            <p className="text-xs text-neutral-500">Try clearing selected filters to see all available creators.</p>
+            <p className="text-xs text-neutral-500">Try clearing or adjusting selected filters to see more creators.</p>
             <button className="btn btn-primary btn-sm mt-3" onClick={handleResetFilters}>
               Reset Filters
             </button>
           </div>
         ) : (
           <div className="kivora-creators-card-grid">
-            {creators.map((creator) => (
+            {filteredCreators.map((creator) => (
               <CreatorCard
                 key={creator.id}
                 creator={creator}

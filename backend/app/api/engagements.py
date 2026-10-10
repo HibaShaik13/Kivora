@@ -71,6 +71,12 @@ def format_engagement_detail(e: Engagement) -> EngagementDetailRead:
             )
         )
 
+    from backend.app.api.projects import calculate_project_progress
+    progress, current_milestone, milestones = calculate_project_progress(e)
+
+    sorted_delivs = sorted(deliv_reads, key=lambda d: d.version, reverse=True)
+    latest_deliv = sorted_delivs[0] if sorted_delivs else None
+
     return EngagementDetailRead(
         id=e.id,
         brief_id=e.brief_id,
@@ -90,7 +96,11 @@ def format_engagement_detail(e: Engagement) -> EngagementDetailRead:
         brand_company_name=e.brief.brand.company_name if (e.brief and e.brief.brand) else None,
         creator_display_name=e.creator.display_name if e.creator else None,
         creator_handle=e.creator.handle if e.creator else None,
+        progress_percentage=progress,
+        current_milestone=current_milestone,
+        milestones=milestones,
         deliverables=deliv_reads,
+        latest_deliverable=latest_deliv,
     )
 
 

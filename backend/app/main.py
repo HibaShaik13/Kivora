@@ -22,7 +22,7 @@ from fastapi.staticfiles import StaticFiles
 import backend.app.core.config  # Ensures .env is loaded
 from backend.app.database import engine, Base
 import backend.app.models.models  # ensure models are registered
-from backend.app.api import auth, creators, brands, briefs, matching, ai, taxonomy, media, verification, engagements
+from backend.app.api import auth, creators, brands, briefs, matching, ai, taxonomy, media, verification, engagements, projects
 
 
 app = FastAPI(
@@ -66,6 +66,7 @@ app.include_router(brands.router)
 app.include_router(briefs.router)
 app.include_router(matching.router)
 app.include_router(engagements.router)
+app.include_router(projects.router)
 app.include_router(ai.router)
 app.include_router(taxonomy.router)
 app.include_router(media.router)

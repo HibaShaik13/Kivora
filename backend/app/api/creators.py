@@ -107,12 +107,21 @@ def list_creators(
     verification_status: Optional[str] = Query(None, description="Verification status alias"),
     only_verified: Optional[bool] = Query(None, description="Filter only verified creators (VERIFIED_PRO or TOP_STUDIO)"),
     availability: Optional[str] = Query(None, description="Availability status (AVAILABLE, BOOKED, LIMITED)"),
+    location: Optional[str] = Query(None, description="Location search or filter"),
     sort_by: Optional[str] = Query(None, description="Sort order: rating_desc, budget_asc, budget_desc, experience_desc, verified_claims_desc"),
     page: Optional[int] = Query(None, ge=1, description="Page number"),
     limit: Optional[int] = Query(None, ge=1, le=100, description="Items per page"),
     db: Session = Depends(get_db)
 ):
     query = db.query(CreatorProfile)
+
+    # Exclude test-generated accounts from public creator discovery
+    query = query.filter(
+        ~CreatorProfile.handle.ilike("test_%"),
+        ~CreatorProfile.display_name.ilike("test_%"),
+        ~CreatorProfile.display_name.ilike("Test User%"),
+        ~CreatorProfile.avatar_url.ilike("%dicebear.com/7.x/bottts%")
+    )
 
     if search:
         search_filter = f"%{search.lower()}%"
@@ -124,6 +133,9 @@ def list_creators(
                 CreatorProfile.primary_specialization.ilike(search_filter)
             )
         )
+
+    if location:
+        query = query.filter(CreatorProfile.location.ilike(f"%{location}%"))
 
     if specialization:
         query = query.filter(CreatorProfile.primary_specialization.ilike(f"%{specialization}%"))

@@ -30,13 +30,25 @@ export async function fetchApi(endpoint, options = {}) {
   } catch (err) {
     // If relative fetch failed, try direct localhost:8000 fallback in dev mode
     if (!API_BASE_URL && url.startsWith('/api')) {
-      const fallbackUrl = `http://localhost:8000${endpoint}`;
-      const response = await fetch(fallbackUrl, config);
-      if (!response.ok) {
-        const errorBody = await response.json().catch(() => ({}));
-        throw new Error(errorBody.detail || `HTTP Error ${response.status}`);
+      try {
+        const fallbackUrl = `http://localhost:8000${endpoint}`;
+        const response = await fetch(fallbackUrl, config);
+        if (response.ok) {
+          return response.json();
+        }
+      } catch {
+        // Localhost:8000 unavailable, try deployed backend fallback
       }
-      return response.json();
+
+      try {
+        const prodFallbackUrl = `https://kivora-web-tv1x.onrender.com${endpoint}`;
+        const prodResponse = await fetch(prodFallbackUrl, config);
+        if (prodResponse.ok) {
+          return prodResponse.json();
+        }
+      } catch {
+        // Both local and fallback failed
+      }
     }
     throw err;
   }
@@ -177,7 +189,38 @@ export const api = {
       body: JSON.stringify(payload),
     }),
 
-  // --- Engagements & Collaborations ---
+  // --- Active Projects & Collaborations ---
+  getProjects: (status) => {
+    const qs = status ? `?status=${encodeURIComponent(status)}` : '';
+    return fetchApi(`/api/projects${qs}`);
+  },
+  getProject: (id) => fetchApi(`/api/projects/${id}`),
+  submitProjectDeliverable: (projectId, payload) =>
+    fetchApi(`/api/projects/${projectId}/deliverables`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  requestProjectRevisions: (projectId, payload) =>
+    fetchApi(`/api/projects/${projectId}/revisions`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  approveProjectDeliverable: (projectId) =>
+    fetchApi(`/api/projects/${projectId}/approve`, {
+      method: 'POST',
+    }),
+  reviewProject: (projectId, payload) =>
+    fetchApi(`/api/projects/${projectId}/review`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  updateProjectStatus: (projectId, payload) =>
+    fetchApi(`/api/projects/${projectId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify(typeof payload === 'string' ? { status: payload } : payload),
+    }),
+
+  // --- Engagements & Collaborations (Legacy & Direct) ---
   getEngagements: (status) => {
     const qs = status ? `?status=${encodeURIComponent(status)}` : '';
     return fetchApi(`/api/engagements${qs}`);

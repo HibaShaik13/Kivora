@@ -555,6 +555,14 @@ class EngagementStatusUpdate(BaseModel):
     notes: Optional[str] = None
 
 
+class ProjectMilestone(BaseModel):
+    id: str
+    title: str
+    description: str
+    status: str  # COMPLETED, IN_PROGRESS, PENDING
+    completed_at: Optional[str] = None
+
+
 class EngagementRead(BaseModel):
     id: str
     brief_id: str
@@ -581,6 +589,10 @@ class EngagementDetailRead(EngagementRead):
     brand_company_name: Optional[str] = None
     creator_display_name: Optional[str] = None
     creator_handle: Optional[str] = None
+    progress_percentage: int = 0
+    current_milestone: Optional[str] = None
+    milestones: List[ProjectMilestone] = []
+    latest_deliverable: Optional[DeliverableRead] = None
 
 
 # ==========================================
@@ -660,3 +672,40 @@ class StructuredBriefOutput(BaseModel):
     restrictions_and_guidelines: str
     disclosure_requirements: str
     generation_engine: str  # "LLM_SYNTHESIZER" or "HEURISTIC_FALLBACK_ENGINE"
+
+
+# ==========================================
+# 10. ACTIVE PROJECTS SCHEMAS
+# ==========================================
+
+class ProjectRead(BaseModel):
+    id: str
+    brief_id: str
+    brief_title: Optional[str] = None
+    brief_slug: Optional[str] = None
+    creator_id: str
+    creator_display_name: Optional[str] = None
+    creator_handle: Optional[str] = None
+    creator_avatar_url: Optional[str] = None
+    brand_id: Optional[str] = None
+    brand_company_name: Optional[str] = None
+    brand_logo_url: Optional[str] = None
+    application_id: str
+    status: str  # KICKOFF, DRAFT_SUBMITTED, REVISION_REQUESTED, FINAL_APPROVED, COMPLETED, DISPUTED
+    progress_percentage: int
+    current_milestone: str
+    milestones: List[ProjectMilestone] = []
+    agreed_amount: float
+    start_date: datetime
+    completion_deadline: datetime
+    final_deliverable_url: Optional[str] = None
+    brand_rating: Optional[int] = None
+    brand_review: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+    deliverables: List[DeliverableRead] = []
+    latest_deliverable: Optional[DeliverableRead] = None
+
+    class Config:
+        from_attributes = True
+

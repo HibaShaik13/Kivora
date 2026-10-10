@@ -69,6 +69,7 @@ export default function CreatorProfileModal({ creator, isOpen, onClose, onSelect
   ];
 
   const avatarUrl = creator.avatar_url || `/assets/avatars/${(creator.handle || 'elena').split('_')[0]}.jpg`;
+  const bannerUrl = creator.banner_url || `/assets/banners/${(creator.handle || 'elena').split('_')[0]}_banner.jpg`;
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -76,157 +77,171 @@ export default function CreatorProfileModal({ creator, isOpen, onClose, onSelect
         className="kivora-profile-modal-container glass-panel"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Top Header Actions */}
-        <div className="profile-modal-top-bar">
-          <button
-            type="button"
-            className="modal-icon-action-btn"
-            onClick={() => {
-              navigator.clipboard?.writeText(window.location.href);
-              alert('Profile link copied to clipboard!');
+        {/* Compact Banner with Overlay & Top Header Actions */}
+        <div className="profile-modal-banner-wrap">
+          <img
+            src={bannerUrl}
+            alt={`${creator.display_name} Banner`}
+            className="profile-modal-banner-img"
+            onError={(e) => {
+              e.target.src = '/assets/banners/elena_banner.jpg';
             }}
-            title="Share profile"
-          >
-            ↗ Share
-          </button>
-          <button
-            type="button"
-            className="modal-icon-action-btn"
-            title="Save creator"
-          >
-            ♡
-          </button>
-          <button
-            type="button"
-            className="modal-close-round-btn"
-            onClick={onClose}
-            aria-label="Close"
-          >
-            ✕
-          </button>
+          />
+          <div className="profile-modal-banner-overlay" />
+          <div className="profile-modal-top-bar">
+            <button
+              type="button"
+              className="modal-icon-action-btn"
+              onClick={() => {
+                navigator.clipboard?.writeText(window.location.href);
+                alert('Profile link copied to clipboard!');
+              }}
+              title="Share profile"
+            >
+              ↗ Share
+            </button>
+            <button
+              type="button"
+              className="modal-icon-action-btn"
+              title="Save creator"
+            >
+              ♡
+            </button>
+            <button
+              type="button"
+              className="modal-close-round-btn"
+              onClick={onClose}
+              aria-label="Close"
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
-        {/* Profile Hero Header */}
-        <div className="profile-modal-hero-grid">
-          {/* Left Column: Portrait & 3 Thumbnails */}
-          <div className="profile-hero-left">
-            <div className="profile-main-portrait-wrapper">
-              <img
-                src={avatarUrl}
-                alt={creator.display_name}
-                className="profile-main-portrait-img"
-                onError={(e) => {
-                  e.target.src = '/assets/avatars/elena.jpg';
-                }}
-              />
+        {/* Modal Main Body */}
+        <div className="profile-modal-body">
+          {/* Profile Hero Header */}
+          <div className="profile-modal-hero-grid">
+            {/* Left Column: Portrait & 3 Thumbnails */}
+            <div className="profile-hero-left">
+              <div className="profile-main-portrait-wrapper">
+                <img
+                  src={avatarUrl}
+                  alt={creator.display_name}
+                  className="profile-main-portrait-img"
+                  onError={(e) => {
+                    e.target.src = '/assets/avatars/elena.jpg';
+                  }}
+                />
+              </div>
+              {/* 3 Small Thumbnails below */}
+              <div className="profile-portrait-thumbs-row">
+                {projects.slice(0, 3).map((p, idx) => (
+                  <div
+                    key={idx}
+                    className="profile-portrait-subthumb"
+                    onClick={() => onSelectProject(p)}
+                    title={p.title}
+                  >
+                    <img
+                      src={p.thumbnail_url || p.primary_asset_url}
+                      alt={p.title}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
-            {/* 3 Small Thumbnails below */}
-            <div className="profile-portrait-thumbs-row">
-              {projects.slice(0, 3).map((p, idx) => (
-                <div
-                  key={idx}
-                  className="profile-portrait-subthumb"
-                  onClick={() => onSelectProject(p)}
+
+            {/* Middle Column: Info, Bio, Buttons */}
+            <div className="profile-hero-middle">
+              <div className="flex items-center gap-2">
+                <h1 className="profile-display-name">{creator.display_name}</h1>
+                <span className="purple-check-badge-large" title="Audited Creator">
+                  ✓
+                </span>
+              </div>
+              <p className="profile-role-text">
+                {creator.primary_specialization || '3D & Motion Artist'}
+              </p>
+
+              <div className="profile-meta-chips-row">
+                <span>📍 {creator.location || 'London, UK'}</span>
+                <span>•</span>
+                <span>⭐ {creator.average_rating ? creator.average_rating.toFixed(1) : '4.9'} ({creator.completed_projects_count ? creator.completed_projects_count * 12 : 36} reviews)</span>
+                <span>•</span>
+                <span className="profile-tier-badge">
+                  {creator.verification_tier === 'TOP_STUDIO' ? '👑 Top Studio' : '🛡 Pro Tier'}
+                </span>
+              </div>
+
+              <p className="profile-bio-manifesto">
+                {creator.bio || 'I create cinematic 3D visuals and AI-driven motion design for brands who want to tell stories that feel alive. From concept to final frame, '}
+                <span className="serif-italic-accent">I blend art, technology and emotion.</span>
+              </p>
+
+              {/* Skills & Tools chips */}
+              <div className="profile-skills-pills-row">
+                {creator.tools && creator.tools.map((t) => (
+                  <span key={t.tool_id || t.name} className="profile-tag-pill">
+                    {t.name || (t.tool && t.tool.name) || t.tool_id}
+                  </span>
+                ))}
+                {creator.skills && creator.skills.map((s) => (
+                  <span key={s.skill_id || s.name} className="profile-tag-pill">
+                    {s.name || (s.skill && s.skill.name) || s.skill_id}
+                  </span>
+                ))}
+                {(!creator.tools || creator.tools.length === 0) && (
+                  <>
+                    <span className="profile-tag-pill">3D & CGI</span>
+                    <span className="profile-tag-pill">Motion</span>
+                    <span className="profile-tag-pill">Visual Effects</span>
+                    <span className="profile-tag-pill">Creative Direction</span>
+                  </>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="profile-cta-buttons-row">
+                <button
+                  type="button"
+                  className="profile-btn-contact"
+                  onClick={() => {
+                    onClose();
+                    if (onPostBrief) onPostBrief();
+                  }}
                 >
-                  <img
-                    src={p.thumbnail_url || p.primary_asset_url}
-                    alt={p.title}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              ))}
+                  Contact
+                </button>
+                <button
+                  type="button"
+                  className="profile-btn-availability"
+                  onClick={() => {
+                    alert(`Creator is currently Available. Minimum project rate is $${creator.min_budget?.toLocaleString() || '2,500'}.`);
+                  }}
+                >
+                  View Availability
+                </button>
+              </div>
+            </div>
+
+            {/* Right Column: Statistics Cluster */}
+            <div className="profile-hero-right">
+              <div className="profile-stat-item">
+                <span className="profile-stat-number">{creator.completed_projects_count ? creator.completed_projects_count + 15 : '50+'}</span>
+                <span className="profile-stat-title">Projects</span>
+              </div>
+              <div className="profile-stat-item">
+                <span className="profile-stat-number">{creator.years_experience ? `${creator.years_experience}+` : '3+'}</span>
+                <span className="profile-stat-title">Years</span>
+              </div>
+              <div className="profile-stat-item">
+                <span className="profile-stat-number">98%</span>
+                <span className="profile-stat-title">Satisfaction</span>
+              </div>
             </div>
           </div>
-
-          {/* Middle Column: Info, Bio, Buttons */}
-          <div className="profile-hero-middle">
-            <div className="flex items-center gap-2">
-              <h1 className="profile-display-name">{creator.display_name}</h1>
-              <span className="purple-check-badge-large" title="Audited Creator">
-                ✓
-              </span>
-            </div>
-            <p className="profile-role-text">
-              {creator.primary_specialization || '3D & Motion Artist'}
-            </p>
-
-            <div className="profile-meta-chips-row">
-              <span>📍 {creator.location || 'London, UK'}</span>
-              <span>•</span>
-              <span>⭐ {creator.average_rating ? creator.average_rating.toFixed(1) : '4.9'} ({creator.completed_projects_count ? creator.completed_projects_count * 12 : 36} reviews)</span>
-              <span>•</span>
-              <span className="text-purple-700 font-semibold font-mono">
-                {creator.verification_tier === 'TOP_STUDIO' ? '👑 Top Studio' : '🛡 Pro Tier'}
-              </span>
-            </div>
-
-            <p className="profile-bio-manifesto">
-              {creator.bio || 'I create cinematic 3D visuals and AI-driven motion design for brands who want to tell stories that feel alive. From concept to final frame, '}
-              <span className="serif-italic-accent">I blend art, technology and emotion.</span>
-            </p>
-
-            {/* Skills & Tools chips */}
-            <div className="profile-skills-pills-row">
-              {creator.tools && creator.tools.map((t) => (
-                <span key={t.tool_id || t.name} className="profile-tag-pill">
-                  {t.name || (t.tool && t.tool.name) || t.tool_id}
-                </span>
-              ))}
-              {creator.skills && creator.skills.map((s) => (
-                <span key={s.skill_id || s.name} className="profile-tag-pill">
-                  {s.name || (s.skill && s.skill.name) || s.skill_id}
-                </span>
-              ))}
-              {(!creator.tools || creator.tools.length === 0) && (
-                <>
-                  <span className="profile-tag-pill">3D & CGI</span>
-                  <span className="profile-tag-pill">Motion</span>
-                  <span className="profile-tag-pill">Visual Effects</span>
-                  <span className="profile-tag-pill">Creative Direction</span>
-                </>
-              )}
-            </div>
-
-            {/* Action Buttons */}
-            <div className="profile-cta-buttons-row">
-              <button
-                type="button"
-                className="btn btn-dark btn-pill-lg"
-                onClick={() => {
-                  onClose();
-                  if (onPostBrief) onPostBrief();
-                }}
-              >
-                Contact
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary btn-pill-lg"
-                onClick={() => {
-                  alert(`Creator is currently Available. Minimum project rate is $${creator.min_budget?.toLocaleString() || '2,500'}.`);
-                }}
-              >
-                View Availability
-              </button>
-            </div>
-          </div>
-
-          {/* Right Column: Statistics Cluster */}
-          <div className="profile-hero-right">
-            <div className="profile-stat-item">
-              <span className="profile-stat-number">{creator.completed_projects_count ? creator.completed_projects_count + 15 : '50+'}</span>
-              <span className="profile-stat-title">Projects</span>
-            </div>
-            <div className="profile-stat-item">
-              <span className="profile-stat-number">{creator.years_experience ? `${creator.years_experience}+` : '3+'}</span>
-              <span className="profile-stat-title">Years</span>
-            </div>
-            <div className="profile-stat-item">
-              <span className="profile-stat-number">98%</span>
-              <span className="profile-stat-title">Client Satisfaction</span>
-            </div>
-          </div>
-        </div>
 
         {/* Navigation Tabs */}
         <div className="profile-tabs-nav-bar">
@@ -351,6 +366,7 @@ export default function CreatorProfileModal({ creator, isOpen, onClose, onSelect
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>
   );

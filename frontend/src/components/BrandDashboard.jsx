@@ -77,6 +77,7 @@ export default function BrandDashboard({
   };
 
   const handleBriefStatusChange = async (briefId, status) => {
+    if (status === 'CLOSED' && !window.confirm('Are you sure you want to close this campaign brief? Creators will no longer be able to submit pitches.')) return;
     try {
       await api.updateBriefStatus(briefId, status);
       loadData();
@@ -516,39 +517,48 @@ export default function BrandDashboard({
                         {brief.campaign_objective}
                       </p>
 
-                      <div className="pt-3 border-t border-black/10 flex items-center justify-between text-xs">
+                      <div className="brief-card-actions-bar pt-4 border-t border-black/10 flex flex-wrap items-center justify-between gap-3 text-xs">
                         <button
                           type="button"
-                          className="link-arrow-btn text-xs"
+                          className="brief-btn-primary"
                           onClick={() => onSelectBrief(brief)}
                         >
-                          View Brief & Matches →
+                          <span>View Brief & Matches</span>
+                          <span className="brief-btn-arrow">→</span>
                         </button>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           {brief.status === 'DRAFT' && (
                             <button
                               type="button"
-                              className="text-xs text-emerald-700 hover:underline font-semibold"
+                              className="brief-btn-publish"
                               onClick={() => handleBriefStatusChange(brief.id, 'PUBLISHED')}
+                              title="Publish this brief to open for pitches"
                             >
-                              Publish Brief
+                              <span>🚀 Publish Brief</span>
                             </button>
                           )}
                           {brief.status === 'PUBLISHED' && (
                             <button
                               type="button"
-                              className="text-xs text-neutral-600 hover:underline font-semibold"
+                              className="brief-btn-secondary"
                               onClick={() => handleBriefStatusChange(brief.id, 'CLOSED')}
+                              title="Close this brief to stop new pitches"
                             >
-                              Close Brief
+                              <span>⏸ Close Brief</span>
                             </button>
+                          )}
+                          {brief.status === 'CLOSED' && (
+                            <span className="brief-status-tag-closed">
+                              Status: Closed
+                            </span>
                           )}
                           <button
                             type="button"
-                            className="text-xs text-red-500 hover:underline"
+                            className="brief-btn-danger"
                             onClick={() => handleDeleteBrief(brief.id)}
+                            title="Delete this campaign brief"
                           >
-                            Delete
+                            <span>🗑 Delete</span>
                           </button>
                         </div>
                       </div>
@@ -720,6 +730,46 @@ export default function BrandDashboard({
                             </button>
                           )}
                         </div>
+                      </div>
+
+                      {/* Project Progress & Milestone Track */}
+                      <div className="bg-purple-50/60 p-4 rounded-xl border border-purple-100 space-y-3">
+                        <div className="flex items-center justify-between text-xs font-semibold">
+                          <span className="text-purple-900 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-purple-600 animate-pulse"></span>
+                            Milestone: <strong>{eng.current_milestone || 'In Progress'}</strong>
+                          </span>
+                          <span className="text-purple-700 font-bold">{eng.progress_percentage || 25}% Progress</span>
+                        </div>
+                        <div className="w-full bg-purple-200/60 h-2 rounded-full overflow-hidden">
+                          <div
+                            className="bg-purple-600 h-2 rounded-full transition-all duration-500 ease-out"
+                            style={{ width: `${eng.progress_percentage || 25}%` }}
+                          />
+                        </div>
+
+                        {/* Milestones Stepper */}
+                        {eng.milestones && eng.milestones.length > 0 && (
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 pt-1 text-[11px]">
+                            {eng.milestones.map((m) => (
+                              <div
+                                key={m.id}
+                                className={`p-2 rounded-lg border ${
+                                  m.status === 'COMPLETED'
+                                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                                    : m.status === 'IN_PROGRESS'
+                                    ? 'bg-purple-100 border-purple-300 text-purple-900 font-semibold'
+                                    : 'bg-white/60 border-black/5 text-neutral-400'
+                                }`}
+                              >
+                                <div className="flex items-center gap-1">
+                                  <span>{m.status === 'COMPLETED' ? '✓' : m.status === 'IN_PROGRESS' ? '⏳' : '○'}</span>
+                                  <span className="truncate">{m.title}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
                       {/* Deliverables Audit */}

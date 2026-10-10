@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import HeroSection from './components/HeroSection';
+import LandingLoginSection from './components/LandingLoginSection';
 import PortfolioSpotlight from './components/PortfolioSpotlight';
 import HowItWorksSection from './components/HowItWorksSection';
 import CreativeUniverseSection from './components/CreativeUniverseSection';
@@ -102,10 +103,31 @@ export default function App() {
         {/* VIEW 1: PUBLIC LANDING PAGE */}
         {currentView === 'landing' && (
           <div className="landing-page-flow">
-            {/* Hero Section with 3D Animated Showcase */}
+            {/* Hero Section with Cosmic Artwork & Interactive Constellation */}
             <HeroSection
               onExploreCreators={() => setCurrentView('creators')}
+              onExploreBriefs={() => setCurrentView('briefs')}
+              onGetStarted={() => {
+                const el = document.getElementById('login-section');
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+                setIsAuthModalOpen(true);
+              }}
               onOpenAiBuilder={() => setIsAiBuilderOpen(true)}
+            />
+
+            {/* Dedicated Login Section with Rotating Creative Quotations */}
+            <LandingLoginSection
+              currentUser={currentUser}
+              onOpenAuth={() => setIsAuthModalOpen(true)}
+              onAuthSuccess={handleAuthSuccess}
+              onNavigateToDashboard={() => {
+                if (currentUser?.role === 'ADMIN') {
+                  setCurrentView('admin');
+                } else {
+                  setCurrentView('dashboard');
+                }
+              }}
+              onLogout={handleLogout}
             />
 
             {/* Curated 6 Portfolios Showcase with Video Previews */}

@@ -208,6 +208,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
                     className="pw-toggle-btn"
                     onClick={() => setShowPassword(!showPassword)}
                     tabIndex={-1}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
                     {showPassword ? '👁️' : '👁️‍🗨️'}
                   </button>
@@ -294,6 +295,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
                     className="pw-toggle-btn"
                     onClick={() => setShowPassword(!showPassword)}
                     tabIndex={-1}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
                     {showPassword ? '👁️' : '👁️‍🗨️'}
                   </button>

@@ -2,119 +2,147 @@ import React from 'react';
 
 export default function HeroSection({
   onExploreCreators,
+  onExploreBriefs,
+  onGetStarted,
   onOpenAiBuilder,
 }) {
+  const scrollToLogin = () => {
+    if (onGetStarted) {
+      onGetStarted();
+    } else {
+      const loginSection = document.getElementById('login-section');
+      if (loginSection) {
+        loginSection.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  };
+
   return (
-    <section className="hero-section">
-      <div className="container hero-container">
-        {/* Left Column: Editorial Headline, Subtext, CTAs */}
-        <div className="hero-content">
-          {/* Tag Badge */}
-          <div className="hero-badge">
-            <span className="badge-editorial">
-              <span className="badge-dot" />
-              A CREATIVE MARKETPLACE FOR THE AI ERA
+    <section className="cosmic-hero-section">
+      {/* Background Cosmic Canvas & Ambient Lights */}
+      <div className="cosmic-hero-bg-layer" aria-hidden="true">
+        <img
+          src="/assets/cosmic_hero_artwork.jpg"
+          alt=""
+          className="cosmic-hero-artwork-img"
+          onError={(e) => {
+            // Fallback in case of image load delay
+            e.currentTarget.style.display = 'none';
+          }}
+        />
+        <div className="cosmic-vignette-overlay" />
+        <div className="cosmic-glow-orb cosmic-glow-purple" />
+        <div className="cosmic-glow-orb cosmic-glow-amber" />
+        <div className="cosmic-stars-particles" />
+      </div>
+
+      <div className="container cosmic-hero-container">
+        {/* Left Column: Editorial Cosmic Typography & Actions */}
+        <div className="cosmic-hero-text-block">
+          {/* Small Top Label */}
+          <div className="cosmic-label-badge">
+            <span className="cosmic-badge-pill">
+              <span className="cosmic-badge-sparkle">✦</span>
+              CREATIVE POSSIBILITIES. LIMITLESS HORIZONS.
             </span>
           </div>
 
-          {/* Main Title */}
-          <h1 className="hero-title">
-            Where bold ideas<br />
-            find their <span className="serif-italic-accent">creators.</span>
+          {/* Main Headline */}
+          <h1 className="cosmic-hero-headline">
+            Step into a<br />
+            <span className="cosmic-hero-italic-highlight">creative universe.</span>
           </h1>
 
-          {/* Subtext */}
-          <p className="hero-description">
-            Connect with verified AI creatives, from visionary directors to 3D artists,
-            animators and designers. Turn your ideas into extraordinary campaigns.
+          {/* Supporting Text */}
+          <p className="cosmic-hero-subtext">
+            Explore talents, ideas and possibilities beyond imagination.
           </p>
 
-          {/* Action Buttons */}
-          <div className="hero-actions">
+          {/* Primary Action Button */}
+          <div className="cosmic-hero-cta-group">
             <button
               type="button"
-              className="btn btn-dark btn-hero-primary"
+              className="cosmic-btn-primary"
               onClick={onExploreCreators}
+              aria-label="Explore creators"
             >
-              Explore Creators <span className="arrow-inline">→</span>
-            </button>
-
-            <button
-              type="button"
-              className="btn btn-frosted btn-hero-secondary"
-              onClick={onOpenAiBuilder}
-            >
-              Create a Brief
+              Explore Now <span className="cosmic-arrow-icon">→</span>
             </button>
           </div>
         </div>
 
-        {/* Right Column: 3D Aesthetic Floating Showcase with Glass Cards & Ambient Lighting */}
-        <div className="hero-visual-wrapper">
-          <div className="hero-ambient-orb" />
-          <div className="hero-ambient-orb secondary" />
+        {/* Right Column: Interactive Constellation Floating Badges over Planet Scene */}
+        <div className="cosmic-hero-planet-interactive-layer" aria-label="Creative Universe Navigation">
+          {/* 1. CREATORS floating label (Top Left) */}
+          <div className="cosmic-floating-node node-creators animate-float-slow">
+            <button
+              type="button"
+              className="cosmic-interactive-pill"
+              onClick={onExploreCreators}
+              title="Discover verified creators"
+            >
+              <span className="node-icon">👑</span>
+              <span className="node-text">CREATORS</span>
+            </button>
+            <div className="cosmic-connector-line line-creators" />
+          </div>
 
-          <div className="hero-floating-scene">
-            {/* Primary Featured Creator Card */}
-            <div className="hero-float-card hero-card-main animate-float">
-              <div className="hero-card-media-wrapper">
-                <img
-                  src="/assets/avatars/elena.jpg"
-                  alt="Elena Rostova"
-                  className="hero-card-img"
-                  onError={(e) => {
-                    e.target.src = '/assets/backgrounds/creator-profile.jpg';
-                  }}
-                />
-                <span className="hero-card-badge">👑 Top Studio</span>
-              </div>
-              <div className="hero-card-content">
-                <div className="hero-card-header-row">
-                  <div>
-                    <h4 className="hero-card-name">Elena Rostova</h4>
-                    <span className="hero-card-role">Sci-Fi Film & AI Director</span>
-                  </div>
-                  <span className="purple-check-badge">✓</span>
-                </div>
-                <div className="hero-card-tags">
-                  <span className="mini-tag-pill">Runway Gen-3</span>
-                  <span className="mini-tag-pill">ComfyUI</span>
-                  <span className="mini-tag-pill">4K Video</span>
-                </div>
-              </div>
-            </div>
+          {/* 2. BRIEFS floating label (Top Right) */}
+          <div className="cosmic-floating-node node-briefs animate-float-delayed">
+            <button
+              type="button"
+              className="cosmic-interactive-pill"
+              onClick={onExploreBriefs}
+              title="Explore open briefs"
+            >
+              <span className="node-icon">📄</span>
+              <span className="node-text">BRIEFS</span>
+            </button>
+            <div className="cosmic-connector-line line-briefs" />
+          </div>
 
-            {/* Secondary Floating Mini Card (Marcus Vance) */}
-            <div className="hero-float-card hero-card-secondary animate-float-delayed">
-              <img
-                src="/assets/avatars/marcus.jpg"
-                alt="Marcus Vance"
-                className="hero-mini-avatar"
-                onError={(e) => {
-                  e.target.src = '/assets/backgrounds/brand-workspace.jpg';
-                }}
-              />
-              <div className="hero-mini-info">
-                <div className="hero-mini-title">
-                  <strong>Marcus Vance</strong>
-                  <span className="purple-check-badge">✓</span>
-                </div>
-                <span className="hero-mini-sub">3D & Product Viz</span>
-              </div>
-            </div>
+          {/* 3. COLLABORATE floating label (Bottom Left) */}
+          <div className="cosmic-floating-node node-collaborate animate-float-gentle">
+            <button
+              type="button"
+              className="cosmic-interactive-pill"
+              onClick={() => {
+                const howItWorks = document.getElementById('how-it-works');
+                if (howItWorks) {
+                  howItWorks.scrollIntoView({ behavior: 'smooth' });
+                } else if (onExploreCreators) {
+                  onExploreCreators();
+                }
+              }}
+              title="Collaborate on campaigns"
+            >
+              <span className="node-icon">🔗</span>
+              <span className="node-text">COLLABORATE</span>
+            </button>
+            <div className="cosmic-connector-line line-collaborate" />
+          </div>
 
-            {/* Tertiary Floating Metric Chip */}
-            <div className="hero-float-card hero-card-metric animate-pulse-gentle">
-              <div className="metric-dot" />
-              <div className="metric-content">
-                <span className="metric-label">Audited Evidence</span>
-                <span className="metric-val">100% Verified</span>
-              </div>
-            </div>
+          {/* 4. CREATE floating label (Bottom Right) */}
+          <div className="cosmic-floating-node node-create animate-float-slow">
+            <button
+              type="button"
+              className="cosmic-interactive-pill"
+              onClick={() => {
+                if (onOpenAiBuilder) {
+                  onOpenAiBuilder();
+                } else {
+                  scrollToLogin();
+                }
+              }}
+              title="Create a brief or launch campaign"
+            >
+              <span className="node-icon">✦</span>
+              <span className="node-text">CREATE</span>
+            </button>
+            <div className="cosmic-connector-line line-create" />
           </div>
         </div>
       </div>
     </section>
   );
 }
-

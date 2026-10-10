@@ -741,6 +741,46 @@ export default function CreatorDashboard({
                         )}
                       </div>
 
+                      {/* Project Progress & Milestone Track */}
+                      <div className="bg-purple-50/60 p-4 rounded-xl border border-purple-100 space-y-3">
+                        <div className="flex items-center justify-between text-xs font-semibold">
+                          <span className="text-purple-900 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-purple-600 animate-pulse"></span>
+                            Milestone: <strong>{eng.current_milestone || 'In Progress'}</strong>
+                          </span>
+                          <span className="text-purple-700 font-bold">{eng.progress_percentage || 25}% Progress</span>
+                        </div>
+                        <div className="w-full bg-purple-200/60 h-2 rounded-full overflow-hidden">
+                          <div
+                            className="bg-purple-600 h-2 rounded-full transition-all duration-500 ease-out"
+                            style={{ width: `${eng.progress_percentage || 25}%` }}
+                          />
+                        </div>
+
+                        {/* Milestones Stepper */}
+                        {eng.milestones && eng.milestones.length > 0 && (
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 pt-1 text-[11px]">
+                            {eng.milestones.map((m) => (
+                              <div
+                                key={m.id}
+                                className={`p-2 rounded-lg border ${
+                                  m.status === 'COMPLETED'
+                                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                                    : m.status === 'IN_PROGRESS'
+                                    ? 'bg-purple-100 border-purple-300 text-purple-900 font-semibold'
+                                    : 'bg-white/60 border-black/5 text-neutral-400'
+                                }`}
+                              >
+                                <div className="flex items-center gap-1">
+                                  <span>{m.status === 'COMPLETED' ? '✓' : m.status === 'IN_PROGRESS' ? '⏳' : '○'}</span>
+                                  <span className="truncate">{m.title}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
                       {/* Deliverables History */}
                       <div>
                         <h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">
