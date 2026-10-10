@@ -4,7 +4,17 @@ Main entrypoint initializing REST routes, CORS middleware, and system health che
 """
 
 import os
+import sys
 from pathlib import Path
+
+# Ensure project root and backend dir are in sys.path for Render deployment
+_current_file = Path(__file__).resolve()
+_backend_dir = _current_file.parent.parent
+_project_dir = _backend_dir.parent
+for _p in [str(_project_dir), str(_backend_dir)]:
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles

@@ -6,11 +6,11 @@ services:
     staticPublishPath: ./frontend/dist
     envVars:
       - key: VITE_API_URL
-        value: https://kivora-backend.onrender.com
+        value: https://kivora-api-jffe.onrender.com
     routes:
       - type: rewrite
         source: /api/*
-        destination: https://kivora-backend.onrender.com/api/*
+        destination: https://kivora-api-jffe.onrender.com/api/*
       - type: rewrite
         source: /*
         destination: /index.html
