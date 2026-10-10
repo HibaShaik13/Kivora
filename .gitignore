@@ -14,6 +14,7 @@ venv/
 # Database
 *.db
 *.sqlite3
+!kivora.db
 
 # Node / Frontend
 node_modules/
