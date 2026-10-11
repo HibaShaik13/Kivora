@@ -79,9 +79,16 @@ export default function RegisterPage() {
       const toastMsg = response?.message || 'Registration successful! Please verify your email via OTP.';
       showToast(toastMsg, response?.delivery_status === 'FAILED' ? 'warning' : 'success');
 
+      // Save pending email to session storage for refresh recovery
+      const cleanEmail = email.trim().toLowerCase();
+      try {
+        sessionStorage.setItem('kivora_pending_email', cleanEmail);
+      } catch (_) {}
+
       // Navigate to OTP verification with email and delivery metadata in state
-      navigate(`/verify-otp?email=${encodeURIComponent(email.trim().toLowerCase())}&role=${role}`, {
+      navigate(`/verify-otp?email=${encodeURIComponent(cleanEmail)}&role=${role}`, {
         state: {
+          email: cleanEmail,
           devOtp: response?.dev_otp,
           deliveryStatus: response?.delivery_status,
           deliveryNotice: response?.delivery_notice,
@@ -327,11 +334,11 @@ export default function RegisterPage() {
               {loading ? (
                 <>
                   <ArrowsClockwise size={18} className="animate-spin" />
-                  <span>Registering Account...</span>
+                  <span>Sending Verification Code...</span>
                 </>
               ) : (
                 <>
-                  <span>Continue to Email Verification</span>
+                  <span>Verify Email</span>
                   <ArrowRight size={18} />
                 </>
               )}

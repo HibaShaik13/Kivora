@@ -22,6 +22,15 @@ export default function VerifyOtpPage() {
   const { showToast } = useToast();
 
   const queryEmail = searchParams.get('email') || '';
+  const storedEmail = (() => {
+    try {
+      return sessionStorage.getItem('kivora_pending_email') || '';
+    } catch {
+      return '';
+    }
+  })();
+  const resolvedEmail = (queryEmail || location.state?.email || storedEmail).trim().toLowerCase();
+
   const isDevOrStaging = !import.meta.env.PROD;
   const initialDevOtp = isDevOrStaging ? (location.state?.devOtp || searchParams.get('dev_otp') || null) : null;
   const initialDeliveryStatus = location.state?.deliveryStatus || (initialDevOtp ? 'SIMULATED' : 'DELIVERED');
@@ -33,7 +42,7 @@ export default function VerifyOtpPage() {
     : (initialDeliveryStatus === 'DELIVERED' ? 60 : 0);
   const [cooldown, setCooldown] = useState(initialCooldown);
 
-  const [email, setEmail] = useState(queryEmail);
+  const [email, setEmail] = useState(resolvedEmail);
   const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
@@ -327,7 +336,7 @@ export default function VerifyOtpPage() {
           )}
 
           {/* Email input if missing */}
-          {!queryEmail && (
+          {!resolvedEmail && (
             <div className="form-group" style={{ marginBottom: '20px', textAlign: 'left' }}>
               <label className="form-label" htmlFor="otp-email">
                 Account Email
@@ -395,7 +404,7 @@ export default function VerifyOtpPage() {
                 </>
               ) : (
                 <>
-                  <span>Verify and Activate Account</span>
+                  <span>Verify & Activate Account</span>
                   <ArrowRight size={18} />
                 </>
               )}
