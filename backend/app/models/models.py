@@ -48,7 +48,7 @@ class OtpCode(Base):
 
     id = Column(String(36), primary_key=True)
     email = Column(String(255), nullable=False, index=True)
-    code = Column(String(10), nullable=False)
+    code = Column(String(64), nullable=False)
     purpose = Column(String(30), nullable=False, default="REGISTRATION")  # REGISTRATION, LOGIN, PASSWORD_RESET
     expires_at = Column(DateTime, nullable=False)
     is_used = Column(Boolean, nullable=False, default=False)

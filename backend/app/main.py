@@ -92,6 +92,13 @@ def on_startup():
         # 1. Ensure all database tables exist (PostgreSQL / SQLite)
         Base.metadata.create_all(bind=engine)
 
+        # 1b. Safely widen otp_codes.code column if needed to support keyed HMAC-SHA256 hashes
+        try:
+            with engine.begin() as conn:
+                conn.exec_driver_sql('ALTER TABLE "otp_codes" ALTER COLUMN "code" TYPE VARCHAR(64);')
+        except Exception:
+            pass
+
         # 2. Check if catalog needs baseline seeding
         db = SessionLocal()
         try:

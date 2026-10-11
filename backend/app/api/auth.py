@@ -25,6 +25,8 @@ from backend.app.core.security import (
     verify_password,
     create_access_token,
     generate_otp_code,
+    hash_otp_code,
+    verify_otp_code,
 )
 from backend.app.core.deps import get_current_user
 from backend.app.core.config import KIVORA_ENV
@@ -115,12 +117,12 @@ def register_user(payload: UserRegisterRequest, db: Session = Depends(get_db)):
         OtpCode.is_used == False
     ).update({"is_used": True})
 
-    # 5. Generate & persist cryptographically secure 6-digit OTP code (15-min expiration)
+    # 5. Generate & persist cryptographically secure 6-digit OTP code (15-min expiration, stored as keyed hash)
     otp = generate_otp_code()
     otp_record = OtpCode(
         id=f"otp-{uuid.uuid4().hex[:10]}",
         email=email,
-        code=otp,
+        code=hash_otp_code(email, otp),
         purpose="REGISTRATION",
         expires_at=datetime.utcnow() + timedelta(minutes=15),
         is_used=False,
@@ -184,12 +186,17 @@ def verify_otp(payload: VerifyOtpRequest, db: Session = Depends(get_db)):
             detail="No account associated with this email address."
         )
 
-    # Find the latest active OTP code for this email matching the submitted code
-    otp_record = db.query(OtpCode).filter(
+    # Find all active unused OTP codes for this email (newest first)
+    active_otps = db.query(OtpCode).filter(
         OtpCode.email == email,
-        OtpCode.code == code,
         OtpCode.is_used == False,
-    ).order_by(OtpCode.created_at.desc()).first()
+    ).order_by(OtpCode.created_at.desc()).all()
+
+    otp_record = None
+    for rec in active_otps:
+        if verify_otp_code(code, rec.code, email):
+            otp_record = rec
+            break
 
     if not otp_record:
         raise HTTPException(
@@ -267,12 +274,12 @@ def resend_otp(payload: ResendOtpRequest, db: Session = Depends(get_db)):
         OtpCode.is_used == False
     ).update({"is_used": True})
 
-    # Generate and persist fresh OTP
+    # Generate and persist fresh OTP (stored as keyed hash)
     otp = generate_otp_code()
     otp_record = OtpCode(
         id=f"otp-{uuid.uuid4().hex[:10]}",
         email=email,
-        code=otp,
+        code=hash_otp_code(email, otp),
         purpose="REGISTRATION",
         expires_at=datetime.utcnow() + timedelta(minutes=15),
         is_used=False,

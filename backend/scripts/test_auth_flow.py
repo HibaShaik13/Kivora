@@ -20,7 +20,14 @@ from starlette.testclient import TestClient
 from backend.app.main import app
 from backend.app.database import SessionLocal
 from backend.app.models.models import User, OtpCode
-from backend.app.core.security import generate_otp_code, hash_password, verify_password, decode_access_token
+from backend.app.core.security import (
+    generate_otp_code,
+    hash_password,
+    verify_password,
+    decode_access_token,
+    hash_otp_code,
+    verify_otp_code,
+)
 from backend.app.services.email_service import send_otp_email
 
 client = TestClient(app)
@@ -48,13 +55,25 @@ def run_auth_and_email_tests():
     cleanup_fixtures(db)
 
     # ----------------------------------------------------
-    # 1. Cryptographic OTP Generator Audit
+    # 1. Cryptographic OTP Generator & Keyed Hashing Audit
     # ----------------------------------------------------
-    print("--- 1. Testing Cryptographic OTP Generator ---")
+    print("--- 1. Testing Cryptographic OTP Generator & Keyed Hashing ---")
     otp_samples = [generate_otp_code() for _ in range(20)]
     assert all(len(code) == 6 and code.isdigit() for code in otp_samples), "OTP must be 6 numeric digits"
     assert len(set(otp_samples)) == len(otp_samples), "OTP codes must be unique and uniform"
+    
+    # Test keyed HMAC-SHA256 hashing
+    test_raw_code = "482910"
+    hashed_code = hash_otp_code("User@Example.Com", test_raw_code)
+    assert len(hashed_code) == 64, "Keyed HMAC-SHA256 must be 64-char hex string"
+    assert verify_otp_code(test_raw_code, hashed_code, "user@example.com") is True
+    assert verify_otp_code("000000", hashed_code, "user@example.com") is False
+    # Cross-email binding check (code valid for user A must not verify for user B)
+    assert verify_otp_code(test_raw_code, hashed_code, "other@example.com") is False
+    # Backward-compatible plaintext check
+    assert verify_otp_code("123456", "123456", "user@example.com") is True
     print("[PASS] Cryptographic OTP generator generates uniform 6-digit codes.")
+    print("[PASS] Keyed HMAC-SHA256 hashing and constant-time verification validated.")
 
     # ----------------------------------------------------
     # 2. Mocked Email Dispatch Logic (SMTP, Resend, Dev, Fixture Guard)
@@ -110,7 +129,13 @@ def run_auth_and_email_tests():
     # 3. User Registration Flow & Pending State
     # ----------------------------------------------------
     print("\n--- 3. Testing User Registration Flow ---")
-    with patch("backend.app.api.auth.send_otp_email", return_value={"sent": True, "provider": "dev_logger", "delivery_status": "SIMULATED", "dev_otp": "654321"}):
+    captured_otps = []
+
+    def mock_send_otp(email, code, *args, **kwargs):
+        captured_otps.append(code)
+        return {"sent": True, "provider": "dev_logger", "delivery_status": "SIMULATED", "dev_otp": code}
+
+    with patch("backend.app.api.auth.send_otp_email", side_effect=mock_send_otp):
         reg_res = client.post("/api/auth/register", json={
             "email": TEST_USER_1,
             "password": "ValidPassword123!",
@@ -128,6 +153,13 @@ def run_auth_and_email_tests():
     assert user_db is not None
     assert user_db.is_email_verified is False
     print("[PASS] User database record persisted with is_email_verified=False.")
+
+    # Verify OTP code is hashed in database
+    first_otp_record = db.query(OtpCode).filter(OtpCode.email == TEST_USER_1).first()
+    assert first_otp_record is not None
+    assert len(first_otp_record.code) == 64, "Database must store 64-char HMAC hash"
+    assert first_otp_record.code != captured_otps[0], "Raw OTP code must never be stored in plaintext"
+    print("[PASS] OTP code persisted as keyed HMAC-SHA256 (plaintext never stored).")
 
     # ----------------------------------------------------
     # 4. Block Unverified User Login
@@ -161,7 +193,7 @@ def run_auth_and_email_tests():
     db.commit()
 
     # Re-register with new password
-    with patch("backend.app.api.auth.send_otp_email", return_value={"sent": True, "provider": "dev_logger", "delivery_status": "SIMULATED", "dev_otp": "654321"}):
+    with patch("backend.app.api.auth.send_otp_email", side_effect=mock_send_otp):
         recovery_reg = client.post("/api/auth/register", json={
             "email": TEST_USER_1,
             "password": "NewUpdatedPassword123!",
@@ -181,13 +213,13 @@ def run_auth_and_email_tests():
     # Only the latest OTP should be unused
     assert all_otps[0].is_used is False
     assert all(o.is_used is True for o in all_otps[1:])
-    old_otp = all_otps[1].code
-    latest_otp = all_otps[0].code
+    old_raw_otp = captured_otps[0]
+    latest_raw_otp = captured_otps[1]
 
-    # Attempting verification with older OTP must fail
+    # Attempting verification with older raw OTP must fail
     old_otp_verify = client.post("/api/auth/verify-otp", json={
         "email": TEST_USER_1,
-        "otp_code": old_otp
+        "otp_code": old_raw_otp
     })
     assert old_otp_verify.status_code == 400
     print("[PASS] Superseded / older OTP code rejected with 400 Bad Request.")
@@ -211,7 +243,7 @@ def run_auth_and_email_tests():
 
     expired_verify = client.post("/api/auth/verify-otp", json={
         "email": TEST_USER_1,
-        "otp_code": latest_otp
+        "otp_code": latest_raw_otp
     })
     assert expired_verify.status_code == 400
     assert "expired" in expired_verify.json()["detail"].lower()
@@ -227,7 +259,7 @@ def run_auth_and_email_tests():
     })
     db.commit()
 
-    with patch("backend.app.api.auth.send_otp_email", return_value={"sent": True, "provider": "dev_logger", "delivery_status": "SIMULATED", "dev_otp": "789123"}):
+    with patch("backend.app.api.auth.send_otp_email", side_effect=mock_send_otp):
         resend_res = client.post("/api/auth/resend-otp", json={"email": TEST_USER_1})
     assert resend_res.status_code == 200
     assert "delivery_status" in resend_res.json()
@@ -242,14 +274,11 @@ def run_auth_and_email_tests():
     # 9. Successful OTP Verification & JWT Issuance
     # ----------------------------------------------------
     print("\n--- 9. Testing Successful OTP Verification ---")
-    active_otp = db.query(OtpCode).filter(
-        OtpCode.email == TEST_USER_1,
-        OtpCode.is_used == False
-    ).order_by(OtpCode.created_at.desc()).first().code
+    active_raw_otp = captured_otps[2]
 
     verify_success = client.post("/api/auth/verify-otp", json={
         "email": TEST_USER_1,
-        "otp_code": active_otp
+        "otp_code": active_raw_otp
     })
     assert verify_success.status_code == 200
     token_data = verify_success.json()

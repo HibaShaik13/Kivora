@@ -65,3 +65,29 @@ def decode_access_token(token: str) -> Optional[Dict[str, Any]]:
 def generate_otp_code() -> str:
     """Generates a cryptographically secure 6-digit numeric OTP code."""
     return f"{secrets.randbelow(900000) + 100000}"
+
+
+def hash_otp_code(email: str, code: str) -> str:
+    """Computes a keyed HMAC-SHA256 hash of the OTP bound to the recipient's normalized email address."""
+    import hmac
+    import hashlib
+    key = (SECRET_KEY or "kivora_otp_default_hmac_secret").encode("utf-8")
+    msg = f"{email.lower().strip()}:{code.strip()}".encode("utf-8")
+    return hmac.new(key, msg, hashlib.sha256).hexdigest()
+
+
+def verify_otp_code(submitted_code: str, stored_value: str, email: str) -> bool:
+    """Verifies a submitted 6-digit OTP against the stored keyed hash or plaintext using constant-time comparison."""
+    if not submitted_code or not stored_value:
+        return False
+    import hmac
+    import hashlib
+    # 1. Keyed HMAC check
+    expected_hash = hash_otp_code(email, submitted_code)
+    if secrets.compare_digest(stored_value, expected_hash):
+        return True
+    # 2. Backward compatibility with plaintext codes issued prior to hashing
+    if secrets.compare_digest(stored_value, submitted_code.strip()):
+        return True
+    return False
+

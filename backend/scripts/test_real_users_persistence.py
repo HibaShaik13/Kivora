@@ -80,7 +80,11 @@ def cleanup_test_fixtures(db):
     db.commit()
 
 
-@patch("backend.app.api.auth.send_otp_email", return_value={"sent": True, "provider": "mock", "delivery_status": "DELIVERED"})
+def mock_otp_dispatch(email, code, *args, **kwargs):
+    return {"sent": True, "provider": "mock", "delivery_status": "DELIVERED", "dev_otp": code}
+
+
+@patch("backend.app.api.auth.send_otp_email", side_effect=mock_otp_dispatch)
 def run_persistence_and_auth_tests(mock_email):
     print("\n=======================================================")
     print("  KIVORA COMPLETE BACKEND REGRESSION & VERIFICATION SUITE")
@@ -129,7 +133,7 @@ def run_persistence_and_auth_tests(mock_email):
     # Valid OTP verification
     verify_res = client.post("/api/auth/verify-otp", json={
         "email": TEST_ALICE_EMAIL,
-        "otp_code": otp_rec.code
+        "otp_code": res.json()["dev_otp"]
     })
     assert verify_res.status_code == 200
     alice_token = verify_res.json()["access_token"]
@@ -137,8 +141,8 @@ def run_persistence_and_auth_tests(mock_email):
     print("[PASS] Valid OTP verified; JWT token issued for Alice.")
 
     # Also register Creator Bob (for cross-creator authorization & ownership testing)
-    client.post("/api/auth/register", json={"email": TEST_BOB_EMAIL, "password": "BobPassword99!", "role": "CREATOR"})
-    bob_otp = db.query(OtpCode).filter(OtpCode.email == TEST_BOB_EMAIL).order_by(OtpCode.created_at.desc()).first().code
+    bob_reg = client.post("/api/auth/register", json={"email": TEST_BOB_EMAIL, "password": "BobPassword99!", "role": "CREATOR"})
+    bob_otp = bob_reg.json()["dev_otp"]
     bob_auth = client.post("/api/auth/verify-otp", json={"email": TEST_BOB_EMAIL, "otp_code": bob_otp}).json()
     bob_headers = {"Authorization": f"Bearer {bob_auth['access_token']}"}
 
@@ -406,8 +410,8 @@ def run_persistence_and_auth_tests(mock_email):
     # 6. BRAND PROFILES CRUD & OWNERSHIP
     # ----------------------------------------------------
     print("\n--- 6. Testing Brand Setups, Updates (PUT) & Ownership ---")
-    client.post("/api/auth/register", json={"email": TEST_SOLARIS_EMAIL, "password": "SolarisPassword!", "role": "BRAND"})
-    solaris_otp = db.query(OtpCode).filter(OtpCode.email == TEST_SOLARIS_EMAIL).order_by(OtpCode.created_at.desc()).first().code
+    solaris_reg = client.post("/api/auth/register", json={"email": TEST_SOLARIS_EMAIL, "password": "SolarisPassword!", "role": "BRAND"})
+    solaris_otp = solaris_reg.json()["dev_otp"]
     solaris_auth = client.post("/api/auth/verify-otp", json={"email": TEST_SOLARIS_EMAIL, "otp_code": solaris_otp}).json()
     solaris_headers = {"Authorization": f"Bearer {solaris_auth['access_token']}"}
 
@@ -420,8 +424,8 @@ def run_persistence_and_auth_tests(mock_email):
     }, headers=solaris_headers).json()
     solaris_brand_id = solaris_prof["id"]
 
-    client.post("/api/auth/register", json={"email": TEST_COMPETITOR_EMAIL, "password": "CompetitorPassword!", "role": "BRAND"})
-    comp_otp = db.query(OtpCode).filter(OtpCode.email == TEST_COMPETITOR_EMAIL).order_by(OtpCode.created_at.desc()).first().code
+    comp_reg = client.post("/api/auth/register", json={"email": TEST_COMPETITOR_EMAIL, "password": "CompetitorPassword!", "role": "BRAND"})
+    comp_otp = comp_reg.json()["dev_otp"]
     comp_auth = client.post("/api/auth/verify-otp", json={"email": TEST_COMPETITOR_EMAIL, "otp_code": comp_otp}).json()
     competitor_headers = {"Authorization": f"Bearer {comp_auth['access_token']}"}
 
