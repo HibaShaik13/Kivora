@@ -27,6 +27,7 @@ from backend.app.core.security import (
     generate_otp_code,
 )
 from backend.app.core.deps import get_current_user
+from backend.app.core.config import KIVORA_ENV
 from backend.app.services.email_service import send_otp_email
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
@@ -78,12 +79,16 @@ def register_user(payload: UserRegisterRequest, db: Session = Depends(get_db)):
             # Unverified account recovery: check 60s cooldown before issuing new OTP
             recent_otp = db.query(OtpCode).filter(
                 OtpCode.email == email,
+                OtpCode.is_used == False,
                 OtpCode.created_at >= datetime.utcnow() - timedelta(seconds=60)
-            ).first()
+            ).order_by(OtpCode.created_at.desc()).first()
             if recent_otp:
+                elapsed = (datetime.utcnow() - recent_otp.created_at).total_seconds()
+                remaining = max(1, int(60 - elapsed))
                 raise HTTPException(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    detail="A verification code was recently requested for this account. Please wait 60 seconds before retrying."
+                    detail=f"A verification code was recently requested for this account. Please wait {remaining} seconds before retrying.",
+                    headers={"Retry-After": str(remaining)}
                 )
 
             # Update password hash and role for the pending account
@@ -130,8 +135,14 @@ def register_user(payload: UserRegisterRequest, db: Session = Depends(get_db)):
     delivery_status = dispatch_result.get("delivery_status", "DELIVERED")
     delivery_notice = dispatch_result.get("delivery_notice", "")
 
+    # Avoid locking user into unnecessary cooldown if sending failed completely
+    if delivery_status == "FAILED":
+        otp_record.is_used = True
+        db.commit()
+
     if delivery_status == "DELIVERED":
         msg = f"User registered successfully! A 6-digit verification code has been sent to {email}."
+        cooldown_sec = 60
     elif delivery_status == "SIMULATED":
         if "sending limit exceeded" in delivery_notice.lower() or "550" in delivery_notice:
             msg = "Gmail daily sending limit exceeded (550). Operating in development mode with generated OTP."
@@ -139,8 +150,10 @@ def register_user(payload: UserRegisterRequest, db: Session = Depends(get_db)):
             msg = "Gmail authentication failed. Operating in development mode with generated OTP."
         else:
             msg = "User registered in development mode. Verification code generated."
+        cooldown_sec = 60
     else:
-        msg = "Account created, but verification email could not be sent. Please check SMTP configuration or request a new code."
+        msg = "Account created, but verification email could not be sent. Please check email provider configuration or request a new code."
+        cooldown_sec = 0
 
     response_data = {
         "message": msg,
@@ -148,8 +161,10 @@ def register_user(payload: UserRegisterRequest, db: Session = Depends(get_db)):
         "email": email,
         "role": user.role,
         "delivery_status": delivery_status,
+        "cooldown_seconds": cooldown_sec,
     }
-    if dispatch_result.get("dev_otp"):
+    is_dev = KIVORA_ENV not in ["production", "prod"]
+    if is_dev and dispatch_result.get("dev_otp"):
         response_data["dev_otp"] = dispatch_result["dev_otp"]
     if dispatch_result.get("delivery_notice"):
         response_data["delivery_notice"] = dispatch_result["delivery_notice"]
@@ -231,15 +246,19 @@ def resend_otp(payload: ResendOtpRequest, db: Session = Depends(get_db)):
             detail="This account is already verified. Please sign in."
         )
 
-    # Rate limiting: Maximum 1 OTP dispatch per 60 seconds per email
+    # Rate limiting: Maximum 1 active OTP dispatch per 60 seconds per email
     recent_otp = db.query(OtpCode).filter(
         OtpCode.email == email,
+        OtpCode.is_used == False,
         OtpCode.created_at >= datetime.utcnow() - timedelta(seconds=60)
-    ).first()
+    ).order_by(OtpCode.created_at.desc()).first()
     if recent_otp:
+        elapsed = (datetime.utcnow() - recent_otp.created_at).total_seconds()
+        remaining = max(1, int(60 - elapsed))
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="A verification code was recently sent. Please wait 60 seconds before requesting a new code."
+            detail=f"A verification code was recently sent. Please wait {remaining} seconds before requesting a new code.",
+            headers={"Retry-After": str(remaining)}
         )
 
     # Invalidate any prior unused OTPs
@@ -266,8 +285,14 @@ def resend_otp(payload: ResendOtpRequest, db: Session = Depends(get_db)):
     delivery_status = dispatch_result.get("delivery_status", "DELIVERED")
     delivery_notice = dispatch_result.get("delivery_notice", "")
 
+    # Avoid locking user into unnecessary cooldown if sending failed completely
+    if delivery_status == "FAILED":
+        otp_record.is_used = True
+        db.commit()
+
     if delivery_status == "DELIVERED":
         msg = f"New verification code sent to {email}. Please check your inbox."
+        cooldown_sec = 60
     elif delivery_status == "SIMULATED":
         if "sending limit exceeded" in delivery_notice.lower() or "550" in delivery_notice:
             msg = "Gmail daily sending limit exceeded (550). Operating in development mode with generated OTP."
@@ -275,14 +300,18 @@ def resend_otp(payload: ResendOtpRequest, db: Session = Depends(get_db)):
             msg = "Gmail authentication failed. Operating in development mode with generated OTP."
         else:
             msg = "Development mode: New verification code generated."
+        cooldown_sec = 60
     else:
-        msg = "New code generated, but email delivery encountered an issue. Please check SMTP settings."
+        msg = "New code generated, but email delivery encountered an issue. Please verify email provider settings."
+        cooldown_sec = 0
 
     res = {
         "message": msg,
         "delivery_status": delivery_status,
+        "cooldown_seconds": cooldown_sec,
     }
-    if dispatch_result.get("dev_otp"):
+    is_dev = KIVORA_ENV not in ["production", "prod"]
+    if is_dev and dispatch_result.get("dev_otp"):
         res["dev_otp"] = dispatch_result["dev_otp"]
     if dispatch_result.get("delivery_notice"):
         res["delivery_notice"] = dispatch_result["delivery_notice"]

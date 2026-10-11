@@ -85,6 +85,7 @@ export default function RegisterPage() {
           devOtp: response?.dev_otp,
           deliveryStatus: response?.delivery_status,
           deliveryNotice: response?.delivery_notice,
+          cooldownSeconds: response?.cooldown_seconds,
         },
       });
     } catch (err) {

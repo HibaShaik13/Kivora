@@ -28,6 +28,11 @@ export default function VerifyOtpPage() {
   const [deliveryStatus, setDeliveryStatus] = useState(initialDeliveryStatus);
   const [deliveryNotice, setDeliveryNotice] = useState(location.state?.deliveryNotice || null);
 
+  const initialCooldown = location.state?.cooldownSeconds !== undefined
+    ? Number(location.state.cooldownSeconds)
+    : (initialDeliveryStatus === 'DELIVERED' ? 60 : 0);
+  const [cooldown, setCooldown] = useState(initialCooldown);
+
   const [email, setEmail] = useState(queryEmail);
   const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
@@ -43,6 +48,15 @@ export default function VerifyOtpPage() {
       inputRefs.current[0].focus();
     }
   }, []);
+
+  // Countdown timer for 60-second cooldown
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const interval = setInterval(() => {
+      setCooldown((prev) => (prev > 1 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [cooldown]);
 
   // Handle single digit input
   const handleDigitChange = (index, value) => {
@@ -134,6 +148,11 @@ export default function VerifyOtpPage() {
       return;
     }
 
+    if (cooldown > 0) {
+      setError(`Please wait ${cooldown} seconds before requesting a new code.`);
+      return;
+    }
+
     setResending(true);
     setError(null);
 
@@ -153,9 +172,23 @@ export default function VerifyOtpPage() {
       if (response?.delivery_notice) {
         setDeliveryNotice(response.delivery_notice);
       }
+      if (response?.cooldown_seconds !== undefined) {
+        setCooldown(Number(response.cooldown_seconds));
+      } else if (response?.delivery_status === 'DELIVERED') {
+        setCooldown(60);
+      }
     } catch (err) {
       console.error('Resend OTP error:', err);
-      setError(err.message || 'Failed to resend code. Please try again.');
+      const msg = err.message || 'Failed to resend code. Please try again.';
+      setError(msg);
+
+      // Parse remaining seconds if server enforced 429 cooldown
+      const match = msg.match(/(\d+)\s*seconds/i);
+      if (match) {
+        setCooldown(parseInt(match[1], 10));
+      } else if (err.status === 429 || msg.toLowerCase().includes('recently sent') || msg.toLowerCase().includes('wait')) {
+        setCooldown(60);
+      }
     } finally {
       setResending(false);
     }
@@ -373,21 +406,37 @@ export default function VerifyOtpPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.875rem' }}>
             <div style={{ color: 'var(--text-secondary)' }}>
               Didn't receive the code?{' '}
-              <button
-                type="button"
-                onClick={handleResend}
-                disabled={resending}
-                style={{
-                  color: 'var(--accent-lavender)',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  background: 'none',
-                  border: 'none',
-                  padding: '0',
-                }}
-              >
-                {resending ? 'Sending...' : 'Resend Code'}
-              </button>
+              {cooldown > 0 ? (
+                <span
+                  style={{
+                    color: 'var(--text-tertiary)',
+                    fontWeight: '600',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                >
+                  <ArrowsClockwise size={14} className="animate-spin" />
+                  Resend available in {cooldown}s
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={resending}
+                  style={{
+                    color: 'var(--accent-lavender)',
+                    fontWeight: '700',
+                    cursor: resending ? 'not-allowed' : 'pointer',
+                    background: 'none',
+                    border: 'none',
+                    padding: '0',
+                    textDecoration: 'underline',
+                  }}
+                >
+                  {resending ? 'Sending code...' : 'Resend Code'}
+                </button>
+              )}
             </div>
 
             <div style={{ paddingTop: '16px', borderTop: '1px solid var(--border-subtle)' }}>

@@ -51,8 +51,9 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
 
 
-# Email settings
+# Email & HTTPS Provider Settings (Resend, etc.)
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
+RESEND_FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL", os.getenv("EMAIL_FROM", "Kivora Platform <onboarding@resend.dev>"))
 SENDER_EMAIL = os.getenv("SENDER_EMAIL", "vu.241fa04495@gmail.com")
 
 # SMTP Configuration (e.g. Gmail SMTP)
@@ -66,6 +67,11 @@ SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
 SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", os.getenv("SENDER_EMAIL", "vu.241fa04495@gmail.com"))
 SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "Kivora Platform")
 SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "true").lower() in ("true", "1", "t", "yes")
+
+
+def is_resend_configured() -> bool:
+    """Check if Resend HTTPS API key is configured without exposing it."""
+    return bool(RESEND_API_KEY and RESEND_API_KEY.strip())
 
 
 def is_smtp_configured() -> bool:

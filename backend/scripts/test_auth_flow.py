@@ -57,44 +57,54 @@ def run_auth_and_email_tests():
     print("[PASS] Cryptographic OTP generator generates uniform 6-digit codes.")
 
     # ----------------------------------------------------
-    # 2. Mocked Email Dispatch Logic (SMTP, Resend, Dev)
+    # 2. Mocked Email Dispatch Logic (SMTP, Resend, Dev, Fixture Guard)
     # ----------------------------------------------------
     print("\n--- 2. Testing Mocked Multi-Tier Email Dispatch ---")
-    
+    mock_recipient = "mock.test.recipient@verified-domain.org"
+
     # Test 2A: SMTP Success
-    with patch("backend.app.services.email_service.is_smtp_configured", return_value=True), \
+    with patch("backend.app.services.email_service.is_resend_configured", return_value=False), \
+         patch("backend.app.services.email_service.is_smtp_configured", return_value=True), \
          patch("backend.app.services.email_service._dispatch_via_smtp", return_value=True):
-        res_smtp = send_otp_email(TEST_USER_1, "123456", "REGISTRATION")
+        res_smtp = send_otp_email(mock_recipient, "123456", "REGISTRATION")
         assert res_smtp["sent"] is True
         assert res_smtp["provider"] == "smtp"
         assert res_smtp["delivery_status"] == "DELIVERED"
         print("[PASS] Mocked SMTP dispatch returns DELIVERED status.")
 
-    # Test 2B: SMTP Failure -> Resend Fallback Success
-    with patch("backend.app.services.email_service.is_smtp_configured", return_value=True), \
-         patch("backend.app.services.email_service._dispatch_via_smtp", side_effect=Exception("SMTP Connection Error")), \
+    # Test 2B: Resend Success
+    with patch("backend.app.services.email_service.is_resend_configured", return_value=True), \
          patch("backend.app.services.email_service.RESEND_API_KEY", "re_test_key_mock"), \
-         patch("requests.post") as mock_post:
+         patch("backend.app.services.email_service.requests.post") as mock_post:
         mock_resp = MagicMock()
         mock_resp.status_code = 200
+        mock_resp.json.return_value = {"id": "msg_resend_test_123"}
         mock_post.return_value = mock_resp
 
-        res_resend = send_otp_email(TEST_USER_1, "123456", "REGISTRATION")
+        res_resend = send_otp_email(mock_recipient, "123456", "REGISTRATION")
         assert res_resend["sent"] is True
         assert res_resend["provider"] == "resend"
         assert res_resend["delivery_status"] == "DELIVERED"
-        print("[PASS] Mocked Resend fallback succeeds on SMTP failure.")
+        print("[PASS] Mocked Resend dispatch succeeds with HTTPS API.")
 
     # Test 2C: Dev Fallback (When no provider configured in non-production)
     with patch("backend.app.services.email_service.is_smtp_configured", return_value=False), \
+         patch("backend.app.services.email_service.is_resend_configured", return_value=False), \
          patch("backend.app.services.email_service.RESEND_API_KEY", None), \
          patch("backend.app.services.email_service.KIVORA_ENV", "development"):
-        res_dev = send_otp_email(TEST_USER_1, "123456", "REGISTRATION")
+        res_dev = send_otp_email(mock_recipient, "123456", "REGISTRATION")
         assert res_dev["sent"] is True
         assert res_dev["provider"] == "dev_logger"
         assert res_dev["delivery_status"] == "SIMULATED"
         assert res_dev["dev_otp"] == "123456"
         print("[PASS] Dev fallback returns SIMULATED delivery with dev_otp.")
+
+    # Test 2D: Test Fixture Interceptor (prevents fixture recipients from live dispatch)
+    res_fixture = send_otp_email(TEST_USER_1, "123456", "REGISTRATION")
+    assert res_fixture["sent"] is True
+    assert res_fixture["provider"] == "fixture_guard"
+    assert res_fixture["delivery_status"] == "SIMULATED"
+    print("[PASS] Fixture recipient intercepted safely without network dispatch.")
 
     # ----------------------------------------------------
     # 3. User Registration Flow & Pending State

@@ -23,6 +23,8 @@ from backend.app.core.config import (
     SMTP_FROM_NAME,
     SMTP_USE_TLS,
     RESEND_API_KEY,
+    RESEND_FROM_EMAIL,
+    is_resend_configured,
     is_smtp_configured,
 )
 
@@ -114,6 +116,68 @@ def _build_email_content(otp_code: str, purpose: str = "REGISTRATION") -> tuple[
     return subject, plain_text, html_content
 
 
+TEST_FIXTURE_DOMAINS = (
+    ".test",
+    ".invalid",
+    ".localhost",
+    ".demo",
+    "example.com",
+    "kivora.test",
+    "kivora.demo",
+    "kivora.internal",
+)
+
+
+def _is_test_fixture_email(email: str) -> bool:
+    """Detects fixture/test recipient addresses by domain to prevent accidental live SMTP/API delivery."""
+    if not email or "@" not in email:
+        return True
+    domain = email.lower().strip().split("@", 1)[1]
+    return any(domain == d or domain.endswith(d) for d in TEST_FIXTURE_DOMAINS)
+
+
+def _dispatch_via_resend(email: str, subject: str, plain_text: str, html_content: str) -> tuple[bool, Optional[str]]:
+    """Dispatches email via official Resend HTTPS REST API (Port 443)."""
+    api_key = (RESEND_API_KEY or "").strip()
+    if not api_key or not is_resend_configured():
+        return False, "RESEND_API_KEY not configured"
+
+    payload = {
+        "from": RESEND_FROM_EMAIL,
+        "to": [email],
+        "subject": subject,
+        "text": plain_text,
+        "html": html_content,
+    }
+
+    try:
+        res = requests.post(
+            "https://api.resend.com/emails",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            json=payload,
+            timeout=8,
+        )
+        if res.status_code in [200, 201]:
+            res_json = res.json()
+            msg_id = res_json.get("id", "accepted")
+            logger.info(f"[RESEND DISPATCH SUCCESS] Delivered to {_mask_email(email)} (ID: {msg_id})")
+            return True, None
+        else:
+            try:
+                err_body = res.json()
+                err_msg = err_body.get("message") or err_body.get("name") or res.text
+            except Exception:
+                err_msg = res.text
+            logger.warning(f"[RESEND DISPATCH ERROR] HTTP {res.status_code}: {err_msg}")
+            return False, f"Resend API ({res.status_code}): {err_msg}"
+    except Exception as e:
+        logger.warning(f"[RESEND CONNECTION ERROR] {type(e).__name__}: {str(e)}")
+        return False, f"Resend connection: {type(e).__name__}"
+
+
 def _dispatch_via_smtp(email: str, subject: str, plain_text: str, html_content: str) -> bool:
     """Attempts SMTP transmission with fallback between STARTTLS (587) and SSL (465)."""
     import ssl
@@ -135,23 +199,23 @@ def _dispatch_via_smtp(email: str, subject: str, plain_text: str, html_content: 
     # 1. If explicitly configured on port 465, use direct SSL
     if SMTP_PORT == 465:
         context = ssl.create_default_context()
-        server = smtplib.SMTP_SSL(SMTP_HOST, 465, context=context, timeout=12)
+        server = smtplib.SMTP_SSL(SMTP_HOST, 465, context=context, timeout=5)
         server.ehlo()
         server.login(clean_username, clean_password)
-        server.send_message(msg)
+        server.send_message(msg, from_addr=SMTP_FROM_EMAIL, to_addrs=[email])
         server.quit()
         return True
 
     # 2. Try configured port (e.g. 587 with STARTTLS)
     try:
-        server = smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=8)
+        server = smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=5)
         server.ehlo()
         if SMTP_USE_TLS:
             context = ssl.create_default_context()
             server.starttls(context=context)
             server.ehlo()
         server.login(clean_username, clean_password)
-        server.send_message(msg)
+        server.send_message(msg, from_addr=SMTP_FROM_EMAIL, to_addrs=[email])
         server.quit()
         return True
     except (TimeoutError, smtplib.SMTPConnectError, OSError) as e:
@@ -159,10 +223,10 @@ def _dispatch_via_smtp(email: str, subject: str, plain_text: str, html_content: 
 
     # 3. Fallback to Port 465 (SSL) if port 587 is blocked
     context = ssl.create_default_context()
-    server = smtplib.SMTP_SSL(SMTP_HOST, 465, context=context, timeout=12)
+    server = smtplib.SMTP_SSL(SMTP_HOST, 465, context=context, timeout=5)
     server.ehlo()
     server.login(clean_username, clean_password)
-    server.send_message(msg)
+    server.send_message(msg, from_addr=SMTP_FROM_EMAIL, to_addrs=[email])
     server.quit()
     return True
 
@@ -182,33 +246,60 @@ def send_otp_email(email: str, otp_code: str, purpose: str = "REGISTRATION") -> 
     """
     Dispatches a 6-digit OTP code to the recipient's email address.
     Priority order:
-    1. Real SMTP (e.g. Gmail SMTP with STARTTLS / SSL)
-    2. Resend REST API if RESEND_API_KEY is configured
-    3. Safe development terminal logger (disabled in production)
+    1. Test fixture interceptor (prevents accidental live dispatch to fixture addresses)
+    2. Resend HTTPS REST API (Port 443 - ideal for cloud container environments like Render)
+    3. Real SMTP with STARTTLS (Port 587) / SSL (Port 465) fallback
+    4. Safe development terminal logger (disabled in production)
     """
+    email_clean = email.lower().strip()
     subject, plain_text, html_content = _build_email_content(otp_code, purpose)
-    masked = _mask_email(email)
+    masked = _mask_email(email_clean)
     delivery_errors = []
 
-    # 1. Primary: SMTP Delivery (e.g. Gmail SMTP)
+    # 1. Guard against test/fixture addresses leaking into live provider dispatch
+    if _is_test_fixture_email(email_clean):
+        logger.info(f"[TEST FIXTURE INTERCEPT] Safely intercepted test fixture recipient {masked}; skipping live network dispatch.")
+        is_dev = KIVORA_ENV not in ["production", "prod"]
+        return {
+            "sent": True,
+            "provider": "fixture_guard",
+            "delivery_status": "SIMULATED",
+            "dev_otp": otp_code if is_dev else None,
+            "message": f"Test fixture recipient recognized: verification code generated safely.",
+        }
+
+    # 2. Primary for Cloud / Containers: Resend HTTPS API (Port 443)
+    if is_resend_configured():
+        ok, resend_err = _dispatch_via_resend(email_clean, subject, plain_text, html_content)
+        if ok:
+            return {
+                "sent": True,
+                "provider": "resend",
+                "delivery_status": "DELIVERED",
+                "message": f"Verification code sent to {email_clean}.",
+            }
+        else:
+            delivery_errors.append(resend_err or "Resend dispatch failed")
+
+    # 3. SMTP Delivery (e.g. Gmail SMTP)
     if is_smtp_configured():
         try:
-            _dispatch_via_smtp(email, subject, plain_text, html_content)
+            _dispatch_via_smtp(email_clean, subject, plain_text, html_content)
             logger.info(f"[EMAIL DISPATCH] Delivered via SMTP ({SMTP_HOST}) to {masked}")
             return {
                 "sent": True,
                 "provider": "smtp",
                 "delivery_status": "DELIVERED",
-                "message": f"Verification code sent to {email}.",
+                "message": f"Verification code sent to {email_clean}.",
             }
         except smtplib.SMTPAuthenticationError:
-            err_msg = f"SMTP authentication failed for user {SMTP_USERNAME}. Please verify your 16-character Google App Password."
+            err_msg = f"SMTP authentication failed for sender {SMTP_USERNAME}. Please check Google App Password."
             logger.error(f"[EMAIL DISPATCH ERROR] {err_msg}")
             delivery_errors.append("Gmail authentication failed (check App Password)")
         except smtplib.SMTPDataError as e:
             error_text = e.smtp_error.decode("utf-8", errors="ignore") if isinstance(e.smtp_error, bytes) else str(e.smtp_error)
             if "Daily user sending limit exceeded" in error_text or e.smtp_code == 550:
-                err_msg = "Gmail SMTP: Daily user sending limit exceeded (550). Google limits free Gmail accounts after frequent sending."
+                err_msg = "Gmail SMTP: Daily user sending limit exceeded (550)."
             else:
                 err_msg = f"Gmail SMTP data error ({e.smtp_code}): {error_text.strip()}"
             logger.error(f"[EMAIL DISPATCH ERROR] {err_msg}")
@@ -217,6 +308,10 @@ def send_otp_email(email: str, otp_code: str, purpose: str = "REGISTRATION") -> 
             err_msg = f"Recipient email address was refused by SMTP server: {masked}"
             logger.error(f"[EMAIL DISPATCH ERROR] {err_msg}")
             delivery_errors.append("Recipient email address refused by mail server")
+        except (TimeoutError, smtplib.SMTPConnectError, OSError) as e:
+            err_msg = f"Outbound SMTP connection timed out or blocked on port {SMTP_PORT}/465. Note: Render free web services block outbound SMTP ports 25, 465, and 587."
+            logger.error(f"[EMAIL DISPATCH ERROR] {err_msg}")
+            delivery_errors.append("Outbound SMTP port blocked or timed out by container environment")
         except smtplib.SMTPException as e:
             err_msg = f"SMTP error during dispatch to {masked}: {type(e).__name__}"
             logger.error(f"[EMAIL DISPATCH ERROR] {err_msg}")
@@ -225,43 +320,10 @@ def send_otp_email(email: str, otp_code: str, purpose: str = "REGISTRATION") -> 
             err_msg = f"Unexpected error during SMTP connection: {type(e).__name__}"
             logger.error(f"[EMAIL DISPATCH ERROR] {err_msg}")
             delivery_errors.append(f"SMTP connection error: {type(e).__name__}")
-    else:
-        delivery_errors.append("SMTP credentials not configured")
+    elif not is_resend_configured():
+        delivery_errors.append("Neither Resend HTTPS API nor SMTP credentials configured")
 
-    # 2. Secondary: Resend REST API Fallback
-    if RESEND_API_KEY:
-        try:
-            res = requests.post(
-                "https://api.resend.com/emails",
-                headers={
-                    "Authorization": f"Bearer {RESEND_API_KEY}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "from": SMTP_FROM_EMAIL,
-                    "to": [email],
-                    "subject": subject,
-                    "text": plain_text,
-                    "html": html_content,
-                },
-                timeout=10,
-            )
-            if res.status_code in [200, 201]:
-                logger.info(f"[EMAIL DISPATCH] Delivered via Resend API to {masked}")
-                return {
-                    "sent": True,
-                    "provider": "resend",
-                    "delivery_status": "DELIVERED",
-                    "message": f"Verification code sent to {email}.",
-                }
-            else:
-                logger.warning(f"[EMAIL DISPATCH ERROR] Resend API error status={res.status_code}")
-                delivery_errors.append(f"Resend API error status={res.status_code}")
-        except Exception as e:
-            logger.warning(f"[EMAIL DISPATCH ERROR] Failed to connect to Resend API: {type(e).__name__}")
-            delivery_errors.append(f"Resend connection failed: {type(e).__name__}")
-
-    # 3. Development / Test Fallback
+    # 4. Development / Test Fallback
     if KIVORA_ENV not in ["production", "prod"]:
         logger.info(f"===> [DEV OTP DISPATCH] To: {masked} | Code: {otp_code} | Purpose: {purpose}")
         return {
@@ -277,7 +339,7 @@ def send_otp_email(email: str, otp_code: str, purpose: str = "REGISTRATION") -> 
         "sent": False,
         "provider": "none",
         "delivery_status": "FAILED",
-        "error": "Failed to deliver verification email. Please check SMTP configuration or contact support.",
+        "error": "Failed to deliver verification email. Please check email provider configuration or contact support.",
         "delivery_notice": "; ".join(delivery_errors),
     }
 
