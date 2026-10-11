@@ -79,14 +79,18 @@ export default function RegisterPage() {
       const toastMsg = response?.message || 'Registration successful! Please verify your email via OTP.';
       showToast(toastMsg, response?.delivery_status === 'FAILED' ? 'warning' : 'success');
 
-      // Save pending email to session storage for refresh recovery
+      // Save pending email and dev OTP to session storage for refresh recovery
       const cleanEmail = email.trim().toLowerCase();
       try {
         sessionStorage.setItem('kivora_pending_email', cleanEmail);
+        if (response?.dev_otp) {
+          sessionStorage.setItem('kivora_pending_dev_otp', response.dev_otp);
+        }
       } catch (_) {}
 
       // Navigate to OTP verification with email and delivery metadata in state
-      navigate(`/verify-otp?email=${encodeURIComponent(cleanEmail)}&role=${role}`, {
+      const devOtpParam = response?.dev_otp ? `&dev_otp=${encodeURIComponent(response.dev_otp)}` : '';
+      navigate(`/verify-otp?email=${encodeURIComponent(cleanEmail)}&role=${role}${devOtpParam}`, {
         state: {
           email: cleanEmail,
           devOtp: response?.dev_otp,

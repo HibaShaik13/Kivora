@@ -31,8 +31,14 @@ export default function VerifyOtpPage() {
   })();
   const resolvedEmail = (queryEmail || location.state?.email || storedEmail).trim().toLowerCase();
 
-  const isDevOrStaging = !import.meta.env.PROD;
-  const initialDevOtp = isDevOrStaging ? (location.state?.devOtp || searchParams.get('dev_otp') || null) : null;
+  const storedDevOtp = (() => {
+    try {
+      return sessionStorage.getItem('kivora_pending_dev_otp') || '';
+    } catch {
+      return '';
+    }
+  })();
+  const initialDevOtp = location.state?.devOtp || searchParams.get('dev_otp') || storedDevOtp || null;
   const initialDeliveryStatus = location.state?.deliveryStatus || (initialDevOtp ? 'SIMULATED' : 'DELIVERED');
   const [deliveryStatus, setDeliveryStatus] = useState(initialDeliveryStatus);
   const [deliveryNotice, setDeliveryNotice] = useState(location.state?.deliveryNotice || null);
@@ -135,6 +141,11 @@ export default function VerifyOtpPage() {
       // Update session with access token and user profile
       login(response.access_token, response.user);
 
+      try {
+        sessionStorage.removeItem('kivora_pending_email');
+        sessionStorage.removeItem('kivora_pending_dev_otp');
+      } catch (_) {}
+
       // Route based on profile setup status
       if (response.user?.has_profile === false) {
         navigate('/onboarding', { replace: true });
@@ -172,8 +183,11 @@ export default function VerifyOtpPage() {
       setOtpDigits(['', '', '', '', '', '']);
       if (inputRefs.current[0]) inputRefs.current[0].focus();
 
-      if (response?.dev_otp && isDevOrStaging) {
+      if (response?.dev_otp) {
         setDevOtpHint(response.dev_otp);
+        try {
+          sessionStorage.setItem('kivora_pending_dev_otp', response.dev_otp);
+        } catch (_) {}
       }
       if (response?.delivery_status) {
         setDeliveryStatus(response.delivery_status);
@@ -285,8 +299,8 @@ export default function VerifyOtpPage() {
             </div>
           )}
 
-          {/* Development Mode OTP Helper Hint */}
-          {isDevOrStaging && devOtpHint && (
+          {/* Development / Demo Mode OTP Helper Hint */}
+          {devOtpHint && (
             <div
               style={{
                 display: 'inline-flex',

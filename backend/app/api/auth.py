@@ -29,7 +29,7 @@ from backend.app.core.security import (
     verify_otp_code,
 )
 from backend.app.core.deps import get_current_user
-from backend.app.core.config import KIVORA_ENV
+from backend.app.core.config import KIVORA_ENV, is_demo_otp_enabled
 from backend.app.services.email_service import send_otp_email
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
@@ -165,8 +165,8 @@ def register_user(payload: UserRegisterRequest, db: Session = Depends(get_db)):
         "delivery_status": delivery_status,
         "cooldown_seconds": cooldown_sec,
     }
-    is_dev = KIVORA_ENV not in ["production", "prod"]
-    if is_dev and dispatch_result.get("dev_otp"):
+    expose_dev_otp = is_demo_otp_enabled() or (KIVORA_ENV not in ["production", "prod"])
+    if expose_dev_otp and dispatch_result.get("dev_otp"):
         response_data["dev_otp"] = dispatch_result["dev_otp"]
     if dispatch_result.get("delivery_notice"):
         response_data["delivery_notice"] = dispatch_result["delivery_notice"]
@@ -317,8 +317,8 @@ def resend_otp(payload: ResendOtpRequest, db: Session = Depends(get_db)):
         "delivery_status": delivery_status,
         "cooldown_seconds": cooldown_sec,
     }
-    is_dev = KIVORA_ENV not in ["production", "prod"]
-    if is_dev and dispatch_result.get("dev_otp"):
+    expose_dev_otp = is_demo_otp_enabled() or (KIVORA_ENV not in ["production", "prod"])
+    if expose_dev_otp and dispatch_result.get("dev_otp"):
         res["dev_otp"] = dispatch_result["dev_otp"]
     if dispatch_result.get("delivery_notice"):
         res["delivery_notice"] = dispatch_result["delivery_notice"]

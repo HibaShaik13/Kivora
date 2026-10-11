@@ -26,6 +26,7 @@ from backend.app.core.config import (
     RESEND_FROM_EMAIL,
     is_resend_configured,
     is_smtp_configured,
+    is_demo_otp_enabled,
 )
 
 logger = logging.getLogger("email_service")
@@ -255,6 +256,18 @@ def send_otp_email(email: str, otp_code: str, purpose: str = "REGISTRATION") -> 
     subject, plain_text, html_content = _build_email_content(otp_code, purpose)
     masked = _mask_email(email_clean)
     delivery_errors = []
+
+    # 0. Explicit Demo Mode: bypass external email delivery entirely when enabled
+    if is_demo_otp_enabled():
+        logger.info(f"[DEMO MODE] Demo OTP mode enabled for {masked}; bypassing external email providers.")
+        return {
+            "sent": True,
+            "provider": "demo_mode",
+            "delivery_status": "SIMULATED",
+            "dev_otp": otp_code,
+            "message": "Demo mode active: Verification code generated without email dispatch.",
+            "delivery_notice": "Demo mode active: Use the verification code displayed below to activate your account.",
+        }
 
     # 1. Guard against test/fixture addresses leaking into live provider dispatch
     if _is_test_fixture_email(email_clean):

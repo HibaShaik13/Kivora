@@ -30,6 +30,16 @@ SECRET_KEY = os.getenv("SECRET_KEY", os.getenv("JWT_SECRET_KEY"))
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./kivora.db")
 UPLOAD_DIR = Path(os.getenv("KIVORA_UPLOAD_DIR", "uploads"))
 
+# Demo / Development OTP configuration
+# Disabled by default. Only enabled when explicitly set to "true" via environment setting.
+KIVORA_DEMO_OTP_ENABLED_RAW = os.getenv("KIVORA_DEMO_OTP_ENABLED", os.getenv("DEMO_OTP_ENABLED", "false")).lower()
+KIVORA_DEMO_OTP_ENABLED = KIVORA_DEMO_OTP_ENABLED_RAW in ("true", "1", "t", "yes")
+
+
+def is_demo_otp_enabled() -> bool:
+    """Check if demo OTP mode is explicitly enabled."""
+    return bool(KIVORA_DEMO_OTP_ENABLED)
+
 # CORS settings
 DEFAULT_LOCAL_ORIGINS = [
     "https://kivora-frontend.onrender.com",
