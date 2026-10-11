@@ -4,7 +4,13 @@
  * normalizes error responses, and handles multipart uploads.
  */
 
-const rawBaseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000').trim().replace(/\/+$/, '');
+const rawBaseUrl = (
+  import.meta.env.VITE_API_BASE_URL ||
+  (typeof window !== 'undefined' && window.location.hostname.includes('onrender.com')
+    ? 'https://kivora-api-n7m1.onrender.com'
+    : 'http://localhost:8000')
+).trim().replace(/\/+$/, '');
+
 // Strip trailing /api if user specified it in VITE_API_BASE_URL so that endpoint paths like /api/... concatenate properly
 const API_BASE_URL = rawBaseUrl.endsWith('/api') ? rawBaseUrl.slice(0, -4) : rawBaseUrl;
 const TOKEN_STORAGE_KEY = 'kivora_access_token';
@@ -72,7 +78,7 @@ export class ApiError extends Error {
 }
 
 /**
- * Core HTTP request dispatcher using native Fetch.
+ * Core HTTP request dispatcher using native Fetch with timeout, retry, and normalized error responses.
  */
 export async function apiRequest(endpoint, options = {}) {
   const {
@@ -82,6 +88,8 @@ export async function apiRequest(endpoint, options = {}) {
     headers = {},
     requiresAuth = false,
     isFormData = false,
+    timeoutMs = 30000,
+    retryCount = 1,
     ...restOptions
   } = options;
 
@@ -126,61 +134,116 @@ export async function apiRequest(endpoint, options = {}) {
     }
   }
 
-  // 4. Execute Fetch
-  try {
-    const response = await fetch(url, {
-      method,
-      headers: requestHeaders,
-      body,
-      ...restOptions,
-    });
+  // 4. Helper for Single Attempt with AbortController
+  async function executeSingleAttempt() {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-    // Handle 204 No Content
-    if (response.status === 204) {
-      return null;
-    }
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: requestHeaders,
+        body,
+        signal: controller.signal,
+        ...restOptions,
+      });
 
-    // Parse Response (JSON or Text)
-    const contentType = response.headers.get('content-type') || '';
-    let responseData = null;
-    if (contentType.includes('application/json')) {
-      responseData = await response.json();
-    } else {
-      responseData = await response.text();
-    }
+      clearTimeout(timer);
 
-    // Handle HTTP Errors
-    if (!response.ok) {
-      const errorMessage =
-        (responseData && typeof responseData === 'object' && responseData.detail) ||
-        (typeof responseData === 'string' && responseData) ||
-        `Request failed with status ${response.status}`;
-
-      // Dispatch global auth expiration event on 401 if token was present
-      if (response.status === 401 && token) {
-        clearStoredToken();
-        window.dispatchEvent(new CustomEvent('kivora:auth-expired'));
+      // Handle 204 No Content
+      if (response.status === 204) {
+        return null;
       }
 
-      throw new ApiError(errorMessage, response.status, responseData);
-    }
+      // Parse Response (JSON or Text)
+      const contentType = response.headers.get('content-type') || '';
+      let responseData = null;
+      if (contentType.includes('application/json')) {
+        responseData = await response.json();
+      } else {
+        const textContent = await response.text();
+        // If response is HTML, don't dump markup into error details
+        responseData = textContent.startsWith('<') ? null : textContent;
+      }
 
-    return responseData;
-  } catch (err) {
-    if (err instanceof ApiError) {
+      // Handle HTTP Errors
+      if (!response.ok) {
+        let errorMessage =
+          (responseData && typeof responseData === 'object' && responseData.detail) ||
+          (typeof responseData === 'string' && responseData);
+
+        if (!errorMessage) {
+          if (response.status === 502 || response.status === 503 || response.status === 504) {
+            errorMessage = 'The Kivora API server is waking up or temporarily unavailable (cold start). Please retry in a few seconds.';
+          } else {
+            errorMessage = `Request failed with status ${response.status}`;
+          }
+        }
+
+        // Dispatch global auth expiration event on 401 if token was present
+        if (response.status === 401 && token) {
+          clearStoredToken();
+          window.dispatchEvent(new CustomEvent('kivora:auth-expired'));
+        }
+
+        throw new ApiError(errorMessage, response.status, responseData);
+      }
+
+      return responseData;
+    } catch (err) {
+      clearTimeout(timer);
       throw err;
     }
-    const isNetworkError =
-      err.name === 'TypeError' ||
-      (typeof err.message === 'string' &&
-        (err.message.toLowerCase().includes('failed to fetch') ||
-          err.message.toLowerCase().includes('network') ||
-          err.message.toLowerCase().includes('connection')));
-    const message = isNetworkError
-      ? `Unable to connect to Kivora API server at ${API_BASE_URL}. Please verify that the backend is running and accessible.`
-      : err.message || 'Network connection failed';
-    throw new ApiError(message, 0, null);
   }
+
+  // 5. Execute with 1-time retry for transient network / cold start errors
+  let lastError = null;
+  for (let attempt = 0; attempt <= retryCount; attempt++) {
+    try {
+      return await executeSingleAttempt();
+    } catch (err) {
+      lastError = err;
+      if (err instanceof ApiError) {
+        // HTTP response received (e.g. 400, 401, 403, 404, 429) - do not retry client errors
+        if (err.status >= 400 && err.status < 500) {
+          throw err;
+        }
+      }
+
+      const isNetworkError =
+        err.name === 'AbortError' ||
+        err.name === 'TypeError' ||
+        (typeof err.message === 'string' &&
+          (err.message.toLowerCase().includes('failed to fetch') ||
+            err.message.toLowerCase().includes('network') ||
+            err.message.toLowerCase().includes('connection')));
+
+      // If we have retries left and it was a transient network error, wait briefly and retry
+      if (attempt < retryCount && isNetworkError) {
+        await new Promise((res) => setTimeout(res, 1200));
+        continue;
+      }
+
+      if (err instanceof ApiError) {
+        throw err;
+      }
+
+      if (err.name === 'AbortError') {
+        throw new ApiError(
+          `Request to Kivora API server timed out after ${Math.round(timeoutMs / 1000)}s. The backend may be starting up from cold sleep; please retry.`,
+          0,
+          null
+        );
+      }
+
+      const message = isNetworkError
+        ? `Unable to connect to Kivora API server at ${API_BASE_URL}. Please verify that the backend is running and accessible.`
+        : err.message || 'Network connection failed';
+      throw new ApiError(message, 0, null);
+    }
+  }
+
+  throw lastError;
 }
 
 export default {

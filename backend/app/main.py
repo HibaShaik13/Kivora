@@ -31,10 +31,11 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 
-# Enable CORS for configured frontend origins
+# Enable CORS for configured frontend origins and Render domains
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS if CORS_ORIGINS else ["*"],
+    allow_origin_regex=r"^https://.*\.onrender\.com$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

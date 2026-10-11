@@ -94,7 +94,7 @@ export default function RegisterPage() {
       setError(msg);
       
       const lower = msg.toLowerCase();
-      if (lower.includes('not verified') || lower.includes('unverified')) {
+      if (lower.includes('not verified') || lower.includes('unverified') || lower.includes('verification code was recently') || lower.includes('please wait')) {
         setErrorInfo({ type: 'UNVERIFIED_EXISTS', email: email.trim().toLowerCase() });
       } else if (lower.includes('already exists')) {
         setErrorInfo({ type: 'VERIFIED_EXISTS', email: email.trim().toLowerCase() });
