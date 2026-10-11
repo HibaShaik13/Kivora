@@ -8,6 +8,8 @@ import api from './client';
 export const engagementsApi = {
   list: (params = {}) => api.get('/api/engagements', { params, requiresAuth: true }),
   getDetail: (engagementId) => api.get(`/api/engagements/${engagementId}`, { requiresAuth: true }),
+  getDeliverable: (deliverableId) =>
+    api.get(`/api/engagements/deliverables/${deliverableId}`, { requiresAuth: true }),
   submitDeliverable: (engagementId, data) =>
     api.post(`/api/engagements/${engagementId}/deliverables`, data, { requiresAuth: true }),
   requestRevisions: (engagementId, data) =>

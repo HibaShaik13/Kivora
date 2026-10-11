@@ -1,1 +1,2 @@
-/*    /index.html   200
+/uploads/*  https://kivora-api-n7m1.onrender.com/uploads/:splat  200
+/*          /index.html                                          200

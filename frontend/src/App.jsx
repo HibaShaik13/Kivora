@@ -16,6 +16,7 @@ import BriefCreatePage from './pages/BriefCreatePage';
 import CreatorDashboardPage from './pages/CreatorDashboardPage';
 import BrandDashboardPage from './pages/BrandDashboardPage';
 import AdminVerificationPage from './pages/AdminVerificationPage';
+import AssetDetailPage from './pages/AssetDetailPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 export default function App() {
@@ -79,6 +80,24 @@ export default function App() {
           element={
             <ProtectedRoute allowedRoles={['ADMIN']}>
               <AdminVerificationPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Deliverable Asset Detail & Preview Routes */}
+        <Route
+          path="/assets/:deliverableId"
+          element={
+            <ProtectedRoute allowedRoles={['CREATOR', 'BRAND', 'ADMIN']}>
+              <AssetDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/deliverables/:deliverableId"
+          element={
+            <ProtectedRoute allowedRoles={['CREATOR', 'BRAND', 'ADMIN']}>
+              <AssetDetailPage />
             </ProtectedRoute>
           }
         />

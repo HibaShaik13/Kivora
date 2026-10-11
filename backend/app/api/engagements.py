@@ -151,6 +151,69 @@ def list_engagements(
     return [format_engagement_detail(e) for e in engagements]
 
 
+@router.get("/deliverables/{deliverable_id}", response_model=DeliverableRead)
+def get_deliverable_asset_detail(
+    deliverable_id: str,
+    current_user: User = Depends(get_current_verified_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get authorized deliverable asset details by deliverable ID.
+    Enforces authorization: only participating creator, owning brand, or admin may access.
+    """
+    deliverable = db.query(EngagementDeliverable).filter(EngagementDeliverable.id == deliverable_id).first()
+    if not deliverable:
+        if deliverable_id.startswith("deliv-initial-"):
+            eng_id = deliverable_id.replace("deliv-initial-", "")
+            eng = db.query(Engagement).filter(Engagement.id == eng_id).first()
+            if eng and eng.final_deliverable_url:
+                verify_engagement_participant(eng, current_user)
+                synth_status = "APPROVED" if eng.status in ["FINAL_APPROVED", "COMPLETED"] else "SUBMITTED"
+                return DeliverableRead(
+                    id=deliverable_id,
+                    engagement_id=eng.id,
+                    version=1,
+                    title="Initial Master Deliverable",
+                    asset_url=eng.final_deliverable_url,
+                    notes="Delivered asset package",
+                    submitted_by=eng.creator_id,
+                    status=synth_status,
+                    feedback=eng.brand_review if eng.brand_review else None,
+                    submitted_at=eng.created_at,
+                    reviewed_at=eng.updated_at if eng.status in ["FINAL_APPROVED", "COMPLETED"] else None,
+                )
+
+        raise HTTPException(
+            status_code=404,
+            detail="Asset deliverable not found. It may have been removed or relocated."
+        )
+
+    verify_engagement_participant(deliverable.engagement, current_user)
+    return format_deliverable_read(deliverable)
+
+
+@router.get("/{engagement_id}/deliverables/{deliverable_id}", response_model=DeliverableRead)
+def get_engagement_deliverable_detail(
+    engagement_id: str,
+    deliverable_id: str,
+    current_user: User = Depends(get_current_verified_user),
+    db: Session = Depends(get_db)
+):
+    """Get deliverable asset details scoped by engagement ID."""
+    deliverable = db.query(EngagementDeliverable).filter(
+        EngagementDeliverable.id == deliverable_id,
+        EngagementDeliverable.engagement_id == engagement_id
+    ).first()
+    if not deliverable:
+        raise HTTPException(
+            status_code=404,
+            detail="Asset deliverable not found for this engagement."
+        )
+
+    verify_engagement_participant(deliverable.engagement, current_user)
+    return format_deliverable_read(deliverable)
+
+
 @router.get("/{engagement_id}", response_model=EngagementDetailRead)
 def get_engagement_detail(
     engagement_id: str,

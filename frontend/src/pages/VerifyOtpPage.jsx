@@ -260,8 +260,8 @@ export default function VerifyOtpPage() {
             )}
           </p>
 
-          {/* Development Mode Notice Banner */}
-          {deliveryStatus === 'SIMULATED' && deliveryNotice && (
+          {/* Delivery Notice Banner (Provider restriction or simulation) */}
+          {deliveryNotice && (
             <div
               style={{
                 display: 'flex',
@@ -269,9 +269,9 @@ export default function VerifyOtpPage() {
                 gap: '8px',
                 padding: '10px 14px',
                 borderRadius: 'var(--radius-md)',
-                background: 'rgba(245, 158, 11, 0.1)',
-                color: '#D97706',
-                border: '1px solid rgba(245, 158, 11, 0.25)',
+                background: deliveryStatus === 'FAILED' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                color: deliveryStatus === 'FAILED' ? 'var(--status-error)' : '#D97706',
+                border: deliveryStatus === 'FAILED' ? '1px solid rgba(239, 68, 68, 0.25)' : '1px solid rgba(245, 158, 11, 0.25)',
                 fontSize: '0.8125rem',
                 marginBottom: '20px',
                 textAlign: 'left',

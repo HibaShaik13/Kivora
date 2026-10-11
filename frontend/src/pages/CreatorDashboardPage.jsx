@@ -791,15 +791,13 @@ export default function CreatorDashboardPage() {
                                   </div>
                                 )}
                               </div>
-                              <a
-                                href={d.asset_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                              <Link
+                                to={`/assets/${d.id}`}
                                 className="btn btn-outline"
                                 style={{ fontSize: '0.75rem', padding: '6px 12px', color: 'var(--text-primary)' }}
                               >
                                 View Asset &rarr;
-                              </a>
+                              </Link>
                             </div>
                           ))}
                         </div>

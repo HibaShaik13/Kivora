@@ -825,15 +825,13 @@ export default function BrandDashboardPage() {
                                 </span>
                                 {d.notes && <div style={{ color: 'var(--text-secondary)', marginTop: '4px' }}>Notes: {d.notes}</div>}
                               </div>
-                              <a
-                                href={d.asset_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                              <Link
+                                to={`/assets/${d.id}`}
                                 className="btn btn-outline"
                                 style={{ fontSize: '0.75rem', padding: '6px 12px', color: 'var(--text-primary)' }}
                               >
                                 Open Asset Package &rarr;
-                              </a>
+                              </Link>
                             </div>
                           ))}
                         </div>
