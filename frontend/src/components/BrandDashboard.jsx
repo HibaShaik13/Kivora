@@ -35,7 +35,7 @@ export default function BrandDashboard({
       setError(null);
       const [profData, briefsData, engsData] = await Promise.all([
         api.getMyBrandProfile().catch(() => null),
-        api.getBriefs().catch(() => []),
+        (api.getMyBriefs ? api.getMyBriefs() : api.getBriefs()).catch(() => api.getBriefs().catch(() => [])),
         api.getEngagements().catch(() => []),
       ]);
 

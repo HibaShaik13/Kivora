@@ -23,8 +23,13 @@ export async function fetchApi(endpoint, options = {}) {
     const response = await fetch(url, config);
     if (!response.ok) {
       const errorBody = await response.json().catch(() => ({}));
-      const message = errorBody.detail || `HTTP Error ${response.status}: ${response.statusText}`;
-      throw new Error(typeof message === 'string' ? message : JSON.stringify(message));
+      let message = errorBody.detail || `HTTP Error ${response.status}: ${response.statusText}`;
+      if (Array.isArray(message)) {
+        message = message.map((m) => m.msg || m.message || JSON.stringify(m)).join(', ');
+      } else if (typeof message === 'object') {
+        message = JSON.stringify(message);
+      }
+      throw new Error(message);
     }
     return response.json();
   } catch (err) {
@@ -41,7 +46,7 @@ export async function fetchApi(endpoint, options = {}) {
       }
 
       try {
-        const prodFallbackUrl = `https://kivora-web-tv1x.onrender.com${endpoint}`;
+        const prodFallbackUrl = `https://kivora-api-jffe.onrender.com${endpoint}`;
         const prodResponse = await fetch(prodFallbackUrl, config);
         if (prodResponse.ok) {
           return prodResponse.json();
@@ -154,6 +159,7 @@ export const api = {
     return fetchApi(`/api/briefs${qs ? `?${qs}` : ''}`);
   },
 
+  getMyBriefs: () => fetchApi('/api/briefs/my-briefs'),
   getBrief: (idOrSlug) => fetchApi(`/api/briefs/${idOrSlug}`),
   createBrief: (payload) =>
     fetchApi('/api/briefs', {

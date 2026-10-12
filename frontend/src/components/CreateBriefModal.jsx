@@ -44,7 +44,7 @@ export default function CreateBriefModal({ isOpen, onClose, onBriefCreated, init
   const [availableSkills, setAvailableSkills] = useState([]);
   const [availableTools, setAvailableTools] = useState([]);
   const [selectedSkillIds, setSelectedSkillIds] = useState(
-    initialData?.required_skill_ids || ['sk-cinematic-direction', 'sk-fluid-dynamics']
+    initialData?.required_skill_ids || ['skill-camera-control', 'skill-macro-fluid']
   );
   const [selectedToolIds, setSelectedToolIds] = useState(
     initialData?.required_tool_ids || ['tool-runway-gen3', 'tool-comfyui']
@@ -86,32 +86,40 @@ export default function CreateBriefModal({ isOpen, onClose, onBriefCreated, init
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isLoading) return;
     setIsLoading(true);
     setError(null);
 
+    const validSkillIds = availableSkills.length > 0
+      ? selectedSkillIds.filter((id) => availableSkills.some((s) => s.id === id))
+      : selectedSkillIds;
+    const validToolIds = availableTools.length > 0
+      ? selectedToolIds.filter((id) => availableTools.some((t) => t.id === id))
+      : selectedToolIds;
+
     const payload = {
-      title,
-      campaign_objective: campaignObjective,
-      target_audience: targetAudience,
+      title: title.trim(),
+      campaign_objective: campaignObjective.trim(),
+      target_audience: targetAudience.trim(),
       content_type: contentType,
-      creative_style_mood: creativeStyleMood,
+      creative_style_mood: creativeStyleMood.trim(),
       aspect_ratio: aspectRatio,
       duration_seconds_min: contentType === 'IMAGE' ? null : parseInt(durationMin, 10),
       duration_seconds_max: contentType === 'IMAGE' ? null : parseInt(durationMax, 10),
       resolution_min: resolutionMin,
-      deliverables_description: deliverablesDescription,
+      deliverables_description: deliverablesDescription.trim(),
       revision_allowance: parseInt(revisionAllowance, 10) || 2,
       budget_amount: parseFloat(budgetAmount),
       budget_currency: budgetCurrency,
       deadline_days: parseInt(deadlineDays, 10) || 14,
-      commercial_use_requirements: commercialRequirements,
-      usage_channels: usageChannels,
-      usage_duration: usageDuration,
-      usage_territories: usageTerritories,
-      restrictions_and_guidelines: restrictions,
-      disclosure_requirements: disclosure,
-      required_skill_ids: selectedSkillIds,
-      required_tool_ids: selectedToolIds,
+      commercial_use_requirements: commercialRequirements.trim(),
+      usage_channels: usageChannels.trim(),
+      usage_duration: usageDuration.trim(),
+      usage_territories: usageTerritories.trim(),
+      restrictions_and_guidelines: restrictions.trim(),
+      disclosure_requirements: disclosure.trim(),
+      required_skill_ids: validSkillIds,
+      required_tool_ids: validToolIds,
     };
 
     try {
@@ -119,6 +127,7 @@ export default function CreateBriefModal({ isOpen, onClose, onBriefCreated, init
       if (onBriefCreated) onBriefCreated(created);
       onClose();
     } catch (err) {
+      console.error('Failed to create campaign brief:', err);
       setError(err.message || 'Failed to create campaign brief.');
     } finally {
       setIsLoading(false);

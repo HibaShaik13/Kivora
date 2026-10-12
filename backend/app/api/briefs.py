@@ -44,18 +44,20 @@ def format_brief_read(b: Brief) -> BriefRead:
     req_skills = [
         BriefSkillRef(
             skill_id=bs.skill_id,
-            name=bs.skill.name,
+            name=bs.skill.name if (bs.skill and bs.skill.name) else bs.skill_id,
             is_required=bs.is_required
         )
         for bs in b.required_skills
+        if bs is not None
     ]
     req_tools = [
         BriefToolRef(
             tool_id=bt.tool_id,
-            name=bt.tool.name,
+            name=bt.tool.name if (bt.tool and bt.tool.name) else bt.tool_id,
             is_required=bt.is_required
         )
         for bt in b.required_tools
+        if bt is not None
     ]
 
     return BriefRead(
@@ -292,6 +294,19 @@ def create_brief(
     if initial_status not in ["DRAFT", "PUBLISHED"]:
         raise HTTPException(status_code=400, detail="Initial status must be either 'DRAFT' or 'PUBLISHED'.")
 
+    # Prevent duplicate brief creation when users retry after an uncertain response
+    recent_duplicate = (
+        db.query(Brief)
+        .filter(
+            Brief.brand_id == brand.id,
+            Brief.title == payload.title.strip(),
+            Brief.created_at >= datetime.utcnow() - timedelta(minutes=5)
+        )
+        .first()
+    )
+    if recent_duplicate:
+        return format_brief_read(recent_duplicate)
+
     brief_id = f"brief-{uuid.uuid4().hex[:10]}"
     slug = payload.title.lower().replace(" ", "-").replace(":", "").replace("/", "")[:60] + f"-{uuid.uuid4().hex[:4]}"
     deadline = datetime.utcnow() + timedelta(days=payload.deadline_days)
@@ -327,23 +342,32 @@ def create_brief(
     db.add(brief)
     db.flush()
 
-    for sk_id in payload.required_skill_ids:
-        bs = BriefSkill(
-            id=f"bs-{brief_id}-{sk_id}",
-            brief_id=brief_id,
-            skill_id=sk_id,
-            is_required=True
-        )
-        db.add(bs)
+    for sk_id in (payload.required_skill_ids or []):
+        skill_obj = db.query(Skill).filter(Skill.id == sk_id).first()
+        if not skill_obj:
+            alt_id = sk_id.replace("sk-", "skill-") if sk_id.startswith("sk-") else sk_id
+            skill_obj = db.query(Skill).filter(or_(Skill.id == alt_id, Skill.name.ilike(sk_id))).first()
+        if skill_obj:
+            bs = BriefSkill(
+                id=f"bs-{brief_id}-{skill_obj.id}",
+                brief_id=brief_id,
+                skill_id=skill_obj.id,
+                is_required=True
+            )
+            db.add(bs)
 
-    for tl_id in payload.required_tool_ids:
-        bt = BriefTool(
-            id=f"bt-{brief_id}-{tl_id}",
-            brief_id=brief_id,
-            tool_id=tl_id,
-            is_required=True
-        )
-        db.add(bt)
+    for tl_id in (payload.required_tool_ids or []):
+        tool_obj = db.query(Tool).filter(Tool.id == tl_id).first()
+        if not tool_obj:
+            tool_obj = db.query(Tool).filter(Tool.name.ilike(tl_id)).first()
+        if tool_obj:
+            bt = BriefTool(
+                id=f"bt-{brief_id}-{tool_obj.id}",
+                brief_id=brief_id,
+                tool_id=tool_obj.id,
+                is_required=True
+            )
+            db.add(bt)
 
     db.commit()
     db.refresh(brief)
@@ -402,23 +426,32 @@ def update_brief(
     if payload.required_skill_ids is not None:
         db.query(BriefSkill).filter(BriefSkill.brief_id == brief.id).delete()
         for sk_id in payload.required_skill_ids:
-            db.add(BriefSkill(
-                id=f"bs-{brief.id}-{sk_id}",
-                brief_id=brief.id,
-                skill_id=sk_id,
-                is_required=True
-            ))
+            skill_obj = db.query(Skill).filter(Skill.id == sk_id).first()
+            if not skill_obj:
+                alt_id = sk_id.replace("sk-", "skill-") if sk_id.startswith("sk-") else sk_id
+                skill_obj = db.query(Skill).filter(or_(Skill.id == alt_id, Skill.name.ilike(sk_id))).first()
+            if skill_obj:
+                db.add(BriefSkill(
+                    id=f"bs-{brief.id}-{skill_obj.id}",
+                    brief_id=brief.id,
+                    skill_id=skill_obj.id,
+                    is_required=True
+                ))
 
     # Sync tools
     if payload.required_tool_ids is not None:
         db.query(BriefTool).filter(BriefTool.brief_id == brief.id).delete()
         for tl_id in payload.required_tool_ids:
-            db.add(BriefTool(
-                id=f"bt-{brief.id}-{tl_id}",
-                brief_id=brief.id,
-                tool_id=tl_id,
-                is_required=True
-            ))
+            tool_obj = db.query(Tool).filter(Tool.id == tl_id).first()
+            if not tool_obj:
+                tool_obj = db.query(Tool).filter(Tool.name.ilike(tl_id)).first()
+            if tool_obj:
+                db.add(BriefTool(
+                    id=f"bt-{brief.id}-{tool_obj.id}",
+                    brief_id=brief.id,
+                    tool_id=tool_obj.id,
+                    is_required=True
+                ))
 
     brief.updated_at = datetime.utcnow()
     db.commit()
