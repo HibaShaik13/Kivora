@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="180" viewBox="0 0 640 180" role="img" aria-labelledby="title desc">
+<title id="title">Kinetix VR Studios logo</title>
+<desc id="desc">Original vector logo concept for Kinetix VR Studios, industry: Virtual Reality.</desc>
+<rect width="640" height="180" fill="none"/>
+<g transform="translate(22 54) scale(1.1)"><path d="M32 5 55 18V45L32 59 9 45V18Z" fill="#7957E8"/><path d="M32 5V32L55 18Z" fill="#25224C" opacity=".5"/></g>
+<path d="M105 38V142" stroke="#7957E8" stroke-width="2" opacity=".45"/>
+<text x="128" y="82" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="700" letter-spacing=".2" fill="#25224C">Kinetix VR Studios</text>
+<text x="130" y="111" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="600" letter-spacing="1.8" fill="#7957E8">VIRTUAL REALITY</text>
+<path d="M130 129H346" stroke="#7957E8" stroke-width="3" stroke-linecap="round"/>
+</svg>

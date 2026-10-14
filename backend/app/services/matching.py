@@ -1,10 +1,10 @@
 """
 Kivora Explainable Matching Service
 Deterministic, two-phase algorithm scoring creator fit for creative briefs.
-Provides granular score breakdowns, matched criteria reasons, and missing gaps.
+Provides granular score breakdowns, matched criteria reasons, missing gaps, and verified portfolio evidence.
 """
 
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Dict, Any
 from sqlalchemy.orm import Session
 
 from backend.app.models.models import CreatorProfile, Brief, PortfolioProject, CreatorSkill, CreatorTool
@@ -14,28 +14,50 @@ from backend.app.schemas.schemas import CreatorMatchResult, MatchScoreBreakdown
 def evaluate_creator_for_brief(creator: CreatorProfile, brief: Brief) -> CreatorMatchResult:
     reasons: List[str] = []
     gaps: List[str] = []
+    warnings: List[str] = []
+    relevant_portfolio_projects: List[Dict[str, Any]] = []
 
     # ----------------------------------------------------
-    # PHASE 1: HARD FILTER CHECKS (Binary Gates)
+    # DATA COVERAGE TRACKING
+    # Explicitly track how many required data dimensions exist
+    # ----------------------------------------------------
+    coverage_checks = {
+        "skills": bool(creator.skills and len(creator.skills) > 0),
+        "tools": bool(creator.tools and len(creator.tools) > 0),
+        "portfolio": bool(creator.portfolio_projects and len(creator.portfolio_projects) > 0),
+        "categories": bool(creator.categories and len(creator.categories) > 0),
+        "budget": bool(creator.min_budget is not None and creator.min_budget > 0),
+        "availability": bool(creator.availability_status in ["AVAILABLE", "LIMITED", "BOOKED"]),
+        "verification": bool(creator.verification_tier and creator.verification_tier != "NONE"),
+    }
+    populated_dims = sum(1 for v in coverage_checks.values() if v)
+    data_coverage = round((populated_dims / len(coverage_checks)) * 100.0, 1)
+
+    # ----------------------------------------------------
+    # PHASE 1: HARD FILTER CHECKS (Binary Eligibility Gates)
     # ----------------------------------------------------
     hard_filter_passed = True
 
     # 1. Content Type Compatibility
     matching_content_projs = [
-        p for p in creator.portfolio_projects
+        p for p in (creator.portfolio_projects or [])
         if p.content_type == brief.content_type
     ]
     if not matching_content_projs:
         # Check if primary specialization loosely aligns, otherwise hard failure
-        if brief.content_type.lower() not in creator.primary_specialization.lower():
+        spec_text = (creator.primary_specialization or "").lower()
+        b_ctype = (brief.content_type or "").lower()
+        if b_ctype not in spec_text:
             hard_filter_passed = False
             gaps.append(f"No proven {brief.content_type} portfolio project found.")
+        else:
+            warnings.append(f"Self-declared {brief.content_type} specialization without direct portfolio sample.")
     else:
-        reasons.append(f"Portfolio includes {len(matching_content_projs)} verified {brief.content_type} projects.")
+        reasons.append(f"Portfolio includes {len(matching_content_projs)} verified {brief.content_type} project(s).")
 
     # 2. Aspect Ratio Capability
     matching_ar_projs = [
-        p for p in creator.portfolio_projects
+        p for p in (creator.portfolio_projects or [])
         if p.aspect_ratio == brief.aspect_ratio
     ]
     if not matching_ar_projs:
@@ -44,107 +66,213 @@ def evaluate_creator_for_brief(creator: CreatorProfile, brief: Brief) -> Creator
         reasons.append(f"Demonstrated native {brief.aspect_ratio} production experience.")
 
     # 3. Budget Tolerance (Allows up to 15% negotiation threshold)
-    budget_limit = brief.budget_amount * 1.15
-    if creator.min_budget > budget_limit:
+    c_budget = creator.min_budget or 0.0
+    b_budget = brief.budget_amount or 0.0
+    budget_limit = b_budget * 1.15
+    if b_budget > 0 and c_budget > budget_limit:
         hard_filter_passed = False
-        gaps.append(f"Minimum budget (${creator.min_budget:,.0f}) exceeds campaign ceiling (${brief.budget_amount:,.0f}).")
-    else:
-        reasons.append(f"Creator minimum fee (${creator.min_budget:,.0f}) comfortably fits campaign budget (${brief.budget_amount:,.0f}).")
+        gaps.append(f"Minimum budget (${c_budget:,.0f}) exceeds campaign ceiling (${b_budget:,.0f}).")
+    elif b_budget > 0 and c_budget > 0:
+        reasons.append(f"Creator minimum fee (${c_budget:,.0f}) fits campaign budget (${b_budget:,.0f}).")
 
     # ----------------------------------------------------
-    # PHASE 2: WEIGHTED SOFT SCORING (0 to 100)
+    # PHASE 2: WEIGHTED SOFT SCORING (100% Total Calibrated Framework)
+    # Skill (25%), Portfolio (25%), Tool (15%), Domain/Format (15%),
+    # Budget (10%), Verification (5%), Availability (5%)
     # ----------------------------------------------------
 
-    # 1. SKILL SCORE (Weight: 35%)
-    creator_skill_ids = {cs.skill_id: cs.proficiency_level for cs in creator.skills}
-    brief_skills = brief.required_skills
+    # 1. SKILL SCORE (Weight: 25%)
+    creator_skill_ids = {cs.skill_id: cs.proficiency_level for cs in (creator.skills or [])}
+    brief_skills = brief.required_skills or []
     if brief_skills:
         skill_points = 0.0
         total_skill_weight = 0.0
         for bs in brief_skills:
             weight = 2.0 if bs.is_required else 1.0
             total_skill_weight += weight
+            skill_name = bs.skill.name if (bs.skill and hasattr(bs.skill, 'name')) else bs.skill_id
             if bs.skill_id in creator_skill_ids:
                 prof = creator_skill_ids[bs.skill_id]
-                multiplier = 1.0 if prof == "EXPERT" else (0.85 if prof == "ADVANCED" else 0.70)
+                multiplier = 1.0 if prof == "EXPERT" else (0.85 if prof == "ADVANCED" else (0.70 if prof == "INTERMEDIATE" else 0.50))
                 skill_points += weight * multiplier
-                reasons.append(f"Mastery in required skill '{bs.skill.name}' ({prof}).")
+                reasons.append(f"Mastery in required skill '{skill_name}' ({prof}).")
             else:
                 if bs.is_required:
-                    gaps.append(f"Missing required skill: '{bs.skill.name}'.")
+                    gaps.append(f"Missing required skill: '{skill_name}'.")
                 else:
-                    gaps.append(f"Preferred skill '{bs.skill.name}' not declared.")
+                    gaps.append(f"Preferred skill '{skill_name}' not declared.")
         skill_score = (skill_points / total_skill_weight) * 100.0 if total_skill_weight > 0 else 75.0
     else:
         skill_score = 80.0
 
-    # 2. TOOL & MODEL SCORE (Weight: 25%)
-    creator_tool_map = {ct.tool_id: ct for ct in creator.tools}
-    brief_tools = brief.required_tools
+    # 2. PORTFOLIO RELEVANCE SCORE (Weight: 25%)
+    # Evaluates past projects: content type alignment, aspect ratio alignment, keyword relevance, and attached evidence
+    projs = creator.portfolio_projects or []
+    if projs:
+        # Check matching projects and build relevant references
+        relevant_matches = []
+        for p in projs:
+            score_contrib = 0
+            if p.content_type == brief.content_type:
+                score_contrib += 40
+            if p.aspect_ratio == brief.aspect_ratio:
+                score_contrib += 25
+            
+            # Text / tag matching
+            brief_text = f"{brief.title or ''} {brief.creative_style_mood or ''} {brief.campaign_objective or ''}".lower()
+            p_title = getattr(p, "title", "") or ""
+            p_desc = getattr(p, "description", "") or ""
+            p_tags = getattr(p, "tags", "") or ""
+            p_tools = getattr(p, "software_used", "") or ""
+            proj_text = f"{p_title} {p_desc} {p_tags} {p_tools}".lower()
+            matching_keywords = [w for w in brief_text.split() if len(w) > 3 and w in proj_text]
+            if matching_keywords:
+                score_contrib += min(25, len(matching_keywords) * 8)
+
+            # Evidence records bonus
+            ev_records = getattr(p, "evidence_records", None) or []
+            if len(ev_records) > 0:
+                score_contrib += 10
+
+            if score_contrib >= 30 or p.content_type == brief.content_type:
+                relevant_matches.append((p, score_contrib))
+
+        if relevant_matches:
+            relevant_matches.sort(key=lambda x: x[1], reverse=True)
+            for top_p, _ in relevant_matches[:4]:
+                relevant_portfolio_projects.append({
+                    "id": getattr(top_p, "id", "") or "",
+                    "title": getattr(top_p, "title", "Project") or "Project",
+                    "content_type": getattr(top_p, "content_type", "") or "",
+                    "aspect_ratio": getattr(top_p, "aspect_ratio", "") or "",
+                    "thumbnail_url": getattr(top_p, "thumbnail_url", "") or "",
+                })
+            # Best project fit
+            top_score = relevant_matches[0][1]
+            portfolio_score = min(100.0, float(top_score))
+            reasons.append(f"Direct portfolio evidence: '{relevant_matches[0][0].title}' matches campaign deliverable.")
+        else:
+            portfolio_score = 35.0
+            gaps.append("Portfolio contains no directly matching deliverables or media formats.")
+    else:
+        portfolio_score = 15.0
+        gaps.append("Creator profile has no portfolio projects uploaded.")
+        warnings.append("Low portfolio evidence available for automated validation.")
+
+    # 3. TOOL & MODEL SCORE (Weight: 15%)
+    creator_tool_map = {ct.tool_id: ct for ct in (creator.tools or [])}
+    brief_tools = brief.required_tools or []
     if brief_tools:
         tool_points = 0.0
         total_tool_weight = 0.0
         for bt in brief_tools:
             weight = 2.0 if bt.is_required else 1.0
             total_tool_weight += weight
+            tool_name = bt.tool.name if (bt.tool and hasattr(bt.tool, 'name')) else bt.tool_id
             if bt.tool_id in creator_tool_map:
                 ct = creator_tool_map[bt.tool_id]
                 bonus = 1.0 if ct.is_claim_verified else 0.85
                 tool_points += weight * bonus
                 status_txt = "evidence-verified" if ct.is_claim_verified else "self-declared"
-                reasons.append(f"Proficient in requested tool '{bt.tool.name}' ({status_txt}).")
+                reasons.append(f"Proficient in requested tool '{tool_name}' ({status_txt}).")
             else:
                 if bt.is_required:
-                    gaps.append(f"Missing required tool pipeline: '{bt.tool.name}'.")
+                    gaps.append(f"Missing required tool pipeline: '{tool_name}'.")
                 else:
-                    gaps.append(f"Preferred tool '{bt.tool.name}' not in creator stack.")
+                    gaps.append(f"Preferred tool '{tool_name}' not in creator stack.")
         tool_score = (tool_points / total_tool_weight) * 100.0 if total_tool_weight > 0 else 75.0
     else:
         tool_score = 80.0
 
-    # 3. STYLE & SPECIALIZATION AFFINITY (Weight: 20%)
-    style_keywords = [w.lower().strip() for w in brief.creative_style_mood.replace(",", " ").split() if len(w) > 3]
-    creator_corpus = (creator.primary_specialization + " " + creator.bio).lower()
+    # 4. CREATIVE DOMAIN & CONTENT-FORMAT AFFINITY (Weight: 15%)
+    brief_cat_ids = {bc.category_id for bc in (brief.categories or [])}
+    brief_parent_ids = {bc.category.parent_id for bc in (brief.categories or []) if bc.category and bc.category.parent_id}
+    creator_cat_ids = {cc.category_id for cc in (creator.categories or [])}
+    creator_parent_ids = {cc.category.parent_id for cc in (creator.categories or []) if cc.category and cc.category.parent_id}
+
+    if brief_cat_ids:
+        direct_matches = brief_cat_ids.intersection(creator_cat_ids)
+        parent_matches = brief_cat_ids.intersection(creator_parent_ids).union(brief_parent_ids.intersection(creator_cat_ids))
+        if direct_matches:
+            matched_cat_names = [bc.category.name for bc in brief.categories if bc.category_id in direct_matches and bc.category]
+            cat_score = 100.0
+            reasons.append(f"Category alignment: matched in '{', '.join(matched_cat_names)}'.")
+        elif parent_matches:
+            cat_score = 80.0
+            reasons.append("Creative domain alignment across parent/child taxonomy.")
+        else:
+            cat_score = 45.0
+            gaps.append("Creator categories do not directly match campaign brief category.")
+    else:
+        cat_score = 75.0
+
+    style_keywords = [w.lower().strip() for w in (brief.creative_style_mood or "").replace(",", " ").split() if len(w) > 3]
+    creator_corpus = ((creator.primary_specialization or "") + " " + (creator.bio or "")).lower()
     style_matches = [w for w in style_keywords if w in creator_corpus]
     if style_matches:
-        style_score = min(100.0, 60.0 + len(style_matches) * 15.0)
+        raw_style_score = min(100.0, 60.0 + len(style_matches) * 15.0)
         reasons.append(f"Creative style alignment: matches aesthetic keywords ({', '.join(style_matches[:3])}).")
     else:
-        style_score = 55.0
+        raw_style_score = 55.0
 
-    # 4. VERIFICATION & EVIDENCE MULTIPLIER (Weight: 15%)
+    style_score = round(0.60 * cat_score + 0.40 * raw_style_score, 1)
+
+    # 5. BUDGET COMPATIBILITY SCORE (Weight: 10%)
+    if b_budget <= 0:
+        budget_score = 80.0
+    elif c_budget <= 0:
+        budget_score = 75.0  # Flexible/open rate
+    elif c_budget <= b_budget:
+        budget_score = 100.0
+    elif c_budget <= budget_limit:
+        # Linear decay from 100 to 60 over 15% negotiation buffer
+        decay = (c_budget - b_budget) / (0.15 * b_budget)
+        budget_score = round(100.0 - (40.0 * decay), 1)
+        warnings.append(f"Creator min budget (${c_budget:,.0f}) is slightly above campaign target (${b_budget:,.0f}).")
+    else:
+        budget_score = 20.0
+
+    # 6. VERIFICATION & EVIDENCE MULTIPLIER (Weight: 5%)
     if creator.verification_tier == "TOP_STUDIO":
         ver_score = 100.0
         reasons.append("Top Studio verified tier with multi-audited production workflows.")
     elif creator.verification_tier == "VERIFIED_PRO":
         ver_score = 90.0
-        reasons.append(f"Verified Pro creator with {creator.verified_claims_count} audited evidence records.")
+        reasons.append(f"Verified Pro creator with {creator.verified_claims_count or 0} audited evidence records.")
     elif creator.verification_tier == "COMMUNITY":
         ver_score = 65.0
     else:
         ver_score = 40.0
         gaps.append("Creator claims are currently self-declared without verified audit.")
 
-    # 5. RATING & AVAILABILITY BONUS (Weight: 5%)
-    rating_score = (creator.average_rating / 5.0) * 100.0
+    # 7. AVAILABILITY SCORE (Weight: 5%)
     if creator.availability_status == "AVAILABLE":
-        rating_score = min(100.0, rating_score + 5.0)
+        avail_score = 100.0
         reasons.append("Immediately available for production kickoff.")
     elif creator.availability_status == "LIMITED":
-        rating_score = max(0.0, rating_score - 10.0)
-    else:
-        rating_score = max(0.0, rating_score - 30.0)
+        avail_score = 60.0
+        warnings.append("Creator has limited production availability.")
+    elif creator.availability_status == "BOOKED":
+        avail_score = 20.0
         gaps.append("Creator currently has booked availability status.")
+    else:
+        avail_score = 70.0
+
+    # Average rating reference (for breakdown transparency)
+    avg_rating = creator.average_rating if creator.average_rating is not None else 5.0
+    rating_score = (avg_rating / 5.0) * 100.0
 
     # ----------------------------------------------------
-    # COMPUTE COMPOSITE SCORE
+    # COMPUTE COMPOSITE SCORE (Sum of Weights = 1.00)
     # ----------------------------------------------------
     raw_composite = (
-        0.35 * skill_score +
-        0.25 * tool_score +
-        0.20 * style_score +
-        0.15 * ver_score +
-        0.05 * rating_score
+        0.25 * skill_score +
+        0.25 * portfolio_score +
+        0.15 * tool_score +
+        0.15 * style_score +
+        0.10 * budget_score +
+        0.05 * ver_score +
+        0.05 * avail_score
     )
 
     if not hard_filter_passed:
@@ -165,28 +293,38 @@ def evaluate_creator_for_brief(creator: CreatorProfile, brief: Brief) -> Creator
     breakdown = MatchScoreBreakdown(
         hard_filter_passed=hard_filter_passed,
         skill_score=round(skill_score, 1),
+        portfolio_score=round(portfolio_score, 1),
         tool_score=round(tool_score, 1),
         style_score=round(style_score, 1),
+        budget_score=round(budget_score, 1),
         verification_score=round(ver_score, 1),
+        availability_score=round(avail_score, 1),
         rating_score=round(rating_score, 1),
+        data_coverage=data_coverage,
         total_score=final_score,
-        match_level=match_level
+        match_level=match_level,
     )
 
     # Collect matched skills and tools
-    matched_skills = [bs.skill.name for bs in brief_skills if bs.skill_id in creator_skill_ids]
-    matched_tools = [bt.tool.name for bt in brief_tools if bt.tool_id in creator_tool_map]
-    strengths = [r for r in reasons if any(k in r.lower() for k in ["mastery", "proficient", "verified", "top studio", "alignment", "available", "fits"])]
+    matched_skills = [
+        (bs.skill.name if (bs.skill and hasattr(bs.skill, 'name')) else bs.skill_id)
+        for bs in brief_skills if bs.skill_id in creator_skill_ids
+    ]
+    matched_tools = [
+        (bt.tool.name if (bt.tool and hasattr(bt.tool, 'name')) else bt.tool_id)
+        for bt in brief_tools if bt.tool_id in creator_tool_map
+    ]
+    strengths = [r for r in reasons if any(k in r.lower() for k in ["mastery", "proficient", "verified", "top studio", "alignment", "available", "fits", "direct portfolio"])]
     missing_requirements = [g for g in gaps if any(k in g.lower() for k in ["missing required", "no proven", "exceeds"])]
 
     return CreatorMatchResult(
         creator_id=creator.id,
         display_name=creator.display_name,
         handle=creator.handle,
-        avatar_url=creator.avatar_url,
-        primary_specialization=creator.primary_specialization,
-        verification_tier=creator.verification_tier,
-        min_budget=creator.min_budget,
+        avatar_url=creator.avatar_url or "",
+        primary_specialization=creator.primary_specialization or "Generative Media Creator",
+        verification_tier=creator.verification_tier or "NONE",
+        min_budget=creator.min_budget or 0.0,
         score=final_score,
         match_level=match_level,
         breakdown=breakdown,
@@ -196,6 +334,10 @@ def evaluate_creator_for_brief(creator: CreatorProfile, brief: Brief) -> Creator
         matched_tools=matched_tools,
         strengths=strengths,
         missing_requirements=missing_requirements,
+        warnings=warnings,
+        relevant_portfolio_projects=relevant_portfolio_projects,
+        confidence_score=data_coverage,
+        data_coverage=data_coverage,
         compatibility_disclaimer="Scores represent estimated compatibility based on declared and verified portfolio evidence, not a guarantee of outcome.",
         hard_requirements_met=hard_filter_passed,
     )
@@ -208,20 +350,18 @@ def match_creators_for_brief(
     enforce_hard_filters: bool = False,
     limit: Optional[int] = None,
 ) -> List[CreatorMatchResult]:
-    from typing import Optional
     creators = db.query(CreatorProfile).all()
     results = [evaluate_creator_for_brief(c, brief) for c in creators]
-    
+
     # Filter by hard filters if requested
     if enforce_hard_filters:
         results = [r for r in results if r.breakdown.hard_filter_passed]
 
-    # Filter by min_score and sort descending by match score
+    # Filter by min_score and sort descending by match score, deterministic tie-break by handle
     filtered = [r for r in results if r.score >= min_score]
-    filtered.sort(key=lambda r: r.score, reverse=True)
+    filtered.sort(key=lambda r: (r.score, r.confidence_score, r.handle), reverse=True)
 
     if limit is not None and limit > 0:
         filtered = filtered[:limit]
 
     return filtered
-

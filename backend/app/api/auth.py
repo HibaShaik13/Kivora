@@ -73,14 +73,14 @@ def register_user(payload: UserRegisterRequest, db: Session = Depends(get_db)):
     # 2. Hash password with bcrypt
     hashed = hash_password(payload.password)
 
-    # 3. Create verified User record directly
+    # 3. Create unverified User record (email verification required)
     user_id = f"user-{uuid.uuid4().hex[:12]}"
     user = User(
         id=user_id,
         email=email,
         hashed_password=hashed,
         role=role,
-        is_email_verified=True,
+        is_email_verified=False,
         created_at=datetime.utcnow()
     )
     db.add(user)
@@ -126,23 +126,41 @@ def register_user(payload: UserRegisterRequest, db: Session = Depends(get_db)):
         )
         db.add(brand_profile)
 
+    # 5. Issue cryptographic OTP for email verification
+    otp = generate_otp_code()
+    otp_record = OtpCode(
+        id=f"otp-{uuid.uuid4().hex[:10]}",
+        email=email,
+        code=otp,
+        purpose="REGISTRATION",
+        expires_at=datetime.utcnow() + timedelta(minutes=15),
+        is_used=False,
+        created_at=datetime.utcnow()
+    )
+    db.add(otp_record)
     db.commit()
     db.refresh(user)
 
-    # 5. Issue JWT access token directly
-    access_token = create_access_token(
-        data={"sub": user.id, "email": user.email, "role": user.role}
-    )
+    # Dispatch OTP via email service
+    dispatch_result = None
+    try:
+        dispatch_result = send_otp_email(email, otp, purpose="REGISTRATION")
+    except Exception as e:
+        # In non-production, log and continue with fallback so local developer is not blocked
+        import logging
+        logging.getLogger("auth").warning(f"Registration email delivery note: {e}")
 
-    return {
-        "message": "User registered successfully! Welcome to Kivora.",
-        "access_token": access_token,
-        "token_type": "bearer",
-        "user_id": user.id,
+    response = {
+        "message": "Account created successfully! Please enter the 6-digit verification code sent to your email.",
         "email": user.email,
-        "role": user.role,
+        "requires_otp": True,
+        "user_id": user.id,
         "user": build_user_summary(user),
     }
+    import os
+    if dispatch_result and dispatch_result.get("dev_otp") and os.getenv("KIVORA_ENV", "development").lower() != "production":
+        response["dev_otp"] = dispatch_result["dev_otp"]
+    return response
 
 
 @router.post("/verify-otp", response_model=TokenResponse)
@@ -280,8 +298,34 @@ def login_user(payload: UserLoginRequest, db: Session = Depends(get_db)):
         )
 
     if not user.is_email_verified:
-        user.is_email_verified = True
-        db.commit()
+        # Prevent silent verification: user must complete OTP verification
+        # Issue fresh OTP if needed
+        recent_otp = db.query(OtpCode).filter(
+            OtpCode.email == email,
+            OtpCode.is_used == False,
+            OtpCode.expires_at > datetime.utcnow()
+        ).first()
+        if not recent_otp:
+            otp = generate_otp_code()
+            otp_record = OtpCode(
+                id=f"otp-{uuid.uuid4().hex[:10]}",
+                email=email,
+                code=otp,
+                purpose="LOGIN_VERIFY",
+                expires_at=datetime.utcnow() + timedelta(minutes=15),
+                is_used=False,
+                created_at=datetime.utcnow()
+            )
+            db.add(otp_record)
+            db.commit()
+            try:
+                send_otp_email(email, otp, purpose="LOGIN_VERIFY")
+            except Exception:
+                pass
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your email address has not been verified yet. A verification code has been dispatched to your email. Please verify your account to continue."
+        )
 
     access_token = create_access_token(
         data={"sub": user.id, "email": user.email, "role": user.role}

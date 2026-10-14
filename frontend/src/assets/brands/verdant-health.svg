@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="180" viewBox="0 0 640 180" role="img" aria-labelledby="title desc">
+<title id="title">Verdant Health logo</title>
+<desc id="desc">Original vector logo concept for Verdant Health, industry: Health &amp; Wellness.</desc>
+<rect width="640" height="180" fill="none"/>
+<g transform="translate(22 54) scale(1.1)"><path d="M27 55V30H9V19H27V5H38V19H55V30H38V55Z" fill="#25A879"/></g>
+<path d="M105 38V142" stroke="#25A879" stroke-width="2" opacity=".45"/>
+<text x="128" y="82" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="700" letter-spacing=".2" fill="#174E49">Verdant Health</text>
+<text x="130" y="111" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="600" letter-spacing="1.8" fill="#25A879">HEALTH &amp; WELLNESS</text>
+<path d="M130 129H298" stroke="#25A879" stroke-width="3" stroke-linecap="round"/>
+</svg>

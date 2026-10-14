@@ -1,21 +1,54 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { briefService } from '../services/briefService';
+import { api } from '../services/api';
+import { getCurrentUser } from '../services/authService';
+import CategoryCard from './CategoryCard';
+import BriefCard from './BriefCard';
 
-export default function BriefsExplorer({ onSelectBrief, onOpenAiBuilder }) {
+export default function BriefsExplorer({
+  onSelectBrief,
+  onOpenAiBuilder,
+  onToggleSaveBrief,
+  savedBriefIds: externalSavedBriefIds,
+}) {
   const [allBriefs, setAllBriefs] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [savedBriefIds, setSavedBriefIds] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  useEffect(() => {
+    if (externalSavedBriefIds) {
+      setSavedBriefIds(new Set(externalSavedBriefIds));
+      return;
+    }
+    const user = getCurrentUser();
+    if (user && user.role === 'CREATOR') {
+      api.getSavedBriefs()
+        .then((res) => {
+          const items = Array.isArray(res) ? res : (res?.items || []);
+          const idSet = new Set(items.map((sb) => sb.brief_id || sb.id));
+          setSavedBriefIds(idSet);
+        })
+        .catch(() => null);
+    }
+  }, [externalSavedBriefIds]);
+
+  // Category State
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedSubcategory, setSelectedSubcategory] = useState(null);
+  const [showAllCategories, setShowAllCategories] = useState(false);
+
   // Filters State
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategories, setSelectedCategories] = useState([]);
-  const [maxBudget, setMaxBudget] = useState(10000);
+  const [maxBudget, setMaxBudget] = useState(35000);
   const [selectedProjectTypes, setSelectedProjectTypes] = useState([]);
   const [selectedTimelines, setSelectedTimelines] = useState([]);
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
   // Sidebar accordion states
   const [openSections, setOpenSections] = useState({
-    category: true,
+    categories: true,
     budget: true,
     projectType: true,
     timeline: true,
@@ -25,10 +58,14 @@ export default function BriefsExplorer({ onSelectBrief, onOpenAiBuilder }) {
     setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }));
   };
 
-  const handleCategoryChange = (category) => {
-    setSelectedCategories((prev) =>
-      prev.includes(category) ? prev.filter((c) => c !== category) : [...prev, category]
-    );
+  const handleCategoryCardClick = (cat) => {
+    if (selectedCategory?.slug === cat?.slug) {
+      setSelectedCategory(null);
+      setSelectedSubcategory(null);
+    } else {
+      setSelectedCategory(cat);
+      setSelectedSubcategory(null);
+    }
   };
 
   const handleProjectTypeChange = (projectType) => {
@@ -44,19 +81,24 @@ export default function BriefsExplorer({ onSelectBrief, onOpenAiBuilder }) {
   };
 
   const handleResetFilters = () => {
+    setSelectedCategory(null);
+    setSelectedSubcategory(null);
     setSearchQuery('');
-    setSelectedCategories([]);
-    setMaxBudget(10000);
+    setMaxBudget(35000);
     setSelectedProjectTypes([]);
     setSelectedTimelines([]);
   };
 
-  const loadBriefs = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await briefService.getBriefs();
-      setAllBriefs(Array.isArray(data) ? data : []);
+      const [briefsData, catsData] = await Promise.all([
+        briefService.getBriefs(),
+        api.getCategories().catch(() => []),
+      ]);
+      setAllBriefs(Array.isArray(briefsData) ? briefsData : []);
+      setCategories(catsData || []);
     } catch (err) {
       console.error('Failed to load briefs:', err);
       setError(err.message || 'Failed to load campaign briefs.');
@@ -66,273 +108,249 @@ export default function BriefsExplorer({ onSelectBrief, onOpenAiBuilder }) {
   };
 
   useEffect(() => {
-    loadBriefs();
+    loadData();
   }, []);
 
-  // Category matching logic
-  const matchesCategory = (b, selectedCats) => {
-    if (!selectedCats || selectedCats.length === 0) return true;
-    const title = (b.title || '').toLowerCase();
-    const ctype = (b.content_type || '').toLowerCase();
-    const mood = (b.creative_style_mood || '').toLowerCase();
-    const obj = (b.campaign_objective || '').toLowerCase();
-
-    return selectedCats.some((cat) => {
-      const catL = cat.toLowerCase();
-      if (catL === 'video & animation') {
-        return (
-          ctype === 'video' ||
-          ctype === 'animation' ||
-          ctype.includes('video') ||
-          ctype.includes('animation') ||
-          title.includes('video') ||
-          title.includes('animation') ||
-          title.includes('film') ||
-          title.includes('motion') ||
-          title.includes('teaser') ||
-          mood.includes('motion') ||
-          obj.includes('video')
-        );
-      }
-      if (catL === 'product visualization') {
-        return (
-          ctype === 'product_viz' ||
-          ctype.includes('product') ||
-          ctype.includes('viz') ||
-          title.includes('product') ||
-          title.includes('render') ||
-          title.includes('glass') ||
-          title.includes('serum') ||
-          obj.includes('product')
-        );
-      }
-      if (catL === 'digital art') {
-        return (
-          ctype === 'image' ||
-          ctype === 'animation' ||
-          ctype === 'concept_art' ||
-          title.includes('art') ||
-          title.includes('digital') ||
-          title.includes('cyberpunk') ||
-          title.includes('silk') ||
-          title.includes('render') ||
-          mood.includes('digital') ||
-          mood.includes('art')
-        );
-      }
-      if (catL === 'brand campaign') {
-        return (
-          title.includes('campaign') ||
-          title.includes('launch') ||
-          title.includes('commercial') ||
-          title.includes('reveal') ||
-          title.includes('ad series') ||
-          obj.includes('commercial') ||
-          obj.includes('campaign') ||
-          obj.includes('launch') ||
-          !!b.brand?.company_name
-        );
-      }
-      if (catL === 'concept design') {
-        return (
-          ctype === 'concept_art' ||
-          ctype.includes('concept') ||
-          title.includes('concept') ||
-          title.includes('spatial') ||
-          title.includes('cockpit') ||
-          title.includes('explainer') ||
-          mood.includes('matte') ||
-          obj.includes('concept')
-        );
-      }
-      if (catL === 'illustration') {
-        return (
-          ctype === 'image' ||
-          ctype === 'concept_art' ||
-          title.includes('still') ||
-          title.includes('illustration') ||
-          title.includes('concept') ||
-          obj.includes('still')
-        );
-      }
-      return ctype.includes(catL) || title.includes(catL) || mood.includes(catL);
+  const matchesProjectType = (b, selectedTypes) => {
+    if (!selectedTypes || selectedTypes.length === 0) return true;
+    const ctype = (b.content_type || '').toUpperCase();
+    return selectedTypes.some((pt) => {
+      if (pt === 'Cinematic Video (16:9)') return ctype === 'VIDEO' && b.aspect_ratio === '16:9';
+      if (pt === 'Social Video (9:16)') return ctype === 'VIDEO' && b.aspect_ratio === '9:16';
+      if (pt === '3D / CGI Render') return ctype === '3D_ANIMATION' || ctype.includes('3D') || ctype === 'PRODUCT_VIZ';
+      if (pt === 'Editorial Still') return ctype === 'STILL_IMAGE' || ctype === 'IMAGE';
+      return false;
     });
   };
 
-  // Project Type matching logic
-  const matchesProjectType = (b, selectedPTs) => {
-    if (!selectedPTs || selectedPTs.length === 0) return true;
-    const reqs = (b.commercial_use_requirements || '').toLowerCase();
-    const channels = (b.usage_channels || '').toLowerCase();
-
-    return selectedPTs.some((pt) => {
-      const ptL = pt.toLowerCase();
-      if (ptL.includes('buyout') || ptL.includes('commercial')) {
-        return reqs.includes('buyout') || reqs.includes('commercial') || reqs.includes('ownership');
-      }
-      if (ptL.includes('non-exclusive') || ptL.includes('digital')) {
-        return (
-          reqs.includes('non-exclusive') ||
-          reqs.includes('digital') ||
-          reqs.includes('social') ||
-          channels.includes('digital') ||
-          channels.includes('social')
-        );
-      }
-      if (ptL.includes('editorial') || ptL.includes('license')) {
-        return (
-          reqs.includes('editorial') ||
-          reqs.includes('license') ||
-          reqs.includes('licensing') ||
-          reqs.includes('pr') ||
-          reqs.includes('rights')
-        );
-      }
-      return reqs.includes(ptL) || channels.includes(ptL);
-    });
-  };
-
-  // Timeline matching logic
-  const matchesTimeline = (b, selectedTLs, refTime) => {
-    if (!selectedTLs || selectedTLs.length === 0) return true;
+  const matchesTimeline = (b, selectedTls, nowMs) => {
+    if (!selectedTls || selectedTls.length === 0) return true;
     if (!b.deadline) return true;
-
-    const deadlineTime = new Date(b.deadline).getTime();
-    const diffTime = deadlineTime - refTime;
-    const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    return selectedTLs.some((tl) => {
-      if (tl.includes('< 7') || tl.toLowerCase().includes('rush')) {
-        return daysLeft <= 7;
-      }
-      if (tl.includes('14') || tl.toLowerCase().includes('standard')) {
-        return daysLeft > 7 && daysLeft <= 14;
-      }
-      if (tl.includes('30+') || tl.toLowerCase().includes('extended')) {
-        return daysLeft > 14;
-      }
-      return true;
+    const daysLeft = Math.ceil((new Date(b.deadline).getTime() - nowMs) / (1000 * 60 * 60 * 24));
+    return selectedTls.some((tl) => {
+      if (tl === '< 7 Days (Rush)') return daysLeft > 0 && daysLeft <= 7;
+      if (tl === '14 Days Standard') return daysLeft > 7 && daysLeft <= 14;
+      if (tl === '30+ Days Extended') return daysLeft > 14;
+      return false;
     });
   };
 
-  // Combine filters reactively
   const filteredBriefs = useMemo(() => {
     const nowMs = Date.now();
     return allBriefs.filter((b) => {
-      // Exclude draft, closed or otherwise ineligible briefs
-      if (b.status && b.status.toUpperCase() !== 'PUBLISHED') {
-        return false;
+      // Exclude non-published briefs from public explorer
+      if (b.status && b.status !== 'PUBLISHED') return false;
+
+      // 1. Category Filter (Top Visual Cards)
+      if (selectedCategory) {
+        const catSlug = selectedCategory.slug.toLowerCase();
+        const catName = selectedCategory.name.toLowerCase();
+        const briefCats = b.categories || [];
+
+        const hasRelationalCat = briefCats.some((bc) => {
+          const s = (bc.slug || '').toLowerCase();
+          const n = (bc.name || '').toLowerCase();
+          return (
+            s === catSlug ||
+            n === catName ||
+            (selectedCategory.subcategories || []).some(
+              (sub) => sub.slug === s || sub.name === n
+            )
+          );
+        });
+
+        const textCorpus = `${b.title} ${b.creative_style_mood} ${b.campaign_objective} ${b.content_type}`.toLowerCase();
+        const hasTextCat = textCorpus.includes(catName) || textCorpus.includes(catSlug.replace('-', ' '));
+
+        if (!hasRelationalCat && !hasTextCat) return false;
+
+        // Subcategory check
+        if (selectedSubcategory) {
+          const subSlug = selectedSubcategory.toLowerCase();
+          const hasSub = briefCats.some(
+            (bc) => (bc.slug || '').toLowerCase() === subSlug || (bc.name || '').toLowerCase() === subSlug
+          );
+          if (!hasSub && !textCorpus.includes(subSlug.replace('-', ' '))) return false;
+        }
       }
 
-      // Search keyword filter
+      // 2. Search query filter
       if (searchQuery.trim()) {
-        const term = searchQuery.trim().toLowerCase();
-        const matchesSearch =
-          (b.title || '').toLowerCase().includes(term) ||
-          (b.campaign_objective || '').toLowerCase().includes(term) ||
-          (b.creative_style_mood || '').toLowerCase().includes(term) ||
-          (b.brand?.company_name || '').toLowerCase().includes(term) ||
-          (b.content_type || '').toLowerCase().includes(term);
-        if (!matchesSearch) return false;
-      }
-
-      // Budget filter
-      if (maxBudget !== undefined && maxBudget !== null) {
-        if (Number(b.budget_amount || 0) > Number(maxBudget)) {
+        const q = searchQuery.toLowerCase().trim();
+        const titleMatch = b.title?.toLowerCase().includes(q);
+        const objMatch = b.campaign_objective?.toLowerCase().includes(q);
+        const brandMatch = b.brand?.company_name?.toLowerCase().includes(q);
+        const moodMatch = b.creative_style_mood?.toLowerCase().includes(q);
+        const skillsMatch = b.required_skills?.some((s) => s.name?.toLowerCase().includes(q));
+        const toolsMatch = b.required_tools?.some((t) => t.name?.toLowerCase().includes(q));
+        if (!titleMatch && !objMatch && !brandMatch && !moodMatch && !skillsMatch && !toolsMatch) {
           return false;
         }
       }
 
-      // Category filter
-      if (!matchesCategory(b, selectedCategories)) {
-        return false;
+      // 3. Budget filter
+      if (maxBudget < 35000) {
+        if ((b.budget_amount || 0) > maxBudget) return false;
       }
 
-      // Project type filter
-      if (!matchesProjectType(b, selectedProjectTypes)) {
-        return false;
-      }
+      // 4. Project type filter
+      if (!matchesProjectType(b, selectedProjectTypes)) return false;
 
-      // Timeline filter
-      if (!matchesTimeline(b, selectedTimelines, nowMs)) {
-        return false;
-      }
+      // 5. Timeline filter
+      if (!matchesTimeline(b, selectedTimelines, nowMs)) return false;
 
       return true;
     });
-  }, [allBriefs, searchQuery, maxBudget, selectedCategories, selectedProjectTypes, selectedTimelines]);
+  }, [allBriefs, selectedCategory, selectedSubcategory, searchQuery, maxBudget, selectedProjectTypes, selectedTimelines]);
 
-  // Helper to pick a high-quality campaign thumbnail
-  const getBriefThumbnail = (brief, idx) => {
-    const defaultThumbs = [
-      '/assets/portfolio/sophia_cellular_dew_thumb.jpg',
-      '/assets/portfolio/marcus_aura_droplet_thumb.jpg',
-      '/assets/portfolio/solaris_anomaly_thumb.jpg',
-      '/assets/portfolio/maya_liquid_organza_thumb.jpg',
-      '/assets/portfolio/hassan_apex_gt_thumb.jpg',
-      '/assets/portfolio/kai_neon_samurai_thumb.jpg',
-    ];
-    return defaultThumbs[idx % defaultThumbs.length];
-  };
+  const hasActiveFilters =
+    Boolean(selectedCategory) ||
+    Boolean(selectedSubcategory) ||
+    Boolean(searchQuery) ||
+    maxBudget < 35000 ||
+    selectedProjectTypes.length > 0 ||
+    selectedTimelines.length > 0;
+
+  const activeFilterCount =
+    (selectedCategory ? 1 : 0) +
+    (selectedSubcategory ? 1 : 0) +
+    (searchQuery ? 1 : 0) +
+    (maxBudget < 35000 ? 1 : 0) +
+    selectedProjectTypes.length +
+    selectedTimelines.length;
+
+  const displayedCategories = showAllCategories ? categories : categories.slice(0, 8);
 
   return (
     <div className="kivora-discovery-layout">
+      {/* Mobile Filter Toggle */}
+      <div className="discovery-mobile-bar">
+        <button
+          type="button"
+          className="mobile-filter-btn"
+          onClick={() => setIsMobileFilterOpen(!isMobileFilterOpen)}
+        >
+          <span className="filter-icon">⚙</span>
+          <span>Filters & Search</span>
+          {activeFilterCount > 0 && (
+            <span className="mobile-active-badge">{activeFilterCount}</span>
+          )}
+        </button>
+
+        {hasActiveFilters && (
+          <button
+            type="button"
+            className="mobile-clear-btn"
+            onClick={handleResetFilters}
+          >
+            Clear all
+          </button>
+        )}
+      </div>
+
       {/* Left Filter Sidebar */}
-      <aside className="kivora-filter-sidebar glass-panel">
+      <aside className={`kivora-filter-sidebar ${isMobileFilterOpen ? 'mobile-open' : ''}`}>
+        <div className="sidebar-header-row">
+          <div className="sidebar-title-wrap">
+            <h3 className="sidebar-main-heading">Filters</h3>
+            <span className="sidebar-count-indicator">
+              {filteredBriefs.length} briefs
+            </span>
+          </div>
+          {hasActiveFilters && (
+            <button
+              type="button"
+              className="sidebar-reset-link"
+              onClick={handleResetFilters}
+            >
+              Reset
+            </button>
+          )}
+        </div>
+
         {/* Search Box */}
         <div className="sidebar-search-box">
-          <span className="search-mag-icon">🔍</span>
+          <svg
+            className="sidebar-search-icon"
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" x2="16.65" y1="21" y2="16.65" />
+          </svg>
           <input
             type="text"
-            placeholder="Search briefs..."
+            placeholder="Search campaign briefs, brands..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="sidebar-search-input"
           />
+          {searchQuery && (
+            <button
+              type="button"
+              className="search-clear-btn"
+              onClick={() => setSearchQuery('')}
+            >
+              ✕
+            </button>
+          )}
         </div>
 
-        {/* Section 1: Category */}
+        {/* Section 0: Taxonomy Categories */}
         <div className="filter-accordion-group">
           <button
             type="button"
             className="filter-accordion-header"
-            onClick={() => toggleSection('category')}
+            onClick={() => toggleSection('categories')}
           >
-            <span>Category</span>
-            <span className="accordion-chevron">{openSections.category ? '∧' : '∨'}</span>
+            <span>Creative Domain</span>
+            <span className="accordion-chevron">{openSections.categories ? '∧' : '∨'}</span>
           </button>
-          {openSections.category && (
-            <div className="filter-checkbox-list">
-              {[
-                'Brand Campaign',
-                'Digital Art',
-                'Product Visualization',
-                'Video & Animation',
-                'Illustration',
-                'Concept Design',
-              ].map((cat) => (
-                <label key={cat} className="filter-checkbox-label">
+          {openSections.categories && (
+            <div className="filter-checkbox-list max-h-48 overflow-y-auto pr-1">
+              <label className="filter-checkbox-label">
+                <input
+                  type="radio"
+                  name="sidebar-brief-category"
+                  checked={selectedCategory === null}
+                  onChange={() => {
+                    setSelectedCategory(null);
+                    setSelectedSubcategory(null);
+                  }}
+                  className="custom-checkbox"
+                />
+                <span className="font-semibold text-xs">All Domains ({allBriefs.length})</span>
+              </label>
+              {categories.map((cat) => (
+                <label key={cat.id} className="filter-checkbox-label">
                   <input
-                    type="checkbox"
-                    checked={selectedCategories.includes(cat)}
-                    onChange={() => handleCategoryChange(cat)}
+                    type="radio"
+                    name="sidebar-brief-category"
+                    checked={selectedCategory?.slug === cat.slug}
+                    onChange={() => handleCategoryCardClick(cat)}
                     className="custom-checkbox"
                   />
-                  <span>{cat}</span>
+                  <span className="text-xs">
+                    {cat.name} ({cat.brief_count || cat.open_brief_count || 0})
+                  </span>
                 </label>
               ))}
             </div>
           )}
         </div>
 
-        {/* Section 2: Budget Range */}
+        {/* Section 1: Budget Range */}
         <div className="filter-accordion-group">
           <button
             type="button"
             className="filter-accordion-header"
             onClick={() => toggleSection('budget')}
           >
-            <span>Budget Range</span>
+            <span>Budget Ceiling</span>
             <span className="accordion-chevron">{openSections.budget ? '∧' : '∨'}</span>
           </button>
           {openSections.budget && (
@@ -340,33 +358,40 @@ export default function BriefsExplorer({ onSelectBrief, onOpenAiBuilder }) {
               <input
                 type="range"
                 min="1000"
-                max="10000"
-                step="500"
+                max="35000"
+                step="1000"
                 value={maxBudget}
                 onChange={(e) => setMaxBudget(Number(e.target.value))}
-                className="w-full"
+                className="w-full accent-purple-600 cursor-pointer"
               />
               <div className="flex justify-between text-xs text-neutral-500 mt-1 font-mono">
-                <span>$1,000</span>
-                <span className="font-bold text-purple-700">Up to ${maxBudget.toLocaleString()}</span>
+                <span>$1k</span>
+                <span className="font-bold text-purple-700">
+                  {maxBudget >= 35000 ? 'Any Budget ($35k+)' : `Up to $${maxBudget.toLocaleString()}`}
+                </span>
               </div>
             </div>
           )}
         </div>
 
-        {/* Section 3: Project Type */}
+        {/* Section 2: Project Type */}
         <div className="filter-accordion-group">
           <button
             type="button"
             className="filter-accordion-header"
             onClick={() => toggleSection('projectType')}
           >
-            <span>Project Type</span>
+            <span>Deliverable Format</span>
             <span className="accordion-chevron">{openSections.projectType ? '∧' : '∨'}</span>
           </button>
           {openSections.projectType && (
             <div className="filter-checkbox-list">
-              {['Commercial Buyout', 'Non-Exclusive Digital', 'Editorial License'].map((pt) => (
+              {[
+                'Cinematic Video (16:9)',
+                'Social Video (9:16)',
+                '3D / CGI Render',
+                'Editorial Still',
+              ].map((pt) => (
                 <label key={pt} className="filter-checkbox-label">
                   <input
                     type="checkbox"
@@ -381,7 +406,7 @@ export default function BriefsExplorer({ onSelectBrief, onOpenAiBuilder }) {
           )}
         </div>
 
-        {/* Section 4: Timeline */}
+        {/* Section 3: Timeline */}
         <div className="filter-accordion-group">
           <button
             type="button"
@@ -408,124 +433,183 @@ export default function BriefsExplorer({ onSelectBrief, onOpenAiBuilder }) {
           )}
         </div>
 
+        {hasActiveFilters && (
+          <button
+            type="button"
+            className="sidebar-clear-all-btn"
+            onClick={handleResetFilters}
+          >
+            Clear All Active Filters
+          </button>
+        )}
+
         {/* AI Brief Builder Quick Button in Sidebar */}
-        <button
-          type="button"
-          className="btn btn-ai w-full mt-6 text-xs flex items-center justify-center gap-1.5"
-          onClick={onOpenAiBuilder}
-        >
-          <span>✨</span> Generate Brief with AI
-        </button>
+        {onOpenAiBuilder && (
+          <button
+            type="button"
+            className="btn btn-ai w-full mt-4 text-xs flex items-center justify-center gap-1.5 shadow-sm"
+            onClick={onOpenAiBuilder}
+          >
+            <span>✨</span> Generate Brief with AI
+          </button>
+        )}
       </aside>
 
       {/* Right Main Grid Area */}
       <main className="kivora-discovery-main">
-        {/* Headline Row */}
-        <div>
-          <span className="badge-editorial mb-2">
-            <span className="badge-dot" />
-            LATEST BRIEFS
-          </span>
-          <div className="discovery-headline-row">
+        {/* Top Category Discovery Section */}
+        {categories.length > 0 && (
+          <div className="category-discovery-section">
+            <div className="category-section-top-bar">
+              <div>
+                <span className="badge-editorial">
+                  <span className="badge-dot" />
+                  CAMPAIGN DOMAINS
+                </span>
+                <h3 className="category-section-heading">Explore Briefs by Creative Domain</h3>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {selectedCategory && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedCategory(null);
+                      setSelectedSubcategory(null);
+                    }}
+                    className="category-clear-pill-btn"
+                  >
+                    Clear Domain ✕
+                  </button>
+                )}
+                {categories.length > 8 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllCategories(!showAllCategories)}
+                    className="category-expand-toggle-btn"
+                  >
+                    {showAllCategories ? 'Show Fewer' : `View All (${categories.length})`}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Category Cards Grid */}
+            <div className="kivora-category-grid">
+              {displayedCategories.map((cat) => (
+                <CategoryCard
+                  key={cat.id}
+                  category={cat}
+                  isSelected={selectedCategory?.slug === cat.slug}
+                  onClick={() => handleCategoryCardClick(cat)}
+                  mode="briefs"
+                />
+              ))}
+            </div>
+
+            {/* Subcategories Row if Category Selected */}
+            {selectedCategory && selectedCategory.subcategories?.length > 0 && (
+              <div className="subcategory-chips-bar">
+                <span className="subcategory-bar-label">
+                  <span className="label-icon">📂</span>
+                  <span>{selectedCategory.name} Subcategories:</span>
+                </span>
+                <button
+                  type="button"
+                  className={`subcategory-chip ${!selectedSubcategory ? 'active' : ''}`}
+                  onClick={() => setSelectedSubcategory(null)}
+                >
+                  All {selectedCategory.name}
+                </button>
+                {selectedCategory.subcategories.map((sub) => {
+                  const isSubActive = selectedSubcategory === sub.slug;
+                  return (
+                    <button
+                      key={sub.id}
+                      type="button"
+                      className={`subcategory-chip ${isSubActive ? 'active' : ''}`}
+                      onClick={() => setSelectedSubcategory(isSubActive ? null : sub.slug)}
+                    >
+                      {sub.name}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Discovery Headline Row */}
+        <div className="discovery-headline-row">
+          <div>
             <h2 className="discovery-main-title">
-              Briefs waiting for the right hands.
+              {selectedCategory
+                ? `${selectedCategory.name} Opportunities`
+                : 'Commercial Briefs Ready for Production'}
             </h2>
+            <p className="discovery-subtitle">
+              Showing <strong>{filteredBriefs.length}</strong> of {allBriefs.length} verified campaign briefs
+              {selectedCategory && ` in ${selectedCategory.name}`}
+              {selectedSubcategory && ` › ${selectedSubcategory}`}
+            </p>
+          </div>
+
+          {hasActiveFilters && (
             <button
               type="button"
               className="view-all-link-btn"
               onClick={handleResetFilters}
             >
-              View all briefs <span className="arrow-inline">→</span>
+              Reset all filters <span className="arrow-inline">↺</span>
             </button>
-          </div>
+          )}
         </div>
 
         {/* Content Area */}
         {loading ? (
           <div className="kivora-loading-card glass-panel">
             <div className="spinner-ring" />
-            <p>Loading active campaign briefs...</p>
+            <p className="loading-text">Loading active campaign briefs...</p>
           </div>
         ) : error ? (
           <div className="kivora-error-card glass-panel">
-            <p className="text-red">Error: {error}</p>
-            <button className="btn btn-secondary btn-sm" onClick={loadBriefs}>
-              Retry
+            <p className="text-red font-semibold">Error: {error}</p>
+            <button className="btn btn-secondary btn-sm mt-3" onClick={loadData}>
+              Retry Query
             </button>
           </div>
         ) : filteredBriefs.length === 0 ? (
           <div className="kivora-empty-card glass-panel">
             <div className="empty-icon text-3xl">📋</div>
-            <h3 className="font-serif text-lg font-bold">No campaign briefs found</h3>
-            <p className="text-xs text-neutral-500">Try clearing selected filters or generate a brief with AI.</p>
-            <button className="btn btn-primary btn-sm mt-3" onClick={handleResetFilters}>
+            <h3 className="empty-title">No campaign briefs match your criteria</h3>
+            <p className="empty-desc">
+              Try adjusting your category selection, increasing budget limits, or clearing search filters.
+            </p>
+            <button className="btn btn-primary btn-sm mt-4" onClick={handleResetFilters}>
               Reset Filters
             </button>
           </div>
         ) : (
           <div className="kivora-briefs-card-grid">
             {filteredBriefs.map((brief, idx) => (
-              <div
+              <BriefCard
                 key={brief.id}
-                className="kivora-brief-card glass-panel"
-                onClick={() => onSelectBrief(brief)}
-              >
-                {/* Brief Image Thumbnail */}
-                <div className="brief-card-thumb-wrap">
-                  <img
-                    src={getBriefThumbnail(brief, idx)}
-                    alt={brief.title}
-                    className="brief-card-img"
-                  />
-                  <button
-                    type="button"
-                    className="brief-favorite-btn"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    ♡
-                  </button>
-                  <span className="brief-format-overlay-pill">
-                    {brief.aspect_ratio || '16:9'}
-                  </span>
-                </div>
-
-                {/* Brief Details */}
-                <div className="brief-card-body-content">
-                  <span className="brief-brand-slug">
-                    {brief.brand?.company_name || 'LUMINA SKINCARE'}
-                  </span>
-                  <h3 className="brief-card-heading">{brief.title}</h3>
-                  <p className="brief-card-desc-snippet">{brief.campaign_objective}</p>
-
-                  {/* Tag chips */}
-                  <div className="brief-card-pills-row">
-                    <span className="mini-tag-pill">{brief.content_type || 'Video'}</span>
-                    <span className="mini-tag-pill">{brief.resolution_min || '4K UHD'}</span>
-                    {brief.creative_style_mood && (
-                      <span className="mini-tag-pill">
-                        {brief.creative_style_mood.split(',')[0]}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Footer Row */}
-                  <div className="brief-card-bottom-bar">
-                    <span className="brief-card-deadline-budget">
-                      Deadline: {brief.deadline ? new Date(brief.deadline).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '14 Nov 2026'} • ${brief.budget_amount?.toLocaleString() || '3,500'}
-                    </span>
-                    <button
-                      type="button"
-                      className="card-arrow-circle-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onSelectBrief(brief);
-                      }}
-                    >
-                      ↗
-                    </button>
-                  </div>
-                </div>
-              </div>
+                brief={brief}
+                index={idx}
+                onSelectBrief={onSelectBrief}
+                isSaved={savedBriefIds.has(brief.id)}
+                onToggleSave={(briefId, isSaved, briefObj) => {
+                  setSavedBriefIds((prev) => {
+                    const next = new Set(prev);
+                    if (isSaved) next.add(briefId);
+                    else next.delete(briefId);
+                    return next;
+                  });
+                  if (onToggleSaveBrief) {
+                    onToggleSaveBrief(briefId, isSaved, briefObj);
+                  }
+                }}
+              />
             ))}
           </div>
         )}

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="180" viewBox="0 0 640 180" role="img" aria-labelledby="title desc">
+<title id="title">Terra Modular Homes logo</title>
+<desc id="desc">Original vector logo concept for Terra Modular Homes, industry: Home &amp; Living.</desc>
+<rect width="640" height="180" fill="none"/>
+<g transform="translate(22 54) scale(1.1)"><path d="M6 30 32 8 58 30V55H10V30" fill="none" stroke="#263F35" stroke-width="4"/><path d="M23 47Q21 30 40 28 41 45 23 47Z" fill="#6D9B6B"/></g>
+<path d="M105 38V142" stroke="#6D9B6B" stroke-width="2" opacity=".45"/>
+<text x="128" y="82" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="700" letter-spacing=".2" fill="#263F35">Terra Modular Homes</text>
+<text x="130" y="111" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="600" letter-spacing="1.8" fill="#6D9B6B">HOME &amp; LIVING</text>
+<path d="M130 129H358" stroke="#6D9B6B" stroke-width="3" stroke-linecap="round"/>
+</svg>

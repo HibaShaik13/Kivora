@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="180" viewBox="0 0 640 180" role="img" aria-labelledby="default-title default-desc">
+<title id="default-title">Verified Brand</title>
+<desc id="default-desc">Verified Commercial Brand Partner on Kivora</desc>
+<rect width="640" height="180" fill="none"/>
+<g transform="translate(26 50) scale(1.1)">
+  <rect x="10" y="8" width="56" height="56" rx="14" fill="#7952EC" opacity="0.12"/>
+  <path d="M38 18L52 26V42L38 50L24 42V26L38 18Z" stroke="#7952EC" stroke-width="3" fill="none"/>
+  <circle cx="38" cy="34" r="5" fill="#7952EC"/>
+</g>
+<path d="M105 38V142" stroke="#7952EC" stroke-width="2" opacity=".3"/>
+<text x="128" y="84" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="28" font-weight="700" letter-spacing=".5" fill="#1F2937">Verified Brand</text>
+<text x="130" y="112" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="600" letter-spacing="2" fill="#7952EC">COMMERCIAL PARTNER</text>
+<path d="M130 129H310" stroke="#7952EC" stroke-width="3" stroke-linecap="round"/>
+</svg>

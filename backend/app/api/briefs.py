@@ -2,9 +2,10 @@
 Kivora Campaign Briefs & Applications Router
 """
 
+import re
 import uuid
 from datetime import datetime, timedelta
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
@@ -20,6 +21,9 @@ from backend.app.models.models import (
     BrandProfile,
     Application,
     Engagement,
+    Category,
+    BriefCategory,
+    Conversation,
 )
 from fastapi.security import HTTPAuthorizationCredentials
 from backend.app.schemas.schemas import (
@@ -29,6 +33,7 @@ from backend.app.schemas.schemas import (
     BriefStatusUpdate,
     BriefSkillRef,
     BriefToolRef,
+    BriefCategoryRef,
     ApplicationCreate,
     ApplicationRead,
     ApplicationStatusUpdate,
@@ -36,8 +41,10 @@ from backend.app.schemas.schemas import (
 )
 from backend.app.core.deps import require_role, get_current_verified_user, security_bearer
 from backend.app.core.security import decode_access_token
+from backend.app.services.notification_service import NotificationService
 
 router = APIRouter(prefix="/api/briefs", tags=["Briefs"])
+
 
 
 def format_brief_read(b: Brief) -> BriefRead:
@@ -58,6 +65,17 @@ def format_brief_read(b: Brief) -> BriefRead:
         )
         for bt in b.required_tools
         if bt is not None
+    ]
+    brief_cats = [
+        BriefCategoryRef(
+            category_id=bc.category_id,
+            name=bc.category.name if bc.category else bc.category_id,
+            slug=bc.category.slug if bc.category else "",
+            icon=bc.category.icon if bc.category else "✨",
+            is_primary=bc.is_primary
+        )
+        for bc in (b.categories or [])
+        if bc is not None
     ]
 
     return BriefRead(
@@ -85,10 +103,13 @@ def format_brief_read(b: Brief) -> BriefRead:
         usage_territories=b.usage_territories,
         restrictions_and_guidelines=b.restrictions_and_guidelines,
         disclosure_requirements=b.disclosure_requirements,
+        reference_asset_url=b.reference_asset_url,
+        cover_image_url=b.reference_asset_url,
         status=b.status,
         created_at=b.created_at,
         required_skills=req_skills,
         required_tools=req_tools,
+        categories=brief_cats,
         applications_count=len(b.applications)
     )
 
@@ -96,6 +117,8 @@ def format_brief_read(b: Brief) -> BriefRead:
 @router.get("", response_model=List[BriefRead])
 def list_briefs(
     search: Optional[str] = Query(None, description="Search term for title or objective"),
+    category: Optional[str] = Query(None, description="Category slug or name"),
+    subcategory: Optional[str] = Query(None, description="Subcategory slug or name"),
     content_type: Optional[str] = Query(None, description="Content type"),
     aspect_ratio: Optional[str] = Query(None, description="Aspect ratio"),
     min_budget: Optional[float] = Query(None, description="Min budget amount"),
@@ -157,9 +180,44 @@ def list_briefs(
 
     briefs = query.all()
 
-    # Relational filtering for skill and tool
+    # Relational filtering for category, subcategory, skill, and tool
     matched = []
     for b in briefs:
+        if category:
+            cat_low = category.lower()
+            has_cat = any(
+                (bc.category and (
+                    bc.category.slug.lower() == cat_low
+                    or bc.category.name.lower() == cat_low
+                    or (bc.category.parent and (
+                        bc.category.parent.slug.lower() == cat_low
+                        or bc.category.parent.name.lower() == cat_low
+                    ))
+                ))
+                or bc.category_id.lower() == cat_low
+                for bc in (b.categories or [])
+            )
+            # Fallback check against creative_style_mood, content_type, or title if not explicitly tagged
+            if not has_cat:
+                combined_text = f"{b.content_type} {b.creative_style_mood} {b.title} {b.campaign_objective}".lower()
+                if cat_low not in combined_text and cat_low.replace("-", " ") not in combined_text:
+                    continue
+
+        if subcategory:
+            subcat_low = subcategory.lower()
+            has_subcat = any(
+                (bc.category and (
+                    bc.category.slug.lower() == subcat_low
+                    or bc.category.name.lower() == subcat_low
+                ))
+                or bc.category_id.lower() == subcat_low
+                for bc in (b.categories or [])
+            )
+            if not has_subcat:
+                combined_text = f"{b.content_type} {b.creative_style_mood} {b.title} {b.campaign_objective}".lower()
+                if subcat_low not in combined_text and subcat_low.replace("-", " ") not in combined_text:
+                    continue
+
         if skill:
             skill_low = skill.lower()
             has_skill = any(
@@ -262,6 +320,50 @@ def get_brief_detail(
     return format_brief_read(brief)
 
 
+@router.post("/check-duplicate")
+def check_duplicate_brief(
+    payload: Dict[str, Any],
+    current_user: User = Depends(require_role(["BRAND"])),
+    db: Session = Depends(get_db)
+):
+    brand = current_user.brand_profile
+    if not brand:
+        return {"is_duplicate_warning": False, "matching_briefs": []}
+
+    title = (payload.get("title") or "").strip().lower()
+    if not title:
+        return {"is_duplicate_warning": False, "matching_briefs": []}
+
+    clean_tokens = set(re.sub(r"[^a-z0-9\s]", "", title).split())
+    if not clean_tokens:
+        return {"is_duplicate_warning": False, "matching_briefs": []}
+
+    existing_briefs = db.query(Brief).filter(
+        Brief.brand_id == brand.id,
+        Brief.status.in_(["PUBLISHED", "DRAFT"])
+    ).all()
+
+    matches = []
+    for eb in existing_briefs:
+        eb_title = eb.title.strip().lower()
+        if eb_title == title:
+            matches.append({"id": eb.id, "title": eb.title, "status": eb.status, "similarity": "exact"})
+            continue
+        eb_tokens = set(re.sub(r"[^a-z0-9\s]", "", eb_title).split())
+        overlap = clean_tokens.intersection(eb_tokens)
+        similarity = len(overlap) / max(len(clean_tokens), len(eb_tokens), 1)
+        if similarity >= 0.70:
+            matches.append({"id": eb.id, "title": eb.title, "status": eb.status, "similarity": "similar"})
+
+    if matches:
+        return {
+            "is_duplicate_warning": True,
+            "warning_message": f"You already have {len(matches)} active or draft campaign brief(s) with matching or similar titles.",
+            "matching_briefs": matches
+        }
+    return {"is_duplicate_warning": False, "matching_briefs": []}
+
+
 @router.post("", response_model=BriefRead, status_code=201)
 def create_brief(
     payload: BriefCreate,
@@ -335,6 +437,7 @@ def create_brief(
         usage_territories=payload.usage_territories,
         restrictions_and_guidelines=payload.restrictions_and_guidelines,
         disclosure_requirements=payload.disclosure_requirements,
+        reference_asset_url=payload.reference_asset_url or payload.cover_image_url,
         status=initial_status,
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow()
@@ -368,6 +471,17 @@ def create_brief(
                 is_required=True
             )
             db.add(bt)
+
+    for cat_id in (payload.category_ids or []):
+        cat_obj = db.query(Category).filter(or_(Category.id == cat_id, Category.slug == cat_id, Category.name.ilike(cat_id))).first()
+        if cat_obj:
+            bc = BriefCategory(
+                id=f"bc-{brief_id}-{cat_obj.id}",
+                brief_id=brief_id,
+                category_id=cat_obj.id,
+                is_primary=False
+            )
+            db.add(bc)
 
     db.commit()
     db.refresh(brief)
@@ -416,6 +530,13 @@ def update_brief(
         if val is not None:
             setattr(brief, field, val)
 
+    if payload.reference_asset_url is not None:
+        val = payload.reference_asset_url.strip()
+        brief.reference_asset_url = val if val else None
+    elif payload.cover_image_url is not None:
+        val = payload.cover_image_url.strip()
+        brief.reference_asset_url = val if val else None
+
     if payload.status is not None:
         valid_statuses = ["DRAFT", "PUBLISHED", "CLOSED", "CANCELLED", "REVIEWING_APPLICATIONS", "IN_PRODUCTION", "COMPLETED"]
         if payload.status.upper() not in valid_statuses:
@@ -451,6 +572,19 @@ def update_brief(
                     brief_id=brief.id,
                     tool_id=tool_obj.id,
                     is_required=True
+                ))
+
+    # Sync categories
+    if payload.category_ids is not None:
+        db.query(BriefCategory).filter(BriefCategory.brief_id == brief.id).delete()
+        for cat_id in payload.category_ids:
+            cat_obj = db.query(Category).filter(or_(Category.id == cat_id, Category.slug == cat_id, Category.name.ilike(cat_id))).first()
+            if cat_obj:
+                db.add(BriefCategory(
+                    id=f"bc-{brief.id}-{cat_obj.id}",
+                    brief_id=brief.id,
+                    category_id=cat_obj.id,
+                    is_primary=False
                 ))
 
     brief.updated_at = datetime.utcnow()
@@ -562,6 +696,18 @@ def submit_application(
     if not brief:
         raise HTTPException(status_code=404, detail="Brief not found")
 
+    # Brand cannot pitch or apply to its own brief
+    if current_user.brand_profile and brief.brand_id == current_user.brand_profile.id:
+        raise HTTPException(
+            status_code=400,
+            detail="Forbidden: Brands cannot apply or submit pitches to their own campaign briefs."
+        )
+    if current_user.role == "BRAND":
+        raise HTTPException(
+            status_code=400,
+            detail="Forbidden: Brands cannot apply or submit pitches to campaign briefs."
+        )
+
     creator = current_user.creator_profile
     if not creator:
         raise HTTPException(
@@ -613,7 +759,22 @@ def submit_application(
     db.add(app)
     db.commit()
     db.refresh(app)
+
+    # Phase 2: Notify the campaign brief's owning brand
+    try:
+        if brief.brand and brief.brand.user_id:
+            NotificationService.notify_application_received(
+                db=db,
+                brand_user_id=brief.brand.user_id,
+                creator_name=creator.display_name or "A creator",
+                brief_title=brief.title,
+                application_id=app.id,
+            )
+    except Exception as notify_err:
+        print(f"[BriefsAPI] Non-fatal notification error: {notify_err}")
+
     return format_application_read(app)
+
 
 
 @router.get("/applications/my-applications", response_model=List[ApplicationRead])
@@ -686,22 +847,68 @@ def update_application_status(
     if payload.brand_feedback:
         app.brand_feedback = payload.brand_feedback
 
-    # If accepted, automatically initialize engagement if one doesn't exist
+    # If accepted, automatically initialize engagement and link conversation if one doesn't exist
     if payload.status == "ACCEPTED":
         existing_eng = db.query(Engagement).filter(Engagement.application_id == app.id).first()
+        eng_id = existing_eng.id if existing_eng else f"eng-{uuid.uuid4().hex[:10]}"
         if not existing_eng:
             eng = Engagement(
-                id=f"eng-{uuid.uuid4().hex[:10]}",
+                id=eng_id,
                 brief_id=app.brief_id,
                 creator_id=app.creator_id,
                 application_id=app.id,
                 status="KICKOFF",
                 agreed_amount=app.proposed_rate,
                 start_date=datetime.utcnow(),
-                completion_deadline=datetime.utcnow() + timedelta(days=app.proposed_timeline_days)
+                completion_deadline=datetime.utcnow() + timedelta(days=app.proposed_timeline_days or 14)
             )
             db.add(eng)
+            db.flush()
+
+        # Idempotently provision Conversation between brand and creator
+        if app.brief and app.brief.brand_id:
+            existing_conv = db.query(Conversation).filter(
+                Conversation.engagement_id == eng_id
+            ).first()
+            if not existing_conv:
+                existing_conv = db.query(Conversation).filter(
+                    Conversation.brand_id == app.brief.brand_id,
+                    Conversation.creator_id == app.creator_id,
+                    Conversation.brief_id == app.brief_id
+                ).first()
+            if not existing_conv:
+                conv = Conversation(
+                    id=f"conv-{uuid.uuid4().hex[:10]}",
+                    engagement_id=eng_id,
+                    brief_id=app.brief_id,
+                    brand_id=app.brief.brand_id,
+                    creator_id=app.creator_id,
+                    created_at=datetime.utcnow(),
+                    updated_at=datetime.utcnow(),
+                )
+                db.add(conv)
 
     db.commit()
     db.refresh(app)
+
+    # Phase 2: Notify the creator of application decision
+    try:
+        if app.creator and app.creator.user_id:
+            brand_name = (
+                current_user.brand_profile.company_name
+                if current_user.brand_profile
+                else "Brand"
+            )
+            NotificationService.notify_application_status(
+                db=db,
+                creator_user_id=app.creator.user_id,
+                brand_name=brand_name,
+                brief_title=app.brief.title if app.brief else "Campaign Brief",
+                status=payload.status,
+                application_id=app.id,
+            )
+    except Exception as notify_err:
+        print(f"[BriefsAPI] Non-fatal notification error: {notify_err}")
+
     return format_application_read(app)
+

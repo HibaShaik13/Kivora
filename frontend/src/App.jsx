@@ -16,18 +16,180 @@ import AuthModal from './components/AuthModal';
 import CreatorDashboard from './components/CreatorDashboard';
 import BrandDashboard from './components/BrandDashboard';
 import AdminDashboard from './components/AdminDashboard';
+import MessagesInbox from './components/MessagesInbox';
+import InviteCreatorModal from './components/InviteCreatorModal';
+import ErrorBoundary from './components/ErrorBoundary';
 import { authService, getCurrentUser, addAuthListener } from './services/authService';
 import { api } from './services/api';
 import './App.css';
 
+
 export default function App() {
-  const [currentView, setCurrentView] = useState('landing'); // 'landing' | 'creators' | 'briefs' | 'dashboard' | 'admin'
+  const [currentView, setCurrentView] = useState(() => {
+    try {
+      const user = getCurrentUser();
+      const pathname = window.location.pathname;
+      const params = new URLSearchParams(window.location.search);
+      const isMessagesRoute =
+        pathname === '/messages' ||
+        pathname === '/inbox' ||
+        pathname === '/chat' ||
+        params.has('conversationId') ||
+        params.has('conv') ||
+        params.has('c') ||
+        params.has('creatorId') ||
+        params.has('briefId');
+
+      if (isMessagesRoute) {
+        return user ? 'dashboard' : 'inbox';
+      }
+
+      const saved = localStorage.getItem('kivora_current_view');
+      if (saved && ['landing', 'creators', 'briefs', 'dashboard', 'admin', 'inbox'].includes(saved)) {
+        if ((saved === 'dashboard' || saved === 'admin' || saved === 'inbox') && !user) {
+          return 'landing';
+        }
+        return saved;
+      }
+      return user ? 'dashboard' : 'landing';
+    } catch {
+      return 'landing';
+    }
+  });
   const [currentUser, setCurrentUser] = useState(getCurrentUser());
+  const [activeConversationId, setActiveConversationId] = useState(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('conversationId') || params.get('conv') || params.get('c') || null;
+    } catch {
+      return null;
+    }
+  });
+  const [chatContext, setChatContext] = useState(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const conv = params.get('conversationId') || params.get('conv') || params.get('c') || null;
+      const creator = params.get('creatorId') || params.get('creator_id') || null;
+      const brand = params.get('brandId') || params.get('brand_id') || null;
+      const brief = params.get('briefId') || params.get('brief_id') || null;
+      if (conv || creator || brand || brief) {
+        return { conversationId: conv, creatorId: creator, brandId: brand, briefId: brief, timestamp: Date.now() };
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  });
+  const [dashboardTab, setDashboardTab] = useState(() => {
+    try {
+      const pathname = window.location.pathname;
+      const params = new URLSearchParams(window.location.search);
+      if (
+        pathname === '/messages' ||
+        pathname === '/inbox' ||
+        params.get('tab') === 'messages' ||
+        params.has('conversationId') ||
+        params.has('conv') ||
+        params.has('c') ||
+        params.has('creatorId') ||
+        params.has('briefId') ||
+        params.has('brandId')
+      ) {
+        return 'messages';
+      }
+      return params.get('tab') || null;
+    } catch {
+      return null;
+    }
+  });
+
+  const handleNavigate = (view) => {
+    setCurrentView(view);
+    try {
+      localStorage.setItem('kivora_current_view', view);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleOpenChat = (chatTarget) => {
+    let conversationId = null;
+    let creatorId = null;
+    let brandId = null;
+    let briefId = null;
+    let targetName = null;
+
+    if (typeof chatTarget === 'string') {
+      conversationId = chatTarget;
+    } else if (chatTarget && typeof chatTarget === 'object') {
+      conversationId = chatTarget.conversationId || chatTarget.id || null;
+      creatorId = chatTarget.creatorId || null;
+      brandId = chatTarget.brandId || null;
+      briefId = chatTarget.briefId || null;
+      targetName = chatTarget.targetName || chatTarget.creatorName || chatTarget.brandName || null;
+    }
+
+    setSelectedCreator(null);
+    setSelectedBrief(null);
+    setSelectedProject(null);
+    setReturnToBrief(null);
+
+    const newContext = {
+      conversationId,
+      creatorId,
+      brandId,
+      briefId,
+      targetName,
+      timestamp: Date.now(),
+    };
+
+    setActiveConversationId(conversationId);
+    setChatContext(newContext);
+    setDashboardTab('messages');
+
+    try {
+      const url = new URL(window.location.href);
+      if (conversationId) {
+        url.searchParams.set('conversationId', conversationId);
+        url.searchParams.set('conv', conversationId);
+      } else {
+        url.searchParams.delete('conversationId');
+        url.searchParams.delete('conv');
+      }
+      if (creatorId) {
+        url.searchParams.set('creatorId', creatorId);
+      } else {
+        url.searchParams.delete('creatorId');
+      }
+      if (brandId) {
+        url.searchParams.set('brandId', brandId);
+      } else {
+        url.searchParams.delete('brandId');
+      }
+      if (briefId) {
+        url.searchParams.set('briefId', briefId);
+      } else {
+        url.searchParams.delete('briefId');
+      }
+      url.searchParams.set('tab', 'messages');
+      window.history.pushState({}, '', url.toString());
+    } catch {
+      // ignore
+    }
+
+    if (currentUser) {
+      handleNavigate('dashboard');
+    } else {
+      handleNavigate('inbox');
+    }
+  };
 
   // Modal states
   const [selectedProject, setSelectedProject] = useState(null);
   const [selectedCreator, setSelectedCreator] = useState(null);
   const [selectedBrief, setSelectedBrief] = useState(null);
+  const [returnToBrief, setReturnToBrief] = useState(null);
+  const [invitingCreator, setInvitingCreator] = useState(null);
   const [isAiBuilderOpen, setIsAiBuilderOpen] = useState(false);
   const [isAdminDeskOpen, setIsAdminDeskOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -40,24 +202,57 @@ export default function App() {
     if (window.location.pathname === '/login' || window.location.hash === '#login') {
       setIsAuthModalOpen(true);
     }
-    return unsubscribe;
+
+    const handlePopState = () => {
+      try {
+        const pathname = window.location.pathname;
+        const params = new URLSearchParams(window.location.search);
+        const conv = params.get('conversationId') || params.get('conv') || params.get('c') || null;
+        const creator = params.get('creatorId') || params.get('creator_id') || null;
+        const brand = params.get('brandId') || params.get('brand_id') || null;
+        const brief = params.get('briefId') || params.get('brief_id') || null;
+        const tab = params.get('tab') || (conv || creator || brand || brief || pathname === '/messages' || pathname === '/inbox' ? 'messages' : null);
+        if (conv) {
+          setActiveConversationId(conv);
+        }
+        if (conv || creator || brand || brief) {
+          setChatContext({ conversationId: conv, creatorId: creator, brandId: brand, briefId: brief, timestamp: Date.now() });
+        }
+        if (tab) {
+          setDashboardTab(tab);
+        }
+        if (pathname === '/messages' || pathname === '/inbox' || conv || creator || brand || brief) {
+          const user = getCurrentUser();
+          setCurrentView(user ? 'dashboard' : 'inbox');
+        }
+      } catch {
+        // ignore
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener('popstate', handlePopState);
+    };
   }, []);
 
   const handleSelectCreator = async (creator) => {
+    setSelectedCreator(creator);
     try {
       const fullProfile = await api.getCreator(creator.id || creator.handle);
       setSelectedCreator(fullProfile);
     } catch {
-      setSelectedCreator(creator);
+      // Keep initial creator object
     }
   };
 
   const handleBriefCreated = (newBrief) => {
     setIsAiBuilderOpen(false);
     if (currentUser?.role === 'BRAND') {
-      setCurrentView('dashboard');
+      handleNavigate('dashboard');
     } else {
-      setCurrentView('briefs');
+      handleNavigate('briefs');
     }
     setSelectedBrief(newBrief);
   };
@@ -67,16 +262,22 @@ export default function App() {
     setCurrentUser(user);
     setIsAuthModalOpen(false);
     if (user.role === 'ADMIN') {
-      setCurrentView('admin');
+      handleNavigate('admin');
     } else {
-      setCurrentView('dashboard');
+      handleNavigate('dashboard');
     }
   };
 
   const handleLogout = () => {
     authService.logout();
     setCurrentUser(null);
-    setCurrentView('landing');
+    try {
+      localStorage.removeItem('kivora_current_view');
+      localStorage.removeItem('kivora_creator_tab');
+    } catch {
+      // ignore
+    }
+    handleNavigate('landing');
   };
 
   return (
@@ -84,14 +285,14 @@ export default function App() {
       {/* Top Navigation */}
       <Navbar
         currentView={currentView}
-        onNavigate={setCurrentView}
+        onNavigate={handleNavigate}
         currentUser={currentUser}
         onOpenAuth={() => setIsAuthModalOpen(true)}
         onLogout={handleLogout}
         onOpenAiBuilder={() => setIsAiBuilderOpen(true)}
         onOpenAdminDesk={() => {
           if (currentUser?.role === 'ADMIN') {
-            setCurrentView('admin');
+            handleNavigate('admin');
           } else {
             setIsAdminDeskOpen(true);
           }
@@ -100,13 +301,14 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="main-content">
+        <ErrorBoundary>
         {/* VIEW 1: PUBLIC LANDING PAGE */}
         {currentView === 'landing' && (
           <div className="landing-page-flow">
             {/* Hero Section with Cosmic Artwork & Interactive Constellation */}
             <HeroSection
-              onExploreCreators={() => setCurrentView('creators')}
-              onExploreBriefs={() => setCurrentView('briefs')}
+              onExploreCreators={() => handleNavigate('creators')}
+              onExploreBriefs={() => handleNavigate('briefs')}
               onGetStarted={() => {
                 const el = document.getElementById('login-section');
                 if (el) el.scrollIntoView({ behavior: 'smooth' });
@@ -122,9 +324,9 @@ export default function App() {
               onAuthSuccess={handleAuthSuccess}
               onNavigateToDashboard={() => {
                 if (currentUser?.role === 'ADMIN') {
-                  setCurrentView('admin');
+                  handleNavigate('admin');
                 } else {
-                  setCurrentView('dashboard');
+                  handleNavigate('dashboard');
                 }
               }}
               onLogout={handleLogout}
@@ -137,7 +339,7 @@ export default function App() {
 
             {/* How Kivora Works (4 Glass Step Cards) */}
             <HowItWorksSection
-              onExplore={() => setCurrentView('creators')}
+              onExplore={() => handleNavigate('creators')}
               onPostBrief={() => setIsAiBuilderOpen(true)}
             />
 
@@ -146,13 +348,14 @@ export default function App() {
               <CreatorDiscovery
                 onSelectCreator={handleSelectCreator}
                 onSelectProject={(project) => setSelectedProject(project)}
+                onOpenChat={handleOpenChat}
               />
             </section>
 
             {/* Creative Universe Section */}
             <CreativeUniverseSection
-              onNavigateCreators={() => setCurrentView('creators')}
-              onNavigateBriefs={() => setCurrentView('briefs')}
+              onNavigateCreators={() => handleNavigate('creators')}
+              onNavigateBriefs={() => handleNavigate('briefs')}
               onOpenAuth={() => setIsAuthModalOpen(true)}
             />
           </div>
@@ -173,10 +376,13 @@ export default function App() {
               <CreatorDiscovery
                 onSelectCreator={handleSelectCreator}
                 onSelectProject={(project) => setSelectedProject(project)}
+                onInviteCreator={(creator) => setInvitingCreator(creator)}
+                onOpenChat={handleOpenChat}
               />
             </div>
           </div>
         )}
+
 
         {/* VIEW 3: CAMPAIGN BRIEFS EXPLORER */}
         {currentView === 'briefs' && (
@@ -218,6 +424,11 @@ export default function App() {
                 onSelectProject={(proj) => setSelectedProject(proj)}
                 onSelectBrief={(b) => setSelectedBrief(b)}
                 onLogout={handleLogout}
+                initialTab={dashboardTab}
+                initialConversationId={activeConversationId}
+                chatContext={chatContext}
+                onClearChatContext={() => setChatContext(null)}
+                onOpenChat={handleOpenChat}
               />
             ) : currentUser.role === 'BRAND' ? (
               <BrandDashboard
@@ -227,6 +438,11 @@ export default function App() {
                 onSelectProject={(proj) => setSelectedProject(proj)}
                 onSelectBrief={(b) => setSelectedBrief(b)}
                 onLogout={handleLogout}
+                initialTab={dashboardTab}
+                initialConversationId={activeConversationId}
+                chatContext={chatContext}
+                onClearChatContext={() => setChatContext(null)}
+                onOpenChat={handleOpenChat}
               />
             ) : (
               <AdminDashboard currentUser={currentUser} onLogout={handleLogout} />
@@ -238,7 +454,34 @@ export default function App() {
         {currentView === 'admin' && (
           <AdminDashboard currentUser={currentUser} onLogout={handleLogout} />
         )}
+
+        {/* VIEW 6: DIRECT INBOX / MESSAGING */}
+        {currentView === 'inbox' && (
+          <div className="container py-6" style={{ minHeight: 'calc(100vh - 120px)' }}>
+            {!currentUser ? (
+              <div className="container py-16 text-center">
+                <p className="text-sm text-neutral-500 mb-4">Please log in to view your messages.</p>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => setIsAuthModalOpen(true)}
+                >
+                  Sign In to Kivora
+                </button>
+              </div>
+            ) : (
+              <MessagesInbox
+                currentUser={currentUser}
+                initialConversationId={activeConversationId}
+                chatContext={chatContext}
+                onClearChatContext={() => setChatContext(null)}
+              />
+            )}
+          </div>
+        )}
+        </ErrorBoundary>
       </main>
+
 
       {/* Global Modals */}
       {selectedProject && (
@@ -256,23 +499,51 @@ export default function App() {
       {selectedCreator && (
         <CreatorProfileModal
           creator={selectedCreator}
+          brief={returnToBrief}
+          currentUser={currentUser}
           isOpen={Boolean(selectedCreator)}
-          onClose={() => setSelectedCreator(null)}
+          onClose={() => {
+            setSelectedCreator(null);
+            if (returnToBrief) {
+              setSelectedBrief(returnToBrief);
+              setReturnToBrief(null);
+            }
+          }}
           onSelectProject={(proj) => setSelectedProject(proj)}
           onPostBrief={() => setIsAiBuilderOpen(true)}
+          onInviteCreator={(c) => {
+            setSelectedCreator(null);
+            setInvitingCreator(c);
+          }}
+          onOpenChat={handleOpenChat}
         />
       )}
+
+      {/* Brand Creator Invite Modal */}
+      {invitingCreator && (
+        <InviteCreatorModal
+          creator={invitingCreator}
+          isOpen={Boolean(invitingCreator)}
+          onClose={() => setInvitingCreator(null)}
+        />
+      )}
+
 
       {selectedBrief && (
         <BriefDetailModal
           brief={selectedBrief}
           currentUser={currentUser}
           isOpen={Boolean(selectedBrief)}
-          onClose={() => setSelectedBrief(null)}
+          onClose={() => {
+            setSelectedBrief(null);
+            setReturnToBrief(null);
+          }}
           onSelectCreator={(creator) => {
+            setReturnToBrief(selectedBrief);
             setSelectedBrief(null);
             handleSelectCreator(creator);
           }}
+          onOpenChat={handleOpenChat}
         />
       )}
 
@@ -322,7 +593,7 @@ export default function App() {
               className="link-arrow-btn"
               onClick={() => {
                 if (currentUser?.role === 'ADMIN') {
-                  setCurrentView('admin');
+                  handleNavigate('admin');
                 } else {
                   setIsAdminDeskOpen(true);
                 }

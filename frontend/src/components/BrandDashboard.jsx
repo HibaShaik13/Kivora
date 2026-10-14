@@ -4,6 +4,11 @@ import CreateBriefModal from './CreateBriefModal';
 import EditBrandProfileModal from './EditBrandProfileModal';
 import ReviewEngagementModal from './ReviewEngagementModal';
 import CreatorDiscovery from './CreatorDiscovery';
+import MessagesInbox from './MessagesInbox';
+import CollaborationWorkspaceModal from './CollaborationWorkspaceModal';
+import BrandLogo from './BrandLogo';
+import { getCreatorAvatar } from '../utils/visualAssetHelpers';
+
 
 export default function BrandDashboard({
   currentUser,
@@ -12,12 +17,49 @@ export default function BrandDashboard({
   onSelectProject,
   onSelectBrief,
   onLogout,
+  initialTab,
+  initialConversationId,
+  chatContext,
+  onClearChatContext,
+  onOpenChat,
 }) {
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'profile' | 'briefs' | 'applications' | 'engagements' | 'creators'
+  const [activeTab, setActiveTab] = useState(() => {
+    if (initialTab) return initialTab;
+    if (chatContext) return 'messages';
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (
+        params.get('tab') === 'messages' ||
+        params.has('conversationId') ||
+        params.has('conv') ||
+        params.has('c') ||
+        params.has('creatorId') ||
+        params.has('briefId')
+      ) {
+        return 'messages';
+      }
+      return params.get('tab') || 'overview';
+    } catch {
+      return 'overview';
+    }
+  }); // 'overview' | 'profile' | 'briefs' | 'applications' | 'engagements' | 'creators' | 'messages'
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+    if (chatContext) {
+      setActiveTab('messages');
+    }
+  }, [initialTab, chatContext]);
   const [profile, setProfile] = useState(null);
   const [briefs, setBriefs] = useState([]);
   const [applications, setApplications] = useState([]);
   const [engagements, setEngagements] = useState([]);
+  const [hiredCreators, setHiredCreators] = useState([]);
+  const [savedCreators, setSavedCreators] = useState([]);
+  const [collabBriefFilter, setCollabBriefFilter] = useState('ALL');
+  const [collabSubView, setCollabSubView] = useState('engagements'); // 'engagements' | 'creators'
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -25,6 +67,7 @@ export default function BrandDashboard({
   const [isCreateBriefOpen, setIsCreateBriefOpen] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [reviewModalData, setReviewModalData] = useState(null); // { engagement, mode: 'revision' | 'approve' | 'review' }
+  const [selectedWorkspaceEngagementId, setSelectedWorkspaceEngagementId] = useState(null);
 
   // Selected brief for viewing applications
   const [selectedBriefId, setSelectedBriefId] = useState('');
@@ -33,15 +76,20 @@ export default function BrandDashboard({
     try {
       setIsLoading(true);
       setError(null);
-      const [profData, briefsData, engsData] = await Promise.all([
+      const [profData, briefsData, engsData, hiredData, savedData] = await Promise.all([
         api.getMyBrandProfile().catch(() => null),
         (api.getMyBriefs ? api.getMyBriefs() : api.getBriefs()).catch(() => api.getBriefs().catch(() => [])),
         api.getEngagements().catch(() => []),
+        api.getHiredCreators().catch(() => []),
+        api.getSavedCreators().catch(() => []),
       ]);
 
       setProfile(profData);
       setBriefs(briefsData || []);
       setEngagements(engsData || []);
+      setHiredCreators(hiredData || []);
+      setSavedCreators(savedData || []);
+
 
       // Load all applications across this brand's briefs
       if (briefsData?.length > 0) {
@@ -128,11 +176,12 @@ export default function BrandDashboard({
           <div className="space-y-6">
             {/* Brand Header */}
             <div className="flex items-center gap-3 pb-4 border-b border-black/10">
-              <img
-                src={profile?.logo_url || '/assets/brands/lumina.png'}
-                alt={profile?.company_name || 'Brand'}
-                className="brand-sidebar-logo"
-                style={{ width: '44px', height: '44px', minWidth: '44px', maxWidth: '44px', minHeight: '44px', maxHeight: '44px', borderRadius: '12px', objectFit: 'contain', flexShrink: 0, background: '#fff', border: '1px solid rgba(0,0,0,0.1)', padding: '2px' }}
+              <BrandLogo
+                brand={profile}
+                brandName={profile?.company_name || 'Lumina Skincare'}
+                size={44}
+                shape="rounded"
+                padding="3px"
               />
               <div className="overflow-hidden">
                 <h3 className="text-sm font-bold text-neutral-900 truncate">
@@ -155,8 +204,11 @@ export default function BrandDashboard({
                 { id: 'briefs', label: '📋 Campaign Briefs', icon: '📋', count: briefs.length },
                 { id: 'applications', label: '📥 Pitch Proposals', icon: '📥', count: applications.length },
                 { id: 'engagements', label: '🤝 Collaborations', icon: '🤝', count: engagements.length },
+                { id: 'saved', label: '🔖 Saved Creators', icon: '🔖', count: savedCreators.length },
+                { id: 'messages', label: '💬 Messages & Chat', icon: '💬' },
                 { id: 'creators', label: '🔍 Discover Creators', icon: '🔍' },
               ].map((tab) => (
+
                 <button
                   key={tab.id}
                   type="button"
@@ -305,10 +357,14 @@ export default function BrandDashboard({
                       >
                         <div className="flex items-center gap-3" style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', minWidth: 0, flex: 1 }}>
                           <img
-                            src={app.creator_avatar_url || '/assets/avatars/elena.jpg'}
+                            src={getCreatorAvatar({ display_name: app.creator_display_name, handle: app.creator_handle, avatar_url: app.creator_avatar_url })}
                             alt={app.creator_display_name}
                             className="pitch-creator-avatar"
                             style={{ width: '48px', height: '48px', minWidth: '48px', maxWidth: '48px', minHeight: '48px', maxHeight: '48px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '2px solid rgba(121,82,236,0.25)' }}
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = '/assets/creator-portraits/devon.jpg';
+                            }}
                           />
                           <div style={{ minWidth: 0, flex: 1 }}>
                             <div className="flex items-center gap-2" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -367,21 +423,13 @@ export default function BrandDashboard({
             <div className="glass-panel p-6 rounded-2xl space-y-6">
               <div className="flex items-start justify-between">
                 <div className="flex gap-4">
-                  <img
-                    src={profile?.logo_url || '/assets/brands/lumina.png'}
-                    alt={profile?.company_name}
-                    className="w-20 h-20 rounded-2xl object-contain bg-white border border-black/10 p-2 shadow-md"
-                    style={{
-                      width: '72px',
-                      height: '72px',
-                      minWidth: '72px',
-                      maxWidth: '72px',
-                      minHeight: '72px',
-                      maxHeight: '72px',
-                      borderRadius: '16px',
-                      objectFit: 'contain',
-                      flexShrink: 0,
-                    }}
+                  <BrandLogo
+                    brand={profile}
+                    brandName={profile?.company_name}
+                    size={72}
+                    shape="rounded"
+                    padding="4px"
+                    className="shadow-md"
                   />
                   <div>
                     <h2 className="text-xl font-serif font-bold text-neutral-900">
@@ -592,7 +640,7 @@ export default function BrandDashboard({
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-3">
                           <img
-                            src={app.creator_avatar_url || '/assets/avatars/elena.jpg'}
+                            src={getCreatorAvatar({ display_name: app.creator_display_name, handle: app.creator_handle, avatar_url: app.creator_avatar_url })}
                             alt={app.creator_display_name}
                             className="w-12 h-12 rounded-full object-cover border border-purple-300 shadow-sm"
                             style={{
@@ -605,6 +653,10 @@ export default function BrandDashboard({
                               borderRadius: '50%',
                               objectFit: 'cover',
                               flexShrink: 0,
+                            }}
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = '/assets/creator-portraits/devon.jpg';
                             }}
                           />
                           <div>
@@ -667,161 +719,435 @@ export default function BrandDashboard({
           )}
 
           {/* TAB 5: ENGAGEMENTS */}
-          {activeTab === 'engagements' && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-xl font-serif font-bold text-neutral-900">
-                  Active Campaigns & Deliverables ({engagements.length})
-                </h2>
-                <p className="text-xs text-neutral-500">
-                  Review submitted master asset files, request revisions, approve deliverables, and publish reviews.
-                </p>
-              </div>
+          {activeTab === 'engagements' && (() => {
+            const displayedEngagements = collabBriefFilter === 'ALL'
+              ? engagements
+              : engagements.filter((e) => e.brief_id === collabBriefFilter);
 
-              {engagements.length === 0 ? (
-                <div className="glass-panel p-12 text-center rounded-2xl">
-                  <p className="text-neutral-500 text-xs">No active campaign collaborations.</p>
+            return (
+              <div className="space-y-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-xl font-serif font-bold text-neutral-900">
+                      Collaborations & Deliverables Management
+                    </h2>
+                    <p className="text-xs text-neutral-500">
+                      Review submitted master asset files, request revisions, approve deliverables, and inspect hired creator histories.
+                    </p>
+                  </div>
+
+                  {/* Subview switcher */}
+                  <div className="flex items-center gap-2 p-1 bg-black/5 rounded-xl self-start md:self-auto">
+                    <button
+                      type="button"
+                      onClick={() => setCollabSubView('engagements')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                        collabSubView === 'engagements'
+                          ? 'bg-purple-600 text-white shadow-sm'
+                          : 'text-neutral-600 hover:text-neutral-900'
+                      }`}
+                    >
+                      All Collaborations ({displayedEngagements.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCollabSubView('creators')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                        collabSubView === 'creators'
+                          ? 'bg-purple-600 text-white shadow-sm'
+                          : 'text-neutral-600 hover:text-neutral-900'
+                      }`}
+                    >
+                      Hired Creators ({hiredCreators.length})
+                    </button>
+                  </div>
                 </div>
-              ) : (
-                <div className="space-y-6">
-                  {engagements.map((eng) => (
-                    <div key={eng.id} className="glass-panel p-6 rounded-2xl space-y-4">
-                      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 pb-4 border-b border-black/10">
-                        <div>
-                          <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-purple-100 text-purple-800">
-                            {eng.status}
-                          </span>
-                          <h3 className="text-lg font-serif font-bold text-neutral-900 mt-1">
-                            {eng.brief_title}
-                          </h3>
-                          <p className="text-xs text-neutral-500">
-                            Creator: <strong>{eng.creator_display_name}</strong> (@{eng.creator_handle}) • Budget: ${eng.agreed_amount?.toLocaleString()}
-                          </p>
-                        </div>
 
-                        {/* Action Buttons based on status */}
-                        <div className="flex items-center gap-2">
-                          {eng.status === 'DRAFT_SUBMITTED' && (
-                            <>
-                              <button
-                                type="button"
-                                className="btn-secondary text-xs"
-                                onClick={() => setReviewModalData({ engagement: eng, mode: 'revision' })}
-                              >
-                                Request Revisions
-                              </button>
-                              <button
-                                type="button"
-                                className="btn-primary text-xs bg-emerald-600 hover:bg-emerald-700"
-                                onClick={() => setReviewModalData({ engagement: eng, mode: 'approve' })}
-                              >
-                                Final Approval ✓
-                              </button>
-                            </>
-                          )}
+                {collabSubView === 'creators' ? (
+                  /* HIRED CREATORS VIEW */
+                  hiredCreators.length === 0 ? (
+                    <div className="glass-panel p-12 text-center rounded-2xl">
+                      <p className="text-neutral-500 text-xs">No creators currently hired by this brand.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {hiredCreators.map((hc) => (
+                        <div key={hc.creator_id} className="glass-panel p-5 rounded-2xl space-y-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              <img
+                                src={getCreatorAvatar(hc)}
+                                alt={hc.display_name}
+                                className="w-12 h-12 rounded-full object-cover border border-purple-300 shadow-sm"
+                                style={{ width: '48px', height: '48px', minWidth: '48px', borderRadius: '50%', objectFit: 'cover' }}
+                                onError={(e) => {
+                                  e.target.onerror = null;
+                                  e.target.src = '/assets/creator-portraits/devon.jpg';
+                                }}
+                              />
+                              <div>
+                                <h3
+                                  className="text-sm font-bold text-neutral-900 cursor-pointer hover:text-purple-700"
+                                  onClick={() => onSelectCreator({ id: hc.creator_id })}
+                                >
+                                  {hc.display_name}
+                                </h3>
+                                <p className="text-xs text-purple-700 font-mono">@{hc.handle}</p>
+                                <span className="inline-block mt-0.5 px-2 py-0.2 text-[9px] font-bold rounded-full bg-purple-100 text-purple-800">
+                                  {hc.verification_tier || 'COMMUNITY'}
+                                </span>
+                              </div>
+                            </div>
+                            <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-purple-100 text-purple-800">
+                              {hc.collaborations_count} {hc.collaborations_count === 1 ? 'Project' : 'Projects'}
+                            </span>
+                          </div>
 
-                          {eng.status === 'FINAL_APPROVED' && (
-                            <button
-                              type="button"
-                              className="btn-primary text-xs"
-                              onClick={() => setReviewModalData({ engagement: eng, mode: 'review' })}
-                            >
-                              ★ Rate & Review Creator
-                            </button>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Project Progress & Milestone Track */}
-                      <div className="bg-purple-50/60 p-4 rounded-xl border border-purple-100 space-y-3">
-                        <div className="flex items-center justify-between text-xs font-semibold">
-                          <span className="text-purple-900 flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-purple-600 animate-pulse"></span>
-                            Milestone: <strong>{eng.current_milestone || 'In Progress'}</strong>
-                          </span>
-                          <span className="text-purple-700 font-bold">{eng.progress_percentage || 25}% Progress</span>
-                        </div>
-                        <div className="w-full bg-purple-200/60 h-2 rounded-full overflow-hidden">
-                          <div
-                            className="bg-purple-600 h-2 rounded-full transition-all duration-500 ease-out"
-                            style={{ width: `${eng.progress_percentage || 25}%` }}
-                          />
-                        </div>
-
-                        {/* Milestones Stepper */}
-                        {eng.milestones && eng.milestones.length > 0 && (
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 pt-1 text-[11px]">
-                            {eng.milestones.map((m) => (
+                          {/* Engagements with this creator */}
+                          <div className="space-y-2 pt-2 border-t border-black/5">
+                            <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
+                              Collaboration Projects with this Brand
+                            </h4>
+                            {hc.engagements?.map((he) => (
                               <div
-                                key={m.id}
-                                className={`p-2 rounded-lg border ${
-                                  m.status === 'COMPLETED'
-                                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                                    : m.status === 'IN_PROGRESS'
-                                    ? 'bg-purple-100 border-purple-300 text-purple-900 font-semibold'
-                                    : 'bg-white/60 border-black/5 text-neutral-400'
-                                }`}
+                                key={he.id}
+                                className="p-3 rounded-xl bg-white/70 border border-black/5 text-xs flex items-center justify-between gap-2"
                               >
-                                <div className="flex items-center gap-1">
-                                  <span>{m.status === 'COMPLETED' ? '✓' : m.status === 'IN_PROGRESS' ? '⏳' : '○'}</span>
-                                  <span className="truncate">{m.title}</span>
+                                <div className="min-w-0">
+                                  <p className="font-semibold text-neutral-900 truncate">{he.brief_title}</p>
+                                  <div className="flex items-center gap-2 mt-0.5 text-[11px] text-neutral-500">
+                                    <span>${he.agreed_amount?.toLocaleString()} Agreed</span>
+                                    <span>•</span>
+                                    <span>{he.deliverables_count} Deliverables</span>
+                                  </div>
                                 </div>
+                                <span
+                                  className={`shrink-0 px-2 py-0.5 text-[10px] font-bold rounded-full ${
+                                    he.status === 'COMPLETED'
+                                      ? 'bg-emerald-100 text-emerald-800'
+                                      : 'bg-purple-100 text-purple-800'
+                                  }`}
+                                >
+                                  {he.status}
+                                </span>
                               </div>
                             ))}
                           </div>
-                        )}
-                      </div>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                ) : (
+                  /* ALL ENGAGEMENTS VIEW WITH BRIEF FILTER */
+                  <>
+                    {/* Filter by Brief */}
+                    <div className="flex items-center gap-3 bg-white/80 p-3 rounded-xl border border-black/5">
+                      <span className="text-xs font-semibold text-neutral-600 whitespace-nowrap">Filter by Brief:</span>
+                      <select
+                        className="input-select text-xs py-1.5 px-3 flex-1 max-w-md"
+                        value={collabBriefFilter}
+                        onChange={(e) => setCollabBriefFilter(e.target.value)}
+                      >
+                        <option value="ALL">All Campaign Briefs ({engagements.length})</option>
+                        {briefs.map((b) => (
+                          <option key={b.id} value={b.id}>
+                            {b.title}
+                          </option>
+                        ))}
+                      </select>
+                      {collabBriefFilter !== 'ALL' && (
+                        <button
+                          type="button"
+                          className="text-xs text-purple-700 hover:underline"
+                          onClick={() => setCollabBriefFilter('ALL')}
+                        >
+                          Clear Brief Filter
+                        </button>
+                      )}
+                    </div>
 
-                      {/* Deliverables Audit */}
-                      <div>
-                        <h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">
-                          Deliverables Package ({eng.deliverables?.length || 0})
-                        </h4>
-                        <div className="space-y-2">
-                          {eng.deliverables?.map((d) => (
-                            <div
-                              key={d.id}
-                              className="p-3 rounded-xl border border-black/5 bg-white/70 flex flex-col md:flex-row items-start md:items-center justify-between gap-2 text-xs"
-                            >
+                    {displayedEngagements.length === 0 ? (
+                      <div className="glass-panel p-12 text-center rounded-2xl">
+                        <p className="text-neutral-500 text-xs">No collaborations matching the selected filter.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-6">
+                        {displayedEngagements.map((eng) => (
+                          <div key={eng.id} className="glass-panel p-6 rounded-2xl space-y-4">
+                            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 pb-4 border-b border-black/10">
                               <div>
-                                <span className="font-bold text-purple-700 mr-2">v{d.version}</span>
-                                <strong>{d.title}</strong>
-                                <p className="text-neutral-500 font-mono text-[11px] truncate max-w-md">
-                                  {d.asset_url}
+                                <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-purple-100 text-purple-800">
+                                  {eng.status}
+                                </span>
+                                <h3 className="text-lg font-serif font-bold text-neutral-900 mt-1">
+                                  {eng.brief_title}
+                                </h3>
+                                <p className="text-xs text-neutral-500">
+                                  Creator: <strong>{eng.creator_display_name}</strong> (@{eng.creator_handle}) • Budget: ${eng.agreed_amount?.toLocaleString()}
                                 </p>
-                                {d.notes && <p className="text-neutral-600 mt-1 italic">"{d.notes}"</p>}
-                                {d.feedback && (
-                                  <p className="text-amber-800 mt-1 bg-amber-50 p-1.5 rounded border border-amber-200">
-                                    <strong>Revision Feedback:</strong> {d.feedback}
-                                  </p>
+                              </div>
+
+                              {/* Action Buttons based on status */}
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  className="btn-secondary text-xs flex items-center gap-1.5"
+                                  onClick={() => {
+                                    if (onOpenChat) {
+                                      onOpenChat({ creatorId: eng.creator_id, briefId: eng.brief_id, targetName: eng.creator_display_name });
+                                    } else {
+                                      setActiveTab('messages');
+                                    }
+                                  }}
+                                >
+                                  💬 Chat
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn-primary text-xs flex items-center gap-1.5"
+                                  onClick={() => setSelectedWorkspaceEngagementId(eng.id)}
+                                >
+                                  🚀 Open Workspace
+                                </button>
+                                {eng.status === 'DRAFT_SUBMITTED' && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      className="btn-secondary text-xs"
+                                      onClick={() => setReviewModalData({ engagement: eng, mode: 'revision' })}
+                                    >
+                                      Request Revisions
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="btn-primary text-xs bg-emerald-600 hover:bg-emerald-700"
+                                      onClick={() => setReviewModalData({ engagement: eng, mode: 'approve' })}
+                                    >
+                                      Final Approval ✓
+                                    </button>
+                                  </>
+                                )}
+
+                                {eng.status === 'FINAL_APPROVED' && (
+                                  <button
+                                    type="button"
+                                    className="btn-primary text-xs"
+                                    onClick={() => setReviewModalData({ engagement: eng, mode: 'review' })}
+                                  >
+                                    ★ Rate & Review Creator
+                                  </button>
                                 )}
                               </div>
-                              <span
-                                className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
-                                  d.status === 'APPROVED'
-                                    ? 'bg-emerald-100 text-emerald-800'
-                                    : d.status === 'REVISION_REQUESTED'
-                                    ? 'bg-amber-100 text-amber-800'
-                                    : 'bg-purple-100 text-purple-800'
-                                }`}
-                              >
-                                {d.status}
-                              </span>
                             </div>
-                          ))}
+
+                            {/* Project Progress & Milestone Track */}
+                            <div className="bg-purple-50/60 p-4 rounded-xl border border-purple-100 space-y-3">
+                              <div className="flex items-center justify-between text-xs font-semibold">
+                                <span className="text-purple-900 flex items-center gap-1.5">
+                                  <span className="w-2 h-2 rounded-full bg-purple-600 animate-pulse"></span>
+                                  Milestone: <strong>{eng.current_milestone || 'In Progress'}</strong>
+                                </span>
+                                <span className="text-purple-700 font-bold">{eng.progress_percentage || 25}% Progress</span>
+                              </div>
+                              <div className="w-full bg-purple-200/60 h-2 rounded-full overflow-hidden">
+                                <div
+                                  className="bg-purple-600 h-2 rounded-full transition-all duration-500 ease-out"
+                                  style={{ width: `${eng.progress_percentage || 25}%` }}
+                                />
+                              </div>
+
+                              {/* Milestones Stepper */}
+                              {eng.milestones && eng.milestones.length > 0 && (
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 pt-1 text-[11px]">
+                                  {eng.milestones.map((m) => (
+                                    <div
+                                      key={m.id}
+                                      className={`p-2 rounded-lg border ${
+                                        m.status === 'COMPLETED'
+                                          ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                                          : m.status === 'IN_PROGRESS'
+                                          ? 'bg-purple-100 border-purple-300 text-purple-900 font-semibold'
+                                          : 'bg-white/60 border-black/5 text-neutral-400'
+                                      }`}
+                                    >
+                                      <div className="flex items-center gap-1">
+                                        <span>{m.status === 'COMPLETED' ? '✓' : m.status === 'IN_PROGRESS' ? '⏳' : '○'}</span>
+                                        <span className="truncate">{m.title}</span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Deliverables Audit */}
+                            <div>
+                              <h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">
+                                Deliverables Package ({eng.deliverables?.length || 0})
+                              </h4>
+                              <div className="space-y-2">
+                                {eng.deliverables?.map((d) => (
+                                  <div
+                                    key={d.id}
+                                    className="p-3 rounded-xl border border-black/5 bg-white/70 flex flex-col md:flex-row items-start md:items-center justify-between gap-2 text-xs"
+                                  >
+                                    <div>
+                                      <span className="font-bold text-purple-700 mr-2">v{d.version}</span>
+                                      <strong>{d.title}</strong>
+                                      <p className="text-neutral-500 font-mono text-[11px] truncate max-w-md">
+                                        {d.asset_url}
+                                      </p>
+                                      {d.notes && <p className="text-neutral-600 mt-1 italic">"{d.notes}"</p>}
+                                      {d.feedback && (
+                                        <p className="text-amber-800 mt-1 bg-amber-50 p-1.5 rounded border border-amber-200">
+                                          <strong>Revision Feedback:</strong> {d.feedback}
+                                        </p>
+                                      )}
+                                    </div>
+                                    <span
+                                      className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
+                                        d.status === 'APPROVED'
+                                          ? 'bg-emerald-100 text-emerald-800'
+                                          : d.status === 'REVISION_REQUESTED'
+                                          ? 'bg-amber-100 text-amber-800'
+                                          : 'bg-purple-100 text-purple-800'
+                                      }`}
+                                    >
+                                      {d.status}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            {eng.brand_rating && (
+                              <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900">
+                                <strong>Your Rating: ★ {eng.brand_rating} / 5.0</strong>
+                                <p className="italic mt-1">"{eng.brand_review}"</p>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* TAB 7: SAVED CREATORS */}
+          {activeTab === 'saved' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-neutral-900">Saved Creator Talent Roster</h2>
+                  <p className="text-xs text-neutral-500">
+                    Bookmarked AI creators and studios curated for your upcoming brand campaigns.
+                  </p>
+                </div>
+                <span className="text-xs font-semibold px-3 py-1 bg-neutral-100 text-neutral-700 rounded-full">
+                  {savedCreators.length} Saved
+                </span>
+              </div>
+
+              {savedCreators.length === 0 ? (
+                <div className="p-12 text-center bg-white rounded-2xl border border-black/10">
+                  <span className="text-3xl block mb-2">🔖</span>
+                  <h3 className="text-sm font-bold text-neutral-800">No saved creators</h3>
+                  <p className="text-xs text-neutral-500 mt-1">
+                    Click the favorite heart on any creator card in "Discover Creators" to save them here.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {savedCreators.map((sc) => (
+                    <div
+                      key={sc.id}
+                      className="p-5 bg-white rounded-2xl border border-black/10 shadow-sm flex flex-col justify-between space-y-4"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={getCreatorAvatar(sc.creator)}
+                            alt={sc.creator?.display_name}
+                            className="w-12 h-12 rounded-full object-cover border border-black/10"
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = '/assets/creator-portraits/devon.jpg';
+                            }}
+                          />
+                          <div>
+                            <h3 className="font-bold text-sm text-neutral-900">{sc.creator?.display_name}</h3>
+                            <span className="text-xs text-neutral-500">@{sc.creator?.handle}</span>
+                          </div>
                         </div>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            await api.unsaveCreator(sc.creator_id);
+                            setSavedCreators((prev) => prev.filter((item) => item.creator_id !== sc.creator_id));
+                          }}
+                          className="text-xs text-neutral-400 hover:text-red-600 transition"
+                          title="Remove from saved"
+                        >
+                          ✕
+                        </button>
                       </div>
 
-                      {eng.brand_rating && (
-                        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900">
-                          <strong>Your Rating: ★ {eng.brand_rating} / 5.0</strong>
-                          <p className="italic mt-1">"{eng.brand_review}"</p>
+                      <p className="text-xs text-neutral-600 line-clamp-2">
+                        {sc.creator?.bio || sc.creator?.primary_specialization}
+                      </p>
+
+                      <div className="flex items-center justify-between pt-3 border-t border-black/5">
+                        <span className="text-xs font-bold text-neutral-800">
+                          Starting at ${(sc.creator?.min_budget || 2500).toLocaleString()}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (onOpenChat && sc.creator_id) {
+                                onOpenChat({ creatorId: sc.creator_id, targetName: sc.creator?.display_name });
+                              }
+                            }}
+                            className="px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-purple-700 text-xs font-bold rounded-lg shadow-sm transition flex items-center gap-1"
+                          >
+                            💬 Chat
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (onSelectCreator && sc.creator) onSelectCreator(sc.creator);
+                            }}
+                            className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg shadow-sm transition"
+                          >
+                            View Profile →
+                          </button>
                         </div>
-                      )}
+                      </div>
                     </div>
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* TAB 8: IN-APP MESSAGING */}
+          {activeTab === 'messages' && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-xl font-bold text-neutral-900">Direct Collaboration Discussions</h2>
+                <p className="text-xs text-neutral-500">
+                  Secure messaging with creators working on your campaign briefs.
+                </p>
+              </div>
+              <MessagesInbox
+                currentUser={currentUser}
+                initialConversationId={initialConversationId}
+                chatContext={chatContext}
+                onClearChatContext={onClearChatContext}
+              />
             </div>
           )}
 
@@ -840,10 +1166,12 @@ export default function BrandDashboard({
               <CreatorDiscovery
                 onSelectCreator={onSelectCreator}
                 onSelectProject={onSelectProject}
+                onOpenChat={onOpenChat}
               />
             </div>
           )}
         </main>
+
       </div>
 
       {/* Modals */}
@@ -871,6 +1199,22 @@ export default function BrandDashboard({
           engagement={reviewModalData.engagement}
           mode={reviewModalData.mode}
           onUpdated={() => loadData()}
+        />
+      )}
+
+      {selectedWorkspaceEngagementId && (
+        <CollaborationWorkspaceModal
+          engagementId={selectedWorkspaceEngagementId}
+          currentUser={currentUser}
+          userRole="BRAND"
+          onOpenMessages={(convId) => {
+            setSelectedWorkspaceEngagementId(null);
+            if (onOpenChat) onOpenChat(convId);
+          }}
+          onClose={() => {
+            setSelectedWorkspaceEngagementId(null);
+            loadData();
+          }}
         />
       )}
     </div>

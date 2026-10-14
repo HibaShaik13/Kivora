@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="180" viewBox="0 0 640 180" role="img" aria-labelledby="title desc">
+<title id="title">Lumina Skincare logo</title>
+<desc id="desc">Original vector logo concept for Lumina Skincare, industry: Skincare &amp; Beauty.</desc>
+<rect width="640" height="180" fill="none"/>
+<g transform="translate(22 54) scale(1.1)"><path d="M6 45Q19 6 31 35 39 5 58 20 43 20 34 55 25 26 6 45Z" fill="#C9A15D"/><path d="M10 53Q30 39 54 48" stroke="#243B31" stroke-width="3" fill="none"/></g>
+<path d="M105 38V142" stroke="#C9A15D" stroke-width="2" opacity=".45"/>
+<text x="128" y="82" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="700" letter-spacing=".2" fill="#243B31">Lumina Skincare</text>
+<text x="130" y="111" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="600" letter-spacing="1.8" fill="#C9A15D">SKINCARE &amp; BEAUTY</text>
+<path d="M130 129H310" stroke="#C9A15D" stroke-width="3" stroke-linecap="round"/>
+</svg>

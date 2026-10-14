@@ -22,7 +22,7 @@ from fastapi.staticfiles import StaticFiles
 import backend.app.core.config  # Ensures .env is loaded
 from backend.app.database import engine, Base
 import backend.app.models.models  # ensure models are registered
-from backend.app.api import auth, creators, brands, briefs, matching, ai, taxonomy, media, verification, engagements, projects
+from backend.app.api import auth, creators, brands, briefs, matching, ai, taxonomy, media, verification, engagements, projects, notifications, messages, saved, alerts, workspaces
 
 
 app = FastAPI(
@@ -41,10 +41,22 @@ def startup_event():
     except Exception as e:
         print(f"Warning: Database startup verification failed (will retry on demand): {e}")
 
-# Enable CORS for Vite frontend dev server
+# Configure validated CORS origins for localhost development and production
+DEFAULT_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://kivora-web-tv1x.onrender.com",
+    "https://kivora-web.onrender.com",
+]
+env_allowed = os.getenv("ALLOWED_ORIGINS", "")
+allowed_origins = list(set(DEFAULT_ORIGINS + [o.strip() for o in env_allowed.split(",") if o.strip()]))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
+    allow_origin_regex=r"^https:\/\/.*\.onrender\.com$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -71,6 +83,12 @@ app.include_router(ai.router)
 app.include_router(taxonomy.router)
 app.include_router(media.router)
 app.include_router(verification.router)
+app.include_router(notifications.router)
+app.include_router(messages.router)
+app.include_router(saved.router)
+app.include_router(alerts.router)
+app.include_router(workspaces.router)
+
 
 
 

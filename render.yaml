@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: kivora-frontend
+    name: kivora-web
     env: static
     buildCommand: cd frontend && npm install && npm run build
     staticPublishPath: ./frontend/dist
@@ -16,7 +16,7 @@ services:
         destination: /index.html
 
   - type: web
-    name: kivora-backend
+    name: kivora-api
     env: python
     buildCommand: pip install -r backend/requirements.txt
     startCommand: python3 run.py

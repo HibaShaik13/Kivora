@@ -1,90 +1,269 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import api from '../services/api';
+import { getCurrentUser } from '../services/authService';
+import { getCreatorAvatar, getCreatorCover } from '../utils/visualAssetHelpers';
 
-export default function CreatorCard({ creator, onSelectCreator }) {
-  // Use creator avatar or specific portrait image
-  const avatarUrl = creator.avatar_url || `/assets/avatars/${(creator.handle || 'elena').split('_')[0]}.jpg`;
-  const isVerified = creator.verification_tier === 'TOP_STUDIO' || creator.verification_tier === 'VERIFIED_PRO' || creator.is_verified;
+export default function CreatorCard({
+  creator,
+  onSelectCreator,
+  onInviteCreator,
+  isSaved: initialSaved,
+  onToggleSave,
+  onOpenChat,
+}) {
+  const [isFavorited, setIsFavorited] = useState(Boolean(initialSaved));
+  const currentUser = getCurrentUser();
+
+  // Check saved status on mount if not provided via props
+  useEffect(() => {
+    if (initialSaved !== undefined) {
+      setIsFavorited(Boolean(initialSaved));
+    } else if (currentUser && currentUser.role === 'BRAND' && creator.id) {
+      api.getCreatorSavedStatus(creator.id)
+        .then((res) => setIsFavorited(Boolean(res?.is_saved)))
+        .catch(() => null);
+    }
+  }, [creator.id, currentUser, initialSaved]);
+
+  const handleToggleFavorite = async (e) => {
+    e.stopPropagation();
+    if (!currentUser || currentUser.role !== 'BRAND') {
+      alert('Sign in as a Brand to save creators to your talent roster.');
+      return;
+    }
+    const previousState = isFavorited;
+    const nextState = !previousState;
+    setIsFavorited(nextState);
+    try {
+      if (previousState) {
+        await api.unsaveCreator(creator.id);
+      } else {
+        await api.saveCreator(creator.id);
+      }
+      if (onToggleSave) onToggleSave(creator.id, nextState);
+    } catch (err) {
+      setIsFavorited(previousState);
+      console.error('Error toggling creator favorite:', err);
+    }
+  };
+
+  // Resolved unique avatar & cover image
+  const avatarUrl = getCreatorAvatar(creator);
+  const coverUrl = getCreatorCover(creator);
+
+  const isVerified =
+    creator.verification_tier === 'TOP_STUDIO' ||
+    creator.verification_tier === 'VERIFIED_PRO' ||
+    creator.is_verified;
+
+  const tierLabel =
+    creator.verification_tier === 'TOP_STUDIO'
+      ? 'Top Studio'
+      : creator.verification_tier === 'VERIFIED_PRO'
+      ? 'Verified Pro'
+      : isVerified
+      ? 'Verified'
+      : null;
+
+  // Gather skills & tools chips
+  const allChips = [
+    ...(creator.skills || []).map((s) => s.name || s.skill_id),
+    ...(creator.tools || []).map((t) => t.name || t.tool_id),
+  ].filter(Boolean);
+
+  const visibleChips = allChips.slice(0, 3);
+  const remainingCount = allChips.length - visibleChips.length;
 
   return (
     <div
       className="kivora-creator-card"
-      onClick={() => onSelectCreator(creator)}
+      onClick={() => onSelectCreator?.(creator)}
+      tabIndex={0}
+      role="button"
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onSelectCreator?.(creator);
+        }
+      }}
     >
-      {/* Top Portrait Image */}
-      <div className="creator-card-image-wrapper">
+      {/* Top Media Cover Section */}
+      <div className="creator-card-media-wrap">
         <img
-          src={avatarUrl}
-          alt={creator.display_name}
-          className="creator-card-portrait-img"
+          src={coverUrl}
+          alt={`${creator.display_name} cover`}
+          className="creator-card-cover-img"
+          loading="lazy"
           onError={(e) => {
-            e.target.src = '/assets/avatars/elena.jpg';
+            e.target.onerror = null;
+            e.target.src = '/assets/portfolio/sophia_cellular_dew_thumb.jpg';
           }}
         />
+
+        {/* Verification Overlay Badge */}
+        {tierLabel && (
+          <span className="creator-card-tier-badge">
+            <span className="tier-star">★</span> {tierLabel}
+          </span>
+        )}
+
+        {/* Favorite Button */}
         <button
           type="button"
-          className="card-favorite-btn"
-          onClick={(e) => {
-            e.stopPropagation();
-          }}
-          title="Save to favorites"
+          className={`creator-card-fav-btn ${isFavorited ? 'active' : ''}`}
+          onClick={handleToggleFavorite}
+          title={isFavorited ? 'Remove from saved creators' : 'Save creator'}
+          aria-label={isFavorited ? 'Remove from saved creators' : 'Save creator'}
         >
-          ♡
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill={isFavorited ? '#DC2626' : 'none'}
+            stroke={isFavorited ? '#DC2626' : 'currentColor'}
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+          </svg>
         </button>
-        <span className="card-overlay-tag">
-          {creator.verification_tier === 'TOP_STUDIO' ? '👑 Top Studio' : '✓ Verified'}
-        </span>
-      </div>
 
-      {/* Card Info Details */}
-      <div className="creator-card-info">
-        <div className="creator-card-name-row">
-          <h3 className="creator-card-name">{creator.display_name}</h3>
+        {/* Creator Avatar overlapping edge */}
+        <div className="creator-card-avatar-anchor">
+          <img
+            src={avatarUrl}
+            alt={creator.display_name}
+            className="creator-card-avatar-img"
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = getCreatorAvatar(creator);
+            }}
+          />
           {isVerified && (
-            <span className="purple-check-badge" title="Verified Creator">
+            <span className="creator-card-avatar-check" title="Verified Creator">
               ✓
             </span>
           )}
         </div>
+      </div>
 
-        <p className="creator-card-role">
-          {creator.primary_specialization || '3D & Motion Artist'}
+      {/* Main Card Body */}
+      <div className="creator-card-body">
+        {/* Creator Name & Subtitle */}
+        <div className="creator-header-row">
+          <h3 className="creator-name-heading">{creator.display_name}</h3>
+          <span className="creator-handle-text">@{creator.handle}</span>
+        </div>
+
+        {/* Specialization / Bio */}
+        <p className="creator-bio-text">
+          {creator.bio || creator.primary_specialization || 'Generative visual artist & director creating premium commercial narratives.'}
         </p>
 
-        {/* Skill / Tool Tag Pills */}
-        <div className="creator-card-tag-chips">
-          {creator.tools && creator.tools.slice(0, 2).map((ct) => (
-            <span key={ct.tool_id || ct.name} className="mini-tag-pill">
-              {ct.name || (ct.tool && ct.tool.name) || ct.tool_id}
+        {/* Visual Skills & Tools Chips */}
+        <div className="creator-chips-cluster">
+          {visibleChips.map((chip, i) => (
+            <span key={i} className="creator-chip">
+              {chip}
             </span>
           ))}
-          {creator.skills && creator.skills.slice(0, 1).map((cs) => (
-            <span key={cs.skill_id || cs.name} className="mini-tag-pill">
-              {cs.name || (cs.skill && cs.skill.name) || cs.skill_id}
-            </span>
-          ))}
-          {(!creator.tools || creator.tools.length === 0) && (
+          {remainingCount > 0 && (
+            <span className="creator-chip remaining">+{remainingCount}</span>
+          )}
+          {visibleChips.length === 0 && (
             <>
-              <span className="mini-tag-pill">3D & CGI</span>
-              <span className="mini-tag-pill">Motion</span>
+              <span className="creator-chip">3D & CGI</span>
+              <span className="creator-chip">Generative AI</span>
             </>
           )}
         </div>
 
-        {/* Bottom Footer Row */}
-        <div className="creator-card-bottom-row">
-          <span className="creator-card-rate">
-            Min ${creator.min_budget?.toLocaleString() || '2,500'}
-          </span>
-          <button
-            type="button"
-            className="card-arrow-circle-btn"
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelectCreator(creator);
-            }}
-          >
-            ↗
-          </button>
+        {/* Bottom Pricing & Primary CTA Row */}
+        <div className="creator-card-footer">
+          <div className="creator-rate-block">
+            <span className="rate-label">Starting at</span>
+            <span className="rate-value">
+              ${(creator.min_budget || 2500).toLocaleString()}
+              <span className="rate-period"> / project</span>
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {currentUser?.role === 'BRAND' && onInviteCreator && (
+              <button
+                type="button"
+                className="btn-invite-pill"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onInviteCreator(creator);
+                }}
+                style={{
+                  backgroundColor: '#ECE6FC',
+                  color: '#7952EC',
+                  border: '1px solid #D8CCFC',
+                  borderRadius: '8px',
+                  padding: '6px 12px',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                Invite ✉️
+              </button>
+            )}
+
+            {currentUser?.role === 'BRAND' && onOpenChat && (
+              <button
+                type="button"
+                className="btn-chat-pill"
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  try {
+                    const res = await api.getContextualConversation({ creator_id: creator.id });
+                    if (res?.status === 'found' && res.conversation) {
+                      onOpenChat({
+                        conversationId: res.conversation.id,
+                        creatorId: creator.id,
+                        creatorName: creator.display_name,
+                      });
+                    } else {
+                      onSelectCreator?.(creator);
+                    }
+                  } catch {
+                    onSelectCreator?.(creator);
+                  }
+                }}
+                style={{
+                  backgroundColor: '#FAF8F5',
+                  color: '#7952EC',
+                  border: '1px solid #D8CCFC',
+                  borderRadius: '8px',
+                  padding: '6px 12px',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+                title="Chat with creator"
+              >
+                Chat 💬
+              </button>
+            )}
+
+            <button
+              type="button"
+              className="creator-view-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectCreator?.(creator);
+              }}
+            >
+              <span>View Profile</span>
+              <span className="view-arrow">→</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 
 from backend.app.database import get_db
-from backend.app.models.models import BrandProfile, User
+from backend.app.models.models import BrandProfile, User, Engagement, Brief, CreatorProfile
 from backend.app.schemas.schemas import BrandProfileRead, BrandProfileSetupRequest, BrandProfileUpdateRequest
 from backend.app.core.deps import require_role, get_current_user
 
@@ -130,3 +130,65 @@ def get_brand_detail(slug_or_id: str, db: Session = Depends(get_db)):
     if not brand:
         raise HTTPException(status_code=404, detail="Brand not found")
     return brand
+
+
+@router.get("/me/creators")
+def get_brand_creators_history(
+    current_user: User = Depends(require_role(["BRAND"])),
+    db: Session = Depends(get_db)
+):
+    """
+    Returns all creators that this brand has had collaborations with,
+    grouped with engagement summaries, deliverable counts, and timelines.
+    Strictly isolated to briefs owned by this brand.
+    """
+    brand = current_user.brand_profile
+    if not brand:
+        return []
+
+    engagements = (
+        db.query(Engagement)
+        .join(Brief, Engagement.brief_id == Brief.id)
+        .filter(Brief.brand_id == brand.id)
+        .order_by(Engagement.created_at.desc())
+        .all()
+    )
+
+    creator_map = {}
+    for eng in engagements:
+        c = eng.creator
+        if not c:
+            continue
+        if c.id not in creator_map:
+            creator_map[c.id] = {
+                "creator_id": c.id,
+                "display_name": c.display_name,
+                "handle": c.handle,
+                "avatar_url": c.avatar_url,
+                "verification_tier": c.verification_tier,
+                "primary_specialization": c.primary_specialization,
+                "collaborations_count": 0,
+                "active_collaborations": 0,
+                "completed_collaborations": 0,
+                "engagements": []
+            }
+
+        entry = creator_map[c.id]
+        entry["collaborations_count"] += 1
+        if eng.status in ["ACTIVE", "IN_PROGRESS", "ACCEPTED"]:
+            entry["active_collaborations"] += 1
+        elif eng.status in ["COMPLETED", "FINAL_APPROVED"]:
+            entry["completed_collaborations"] += 1
+
+        entry["engagements"].append({
+            "engagement_id": eng.id,
+            "brief_id": eng.brief_id,
+            "brief_title": eng.brief.title if eng.brief else "Campaign",
+            "status": eng.status,
+            "agreed_amount": eng.agreed_amount,
+            "deliverables_count": len(eng.deliverables) if eng.deliverables else (1 if eng.final_deliverable_url else 0),
+            "created_at": eng.created_at.isoformat() if eng.created_at else None,
+            "updated_at": eng.updated_at.isoformat() if eng.updated_at else None
+        })
+
+    return list(creator_map.values())

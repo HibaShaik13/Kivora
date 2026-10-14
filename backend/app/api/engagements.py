@@ -4,9 +4,9 @@ Handles project status, deliverable submissions, revisions, reviews, and deliver
 """
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from backend.app.database import get_db
@@ -17,6 +17,8 @@ from backend.app.models.models import (
     CreatorProfile,
     BrandProfile,
     Brief,
+    Application,
+    Conversation,
 )
 from backend.app.schemas.schemas import (
     EngagementRead,
@@ -26,10 +28,15 @@ from backend.app.schemas.schemas import (
     RevisionRequestCreate,
     EngagementReviewCreate,
     EngagementStatusUpdate,
+    CreatorInviteRequest,
+    InvitationRead,
+    InvitationActionRequest,
 )
 from backend.app.core.deps import require_role, get_current_verified_user
+from backend.app.services.notification_service import NotificationService
 
 router = APIRouter(prefix="/api/engagements", tags=["Engagements"])
+
 
 
 def format_deliverable_read(d: EngagementDeliverable) -> DeliverableRead:
@@ -104,6 +111,29 @@ def format_engagement_detail(e: Engagement) -> EngagementDetailRead:
     )
 
 
+def format_invitation_read(app: Application) -> InvitationRead:
+    return InvitationRead(
+        id=app.id,
+        brief_id=app.brief_id,
+        brief_title=app.brief.title if app.brief else "Campaign Brief",
+        brief_slug=app.brief.slug if app.brief else None,
+        brief_budget=float(app.brief.budget_amount) if (app.brief and app.brief.budget_amount) else 0.0,
+        creator_id=app.creator_id,
+        creator_name=app.creator.display_name if app.creator else "Creator",
+        creator_handle=app.creator.handle if app.creator else None,
+        creator_avatar=app.creator.avatar_url if app.creator else None,
+        brand_id=app.brief.brand_id if app.brief else "",
+        brand_name=app.brief.brand.company_name if (app.brief and app.brief.brand) else "Brand",
+        brand_logo=app.brief.brand.logo_url if (app.brief and app.brief.brand) else None,
+        status=app.status,
+        pitch_text=app.pitch_text,
+        proposed_rate=float(app.proposed_rate) if app.proposed_rate is not None else (float(app.brief.budget_amount) if app.brief else 0.0),
+        created_at=app.submitted_at or datetime.utcnow(),
+        updated_at=app.reviewed_at or app.submitted_at or datetime.utcnow(),
+    )
+
+
+
 def verify_engagement_participant(e: Engagement, user: User):
     """Verify that user is either the assigned creator, the owning brand, or an admin."""
     if user.role == "ADMIN":
@@ -130,6 +160,8 @@ def verify_engagement_participant(e: Engagement, user: User):
 @router.get("", response_model=List[EngagementDetailRead])
 def list_engagements(
     status: Optional[str] = Query(None, description="Filter by engagement status"),
+    brief_id: Optional[str] = Query(None, description="Filter by brief ID"),
+    creator_id: Optional[str] = Query(None, description="Filter by creator ID"),
     current_user: User = Depends(get_current_verified_user),
     db: Session = Depends(get_db)
 ):
@@ -156,9 +188,372 @@ def list_engagements(
 
     if status:
         query = query.filter(Engagement.status == status.upper())
+    if brief_id:
+        query = query.filter(Engagement.brief_id == brief_id)
+    if creator_id:
+        query = query.filter(Engagement.creator_id == creator_id)
 
     engagements = query.order_by(Engagement.created_at.desc()).all()
     return [format_engagement_detail(e) for e in engagements]
+
+
+# ==========================================
+# PHASE 2: BRAND-TO-CREATOR INVITATION APIS
+# ==========================================
+
+@router.post("/invite", response_model=InvitationRead, status_code=status.HTTP_201_CREATED)
+def invite_creator_to_brief(
+    payload: CreatorInviteRequest,
+    current_user: User = Depends(require_role(["BRAND"])),
+    db: Session = Depends(get_db),
+):
+    """
+    Brand invites a creator to an active campaign brief they own.
+    Enforces ownership, validates creator existence, prevents duplicate invites,
+    creates Application record with status='INVITED', and triggers notification.
+    """
+    brand = current_user.brand_profile
+    if not brand:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Authenticated user has no brand profile.",
+        )
+
+    brief = db.query(Brief).filter(Brief.id == payload.brief_id).first()
+    if not brief:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Brief not found.",
+        )
+
+    if brief.brand_id != brand.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: You can only invite creators to briefs owned by your brand.",
+        )
+
+    if brief.status not in ["ACTIVE", "PUBLISHED", "OPEN"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Brief is not open for invitations (status: {brief.status}).",
+        )
+
+    creator = db.query(CreatorProfile).filter(CreatorProfile.id == payload.creator_id).first()
+    if not creator:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Creator profile not found.",
+        )
+
+    # Check existing application or invitation
+    existing = (
+        db.query(Application)
+        .filter(Application.brief_id == brief.id, Application.creator_id == creator.id)
+        .first()
+    )
+    if existing:
+        if existing.status == "INVITED":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="A pending invitation already exists for this creator on this brief.",
+            )
+        elif existing.status == "ACCEPTED":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Creator is already collaborating on this brief.",
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"An application already exists for this creator with status '{existing.status}'.",
+            )
+
+    invitation_id = f"inv-{uuid.uuid4().hex[:10]}"
+    invitation = Application(
+        id=invitation_id,
+        brief_id=brief.id,
+        creator_id=creator.id,
+        pitch_text=payload.message or f"Invitation from {brand.company_name} to collaborate on {brief.title}",
+        proposed_rate=payload.proposed_rate if payload.proposed_rate is not None else float(brief.budget_amount or 0.0),
+        proposed_timeline_days=getattr(brief, "estimated_duration_days", 14) or 14,
+        attached_project_ids="",
+        status="INVITED",
+        submitted_at=datetime.utcnow(),
+    )
+    db.add(invitation)
+    db.commit()
+    db.refresh(invitation)
+
+    # Trigger notification & email to creator
+    try:
+        if creator.user_id:
+            NotificationService.notify_creator_invited(
+                db=db,
+                creator_user_id=creator.user_id,
+                brand_name=brand.company_name or "Brand",
+                brief_title=brief.title,
+                invitation_id=invitation.id,
+            )
+    except Exception as notify_err:
+        print(f"[EngagementsAPI] Non-fatal notification error on invite: {notify_err}")
+
+    return format_invitation_read(invitation)
+
+
+@router.get("/my-invitations", response_model=List[InvitationRead])
+def list_my_invitations(
+    status: Optional[str] = Query(None, description="Optional status filter: INVITED, ACCEPTED, DECLINED"),
+    current_user: User = Depends(require_role(["CREATOR"])),
+    db: Session = Depends(get_db),
+):
+    """
+    Authenticated creator retrieves all invitations sent to them.
+    Optionally filters by status (e.g. INVITED, ACCEPTED, DECLINED).
+    """
+    creator = current_user.creator_profile
+    if not creator:
+        return []
+
+    query = db.query(Application).filter(Application.creator_id == creator.id)
+    if status and status.upper().strip():
+        query = query.filter(Application.status == status.upper().strip())
+    else:
+        query = query.filter(Application.status.in_(["INVITED", "ACCEPTED", "DECLINED"]))
+
+    invitations = query.order_by(Application.submitted_at.desc()).all()
+    return [format_invitation_read(inv) for inv in invitations]
+
+
+@router.get("/my-invitations/count")
+def get_my_invitations_count(
+    current_user: User = Depends(require_role(["CREATOR"])),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns authoritative counts for direct invitations sent to the authenticated creator.
+    Used for sidebar badge and header status synchronization.
+    """
+    creator = current_user.creator_profile
+    if not creator:
+        return {"total": 0, "pending": 0, "accepted": 0, "declined": 0}
+
+    invitations = (
+        db.query(Application.status)
+        .filter(
+            Application.creator_id == creator.id,
+            Application.status.in_(["INVITED", "ACCEPTED", "DECLINED"]),
+        )
+        .all()
+    )
+
+    total = len(invitations)
+    pending = sum(1 for (st,) in invitations if st == "INVITED")
+    accepted = sum(1 for (st,) in invitations if st == "ACCEPTED")
+    declined = sum(1 for (st,) in invitations if st == "DECLINED")
+
+    return {
+        "total": total,
+        "pending": pending,
+        "accepted": accepted,
+        "declined": declined,
+    }
+
+
+@router.get("/brief-invitations/{brief_id}", response_model=List[InvitationRead])
+def list_brief_invitations(
+    brief_id: str,
+    current_user: User = Depends(require_role(["BRAND"])),
+    db: Session = Depends(get_db),
+):
+    """
+    Owning brand retrieves all invitations issued for a specific brief.
+    """
+    brand = current_user.brand_profile
+    if not brand:
+        return []
+
+    brief = db.query(Brief).filter(Brief.id == brief_id, Brief.brand_id == brand.id).first()
+    if not brief:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Brief not found or not owned by your brand.",
+        )
+
+    invitations = (
+        db.query(Application)
+        .filter(
+            Application.brief_id == brief.id,
+            Application.status.in_(["INVITED", "ACCEPTED", "DECLINED"]),
+        )
+        .order_by(Application.submitted_at.desc())
+        .all()
+    )
+    return [format_invitation_read(inv) for inv in invitations]
+
+
+@router.post("/invitations/{invitation_id}/accept", response_model=InvitationRead)
+def accept_invitation(
+    invitation_id: str,
+    current_user: User = Depends(require_role(["CREATOR"])),
+    db: Session = Depends(get_db),
+):
+    """
+    Creator accepts an invitation.
+    Transitions status to ACCEPTED, provisions an active Engagement,
+    establishes or links conversation, and notifies the brand.
+    """
+    creator = current_user.creator_profile
+    if not creator:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Creator profile not found.",
+        )
+
+    invitation = db.query(Application).filter(Application.id == invitation_id).first()
+    if not invitation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invitation not found.",
+        )
+
+    if invitation.creator_id != creator.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: You cannot accept an invitation addressed to another creator.",
+        )
+
+    if invitation.status != "INVITED":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot accept invitation: Current status is '{invitation.status}'.",
+        )
+
+    invitation.status = "ACCEPTED"
+    invitation.reviewed_at = datetime.utcnow()
+
+    # Automatically provision Engagement
+    existing_eng = db.query(Engagement).filter(Engagement.application_id == invitation.id).first()
+    eng_id = existing_eng.id if existing_eng else f"eng-{uuid.uuid4().hex[:10]}"
+    if not existing_eng:
+        eng = Engagement(
+            id=eng_id,
+            brief_id=invitation.brief_id,
+            creator_id=invitation.creator_id,
+            application_id=invitation.id,
+            status="KICKOFF",
+            agreed_amount=invitation.proposed_rate,
+            start_date=datetime.utcnow(),
+            completion_deadline=datetime.utcnow() + timedelta(days=invitation.proposed_timeline_days or 14),
+        )
+        db.add(eng)
+        db.flush()
+
+    # Ensure Conversation exists between brand and creator
+    if invitation.brief and invitation.brief.brand_id:
+        existing_conv = db.query(Conversation).filter(
+            Conversation.engagement_id == eng_id
+        ).first()
+        if not existing_conv:
+            existing_conv = db.query(Conversation).filter(
+                Conversation.brand_id == invitation.brief.brand_id,
+                Conversation.creator_id == invitation.creator_id,
+                Conversation.brief_id == invitation.brief_id
+            ).first()
+            if existing_conv and not existing_conv.engagement_id:
+                existing_conv.engagement_id = eng_id
+        if not existing_conv:
+            conv_id = f"conv-{uuid.uuid4().hex[:10]}"
+            conv = Conversation(
+                id=conv_id,
+                engagement_id=eng_id,
+                brief_id=invitation.brief_id,
+                brand_id=invitation.brief.brand_id,
+                creator_id=invitation.creator_id,
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow(),
+            )
+            db.add(conv)
+
+    db.commit()
+    db.refresh(invitation)
+
+    # Notify brand
+    try:
+        if invitation.brief and invitation.brief.brand and invitation.brief.brand.user_id:
+            NotificationService.notify_invitation_response(
+                db=db,
+                brand_user_id=invitation.brief.brand.user_id,
+                creator_name=creator.display_name or "Creator",
+                brief_title=invitation.brief.title,
+                accepted=True,
+                invitation_id=invitation.id,
+            )
+    except Exception as notify_err:
+        print(f"[EngagementsAPI] Non-fatal notification error on accept: {notify_err}")
+
+    return format_invitation_read(invitation)
+
+
+@router.post("/invitations/{invitation_id}/decline", response_model=InvitationRead)
+def decline_invitation(
+    invitation_id: str,
+    payload: Optional[InvitationActionRequest] = None,
+    current_user: User = Depends(require_role(["CREATOR"])),
+    db: Session = Depends(get_db),
+):
+    """
+    Creator declines an invitation.
+    Transitions status to DECLINED and notifies the brand.
+    """
+    creator = current_user.creator_profile
+    if not creator:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Creator profile not found.",
+        )
+
+    invitation = db.query(Application).filter(Application.id == invitation_id).first()
+    if not invitation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invitation not found.",
+        )
+
+    if invitation.creator_id != creator.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: You cannot decline an invitation addressed to another creator.",
+        )
+
+    if invitation.status != "INVITED":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot decline invitation: Current status is '{invitation.status}'.",
+        )
+
+    invitation.status = "DECLINED"
+    invitation.reviewed_at = datetime.utcnow()
+    if payload and payload.reason:
+        invitation.brand_feedback = f"Declined by creator: {payload.reason}"
+
+    db.commit()
+    db.refresh(invitation)
+
+    # Notify brand
+    try:
+        if invitation.brief and invitation.brief.brand and invitation.brief.brand.user_id:
+            NotificationService.notify_invitation_response(
+                db=db,
+                brand_user_id=invitation.brief.brand.user_id,
+                creator_name=creator.display_name or "Creator",
+                brief_title=invitation.brief.title,
+                accepted=False,
+                invitation_id=invitation.id,
+            )
+    except Exception as notify_err:
+        print(f"[EngagementsAPI] Non-fatal notification error on decline: {notify_err}")
+
+    return format_invitation_read(invitation)
 
 
 @router.get("/{engagement_id}", response_model=EngagementDetailRead)
@@ -230,6 +625,20 @@ def submit_deliverable(
 
     db.commit()
     db.refresh(engagement)
+
+    # Phase 2: Notify the owning brand of deliverable submission
+    try:
+        if engagement.brief and engagement.brief.brand and engagement.brief.brand.user_id:
+            NotificationService.notify_deliverable_submitted(
+                db=db,
+                brand_user_id=engagement.brief.brand.user_id,
+                creator_name=creator.display_name or "Creator",
+                milestone_title=deliv.title,
+                engagement_id=engagement.id,
+            )
+    except Exception as notify_err:
+        print(f"[EngagementsAPI] Non-fatal notification error: {notify_err}")
+
     return format_engagement_detail(engagement)
 
 
@@ -284,6 +693,21 @@ def request_revisions(
 
     db.commit()
     db.refresh(engagement)
+
+    # Phase 2: Notify creator of revision request
+    try:
+        if engagement.creator and engagement.creator.user_id:
+            NotificationService.notify_deliverable_reviewed(
+                db=db,
+                creator_user_id=engagement.creator.user_id,
+                brand_name=brand.company_name or "Brand",
+                milestone_title=payload.feedback[:60] if payload.feedback else "Deliverable",
+                status="REVISION_REQUESTED",
+                engagement_id=engagement.id,
+            )
+    except Exception as notify_err:
+        print(f"[EngagementsAPI] Non-fatal notification error: {notify_err}")
+
     return format_engagement_detail(engagement)
 
 
@@ -324,6 +748,21 @@ def approve_deliverable(
 
     db.commit()
     db.refresh(engagement)
+
+    # Phase 2: Notify creator of approval
+    try:
+        if engagement.creator and engagement.creator.user_id:
+            NotificationService.notify_deliverable_reviewed(
+                db=db,
+                creator_user_id=engagement.creator.user_id,
+                brand_name=brand.company_name or "Brand",
+                milestone_title="Final Deliverable",
+                status="FINAL_APPROVED",
+                engagement_id=engagement.id,
+            )
+    except Exception as notify_err:
+        print(f"[EngagementsAPI] Non-fatal notification error: {notify_err}")
+
     return format_engagement_detail(engagement)
 
 
@@ -428,3 +867,4 @@ def update_engagement_status(
     db.commit()
     db.refresh(engagement)
     return format_engagement_detail(engagement)
+

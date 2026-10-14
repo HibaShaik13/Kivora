@@ -217,6 +217,14 @@ def send_otp_email(email: str, otp_code: str, purpose: str = "REGISTRATION") -> 
         missing_vars.append("SMTP_PASSWORD")
 
     if missing_vars:
+        if os.getenv("KIVORA_ENV", "development").lower() != "production":
+            logger.info(f"==> [DEV/FALLBACK OTP] Verification code for {email}: {otp_code}")
+            return {
+                "sent": False,
+                "provider": "dev_fallback",
+                "status": "unconfigured_smtp_dev_mode",
+                "dev_otp": otp_code,
+            }
         raise ValueError(f"Missing required SMTP configuration: {', '.join(missing_vars)}")
 
     # 3. Send via SMTP with quota/eval fallback
@@ -239,3 +247,136 @@ def send_otp_email(email: str, otp_code: str, purpose: str = "REGISTRATION") -> 
                 "dev_otp": otp_code,
             }
         raise RuntimeError("Email delivery failed. Please try again later.")
+
+
+def _build_marketplace_html_email(title: str, message: str, action_url: Optional[str] = None) -> str:
+    btn_html = ""
+    if action_url:
+        full_url = action_url if action_url.startswith("http") else f"http://localhost:5173{action_url}"
+        btn_html = f"""
+        <div style="margin: 28px 0; text-align: center;">
+          <a href="{full_url}" style="background-color: #7952EC; color: #FFFFFF; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block;">
+            View in Kivora
+          </a>
+        </div>
+        """
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{title}</title>
+  <style>
+    body {{
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: #F8F7F4;
+      margin: 0;
+      padding: 40px 20px;
+      color: #1A1A1A;
+    }}
+    .container {{
+      max-width: 520px;
+      margin: 0 auto;
+      background: #FFFFFF;
+      border-radius: 16px;
+      border: 1px solid #EAE6DF;
+      padding: 40px 36px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.04);
+    }}
+    .brand {{
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.8px;
+      color: #111111;
+      margin-bottom: 24px;
+    }}
+    .brand span {{ color: #7952EC; }}
+    h1 {{ font-size: 20px; font-weight: 700; color: #1E1E1E; margin: 0 0 14px 0; }}
+    p {{ font-size: 15px; line-height: 1.6; color: #555555; margin: 0 0 20px 0; }}
+    .footer {{
+      margin-top: 36px;
+      padding-top: 20px;
+      border-top: 1px solid #EEEEEE;
+      font-size: 12px;
+      color: #999999;
+      text-align: center;
+    }}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="brand">Kivora<span>.</span></div>
+    <h1>{title}</h1>
+    <p>{message}</p>
+    {btn_html}
+    <div class="footer">
+      &copy; 2026 Kivora Inc. Generative Creator & Agency Marketplace.
+    </div>
+  </div>
+</body>
+</html>
+"""
+
+
+def send_marketplace_email(
+    to_email: str,
+    subject: str,
+    title: str,
+    message: str,
+    action_url: Optional[str] = None,
+    template_data: Optional[Dict[str, Any]] = None,
+    max_retries: int = 2,
+) -> Dict[str, Any]:
+    """
+    Dispatches a branded marketplace notification email with bounded retries and dev fallback.
+    Never reports delivered unless confirmed by provider.
+    """
+    body_text = f"{title}\n\n{message}\n\nView details: {action_url or 'http://localhost:5173'}"
+    body_html = _build_marketplace_html_email(title, message, action_url)
+
+    # 1. Try Resend if configured
+    if RESEND_API_KEY and RESEND_API_KEY.strip():
+        for attempt in range(max_retries):
+            try:
+                return _send_via_resend(to_email, subject, body_text, body_html)
+            except Exception as resend_err:
+                logger.warning(f"Resend attempt {attempt+1}/{max_retries} failed: {resend_err}")
+                if attempt == max_retries - 1:
+                    logger.warning("Resend retries exhausted. Falling back to SMTP or dev mode.")
+
+    # 2. Try SMTP if configured
+    if SMTP_HOST and SMTP_USER and SMTP_PASSWORD:
+        for attempt in range(max_retries):
+            try:
+                return _send_via_smtp(to_email, subject, body_text, body_html)
+            except Exception as smtp_err:
+                logger.warning(f"SMTP attempt {attempt+1}/{max_retries} failed: {smtp_err}")
+                if attempt == max_retries - 1:
+                    logger.warning("SMTP retries exhausted.")
+
+    # 3. Development / Safe Local Fallback
+    logger.info(f"==> [DEV MARKETPLACE EMAIL FALLBACK] To: {to_email} | Subject: {subject} | Title: {title}")
+    return {
+        "sent": False,
+        "provider": "dev_console",
+        "status": "development_fallback",
+        "message_preview": title,
+    }
+
+
+class EmailService:
+    @staticmethod
+    def send_otp(email: str, otp_code: str, purpose: str = "REGISTRATION") -> Dict[str, Any]:
+        return send_otp_email(email, otp_code, purpose)
+
+    @staticmethod
+    def send_marketplace_notification(
+        to_email: str,
+        subject: str,
+        title: str,
+        message: str,
+        action_url: Optional[str] = None,
+        template_data: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        return send_marketplace_email(to_email, subject, title, message, action_url, template_data)
+

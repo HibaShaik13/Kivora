@@ -41,6 +41,10 @@ export default function CreateBriefModal({ isOpen, onClose, onBriefCreated, init
     initialData?.disclosure_requirements || 'Creator must disclose specific generative AI models used and attach reproducibility workflow evidence.'
   );
 
+  const [availableCategories, setAvailableCategories] = useState([]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState(
+    initialData?.category_ids || []
+  );
   const [availableSkills, setAvailableSkills] = useState([]);
   const [availableTools, setAvailableTools] = useState([]);
   const [selectedSkillIds, setSelectedSkillIds] = useState(
@@ -50,13 +54,61 @@ export default function CreateBriefModal({ isOpen, onClose, onBriefCreated, init
     initialData?.required_tool_ids || ['tool-runway-gen3', 'tool-comfyui']
   );
 
+  // Reference Media Upload and Duplicate Warning states
+  const [referenceImageUrl, setReferenceImageUrl] = useState(
+    initialData?.reference_asset_url || initialData?.cover_image_url || ''
+  );
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
+  const [duplicateWarning, setDuplicateWarning] = useState(null);
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 25 * 1024 * 1024) {
+      setUploadError('File size exceeds the 25 MB limit.');
+      return;
+    }
+    setIsUploadingMedia(true);
+    setUploadError(null);
+    try {
+      const res = await api.uploadMedia(file, 'briefs');
+      if (res?.url) {
+        setReferenceImageUrl(res.url);
+      }
+    } catch (err) {
+      setUploadError(err.message || 'Failed to upload reference media asset.');
+    } finally {
+      setIsUploadingMedia(false);
+    }
+  };
+
+  const handleTitleBlur = async () => {
+    if (!title.trim() || title.trim().length < 4) return;
+    try {
+      const res = await api.checkDuplicateBrief({ title: title.trim() });
+      if (res?.is_duplicate_warning) {
+        setDuplicateWarning(res.warning_message);
+      } else {
+        setDuplicateWarning(null);
+      }
+    } catch {
+      // Non-blocking duplicate detection
+    }
+  };
 
   useEffect(() => {
     async function loadTaxonomy() {
       try {
-        const [skills, tools] = await Promise.all([api.getSkills(), api.getTools()]);
+        const [cats, skills, tools] = await Promise.all([
+          api.getCategories().catch(() => []),
+          api.getSkills().catch(() => []),
+          api.getTools().catch(() => [])
+        ]);
+        setAvailableCategories(cats || []);
         setAvailableSkills(skills || []);
         setAvailableTools(tools || []);
       } catch (err) {
@@ -64,9 +116,21 @@ export default function CreateBriefModal({ isOpen, onClose, onBriefCreated, init
       }
     }
     loadTaxonomy();
-  }, []);
+
+    if (initialData) {
+      setReferenceImageUrl(initialData.reference_asset_url || initialData.cover_image_url || '');
+    }
+  }, [initialData]);
 
   if (!isOpen) return null;
+
+  const toggleCategory = (id) => {
+    if (selectedCategoryIds.includes(id)) {
+      setSelectedCategoryIds(selectedCategoryIds.filter((c) => c !== id));
+    } else {
+      setSelectedCategoryIds([...selectedCategoryIds, id]);
+    }
+  };
 
   const toggleSkill = (id) => {
     if (selectedSkillIds.includes(id)) {
@@ -84,8 +148,8 @@ export default function CreateBriefModal({ isOpen, onClose, onBriefCreated, init
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (e, statusToSubmit = 'PUBLISHED') => {
+    if (e && e.preventDefault) e.preventDefault();
     if (isLoading) return;
     setIsLoading(true);
     setError(null);
@@ -118,17 +182,26 @@ export default function CreateBriefModal({ isOpen, onClose, onBriefCreated, init
       usage_territories: usageTerritories.trim(),
       restrictions_and_guidelines: restrictions.trim(),
       disclosure_requirements: disclosure.trim(),
+      category_ids: selectedCategoryIds,
       required_skill_ids: validSkillIds,
       required_tool_ids: validToolIds,
+      status: statusToSubmit,
     };
 
+    if (referenceImageUrl !== undefined) {
+      payload.reference_asset_url = referenceImageUrl || '';
+      payload.cover_image_url = referenceImageUrl || '';
+    }
+
     try {
-      const created = await api.createBrief(payload);
-      if (onBriefCreated) onBriefCreated(created);
+      const savedBrief = initialData?.id
+        ? await api.updateBrief(initialData.id, payload)
+        : await api.createBrief(payload);
+      if (onBriefCreated) onBriefCreated(savedBrief);
       onClose();
     } catch (err) {
-      console.error('Failed to create campaign brief:', err);
-      setError(err.message || 'Failed to create campaign brief.');
+      console.error('Failed to save campaign brief:', err);
+      setError(err.message || 'Failed to save campaign brief.');
     } finally {
       setIsLoading(false);
     }
@@ -163,7 +236,13 @@ export default function CreateBriefModal({ isOpen, onClose, onBriefCreated, init
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {duplicateWarning && (
+          <div className="banner-warning mb-4" style={{ padding: '0.75rem 1rem', borderRadius: '10px', background: '#FEF3C7', color: '#92400E', border: '1px solid #FCD34D' }}>
+            ⚠️ <strong>Duplicate Warning:</strong> {duplicateWarning}
+          </div>
+        )}
+
+        <form onSubmit={(e) => handleSubmit(e, 'PUBLISHED')} className="space-y-4">
           <div className="grid grid-cols-3 gap-3">
             <div className="col-span-2">
               <label className="label-form">Campaign Title *</label>
@@ -172,10 +251,12 @@ export default function CreateBriefModal({ isOpen, onClose, onBriefCreated, init
                 className="input-text w-full"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
+                onBlur={handleTitleBlur}
                 placeholder="e.g. Lumina Hydration Serum Launch Commercial"
                 required
               />
             </div>
+
             <div>
               <label className="label-form">Content Type *</label>
               <select
@@ -225,6 +306,33 @@ export default function CreateBriefModal({ isOpen, onClose, onBriefCreated, init
               />
             </div>
           </div>
+
+          {/* Campaign Category Domain */}
+          {availableCategories.length > 0 && (
+            <div>
+              <label className="label-form">Campaign Creative Categories</label>
+              <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-2 rounded-lg border border-black/10 bg-white/60">
+                {availableCategories.map((cat) => {
+                  const isSelected = selectedCategoryIds.includes(cat.id);
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => toggleCategory(cat.id)}
+                      className={`tag-pill text-xs transition ${
+                        isSelected
+                          ? 'bg-purple-600 text-white font-semibold'
+                          : 'bg-white text-neutral-700 hover:bg-neutral-100'
+                      }`}
+                    >
+                      {isSelected ? '✓ ' : '+ '}
+                      {cat.icon || '✨'} {cat.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-4 gap-3">
             <div>
@@ -358,12 +466,71 @@ export default function CreateBriefModal({ isOpen, onClose, onBriefCreated, init
             </div>
           </div>
 
+          {/* Reference Media Upload */}
+          <div>
+            <label className="label-form">Campaign Reference Image / Moodboard Asset (Optional)</label>
+            <div className="flex items-center gap-4 p-3 rounded-lg border border-black/10 bg-white/60">
+              {referenceImageUrl ? (
+                <div className="flex items-center gap-3">
+                  <img
+                    src={referenceImageUrl}
+                    alt="Campaign Reference"
+                    className="w-16 h-16 object-cover rounded-md border border-neutral-200"
+                  />
+                  <div className="text-xs">
+                    <p className="font-semibold text-neutral-800">Asset Uploaded</p>
+                    <p className="text-neutral-500 truncate max-w-xs">{referenceImageUrl}</p>
+                    <button
+                      type="button"
+                      onClick={() => setReferenceImageUrl('')}
+                      className="text-red-600 hover:underline mt-1"
+                    >
+                      Remove asset
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3 w-full">
+                  <label className="btn-secondary text-xs cursor-pointer">
+                    {isUploadingMedia ? 'Uploading...' : '📁 Upload Reference Image'}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                      disabled={isUploadingMedia}
+                    />
+                  </label>
+                  <span className="text-xs text-neutral-500">
+                    PNG, JPG, or WEBP up to 25 MB. Guides creator style and tone.
+                  </span>
+                </div>
+              )}
+            </div>
+            {uploadError && (
+              <p className="text-xs text-red-600 mt-1">{uploadError}</p>
+            )}
+          </div>
+
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-black/10">
             <button type="button" className="btn-secondary" onClick={onClose} disabled={isLoading}>
               Cancel
             </button>
-            <button type="submit" className="btn-primary" disabled={isLoading}>
-              {isLoading ? 'Publishing Brief...' : 'Publish Campaign Brief'}
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={(e) => handleSubmit(e, 'DRAFT')}
+              disabled={isLoading || isUploadingMedia}
+            >
+              Save as Draft
+            </button>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={(e) => handleSubmit(e, 'PUBLISHED')}
+              disabled={isLoading || isUploadingMedia}
+            >
+              {isLoading ? 'Publishing...' : 'Publish Campaign Brief'}
             </button>
           </div>
         </form>
@@ -371,3 +538,4 @@ export default function CreateBriefModal({ isOpen, onClose, onBriefCreated, init
     </div>
   );
 }
+

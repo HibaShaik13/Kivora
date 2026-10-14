@@ -150,9 +150,13 @@ class GeminiBriefProvider(BaseBriefProvider):
     def generate(self, req: BriefGenerationRequest) -> StructuredBriefOutput:
         from google import genai
         client = genai.Client(api_key=self.api_key)
+        
+        # Input safety: truncate to max 3000 chars, strip nulls and control chars
+        sanitized_prompt = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', req.raw_prompt)[:3000].strip()
+        
         prompt_instruction = (
             f"You are Kivora's AI Campaign Brief Architect. Convert the following campaign concept into a technical, "
-            f"production-ready creative brief for generative AI creators.\n\nConcept: {req.raw_prompt}\n"
+            f"production-ready creative brief for generative AI creators.\n\nConcept: {sanitized_prompt}\n"
             f"Target Budget: {req.target_budget or 'Standard commercial rate'}\n\n"
             f"Output strictly valid JSON with fields:\n"
             f"- title (string)\n"
@@ -183,6 +187,25 @@ class GeminiBriefProvider(BaseBriefProvider):
             config={'response_mime_type': 'application/json'}
         )
         parsed = json.loads(response.text)
+        
+        # Ensure fallback defaults for any omitted fields
+        if not parsed.get("budget_currency"):
+            parsed["budget_currency"] = "USD"
+        if not parsed.get("budget_amount"):
+            parsed["budget_amount"] = req.target_budget or 4500.0
+        if not parsed.get("revision_allowance"):
+            parsed["revision_allowance"] = 2
+        if not parsed.get("content_type"):
+            parsed["content_type"] = "VIDEO"
+        if not parsed.get("resolution_min"):
+            parsed["resolution_min"] = "4K UHD"
+        if not parsed.get("aspect_ratio"):
+            parsed["aspect_ratio"] = "16:9"
+        if not parsed.get("recommended_skills"):
+            parsed["recommended_skills"] = ["skill-4k-video"]
+        if not parsed.get("recommended_tools"):
+            parsed["recommended_tools"] = ["tool-runway-gen3"]
+
         parsed["generation_engine"] = f"GEMINI ({self.model_name})"
         return StructuredBriefOutput(**parsed)
 
@@ -194,7 +217,6 @@ def get_brief_provider(api_key: Optional[str] = None, force_fallback: bool = Fal
         return HeuristicFallbackProvider()
     model = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
     return GeminiBriefProvider(api_key=key, model_name=model)
-
 
 
 def generate_structured_brief(req: BriefGenerationRequest) -> StructuredBriefOutput:
@@ -210,7 +232,7 @@ def generate_structured_brief(req: BriefGenerationRequest) -> StructuredBriefOut
             provider = get_brief_provider(api_key=gemini_key)
             return provider.generate(req)
         except Exception:
-            # Fall back safely without crashing
+            # Fall back safely to heuristic engine without crashing
             pass
 
     # Clearly labelled deterministic fallback engine

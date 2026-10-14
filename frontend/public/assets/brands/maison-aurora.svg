@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="180" viewBox="0 0 640 180" role="img" aria-labelledby="title desc">
+<title id="title">Maison Aurora logo</title>
+<desc id="desc">Original vector logo concept for Maison Aurora, industry: Luxury Lifestyle.</desc>
+<rect width="640" height="180" fill="none"/>
+<g transform="translate(22 54) scale(1.1)"><path d="M8 54V36H19V54ZM26 54V22H37V54ZM44 54V8H55V54Z" fill="#D6A5A5"/><path d="M8 54H58" stroke="#4B3260" stroke-width="3"/></g>
+<path d="M105 38V142" stroke="#D6A5A5" stroke-width="2" opacity=".45"/>
+<text x="128" y="82" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="700" letter-spacing=".2" fill="#4B3260">Maison Aurora</text>
+<text x="130" y="111" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="600" letter-spacing="1.8" fill="#D6A5A5">LUXURY LIFESTYLE</text>
+<path d="M130 129H286" stroke="#D6A5A5" stroke-width="3" stroke-linecap="round"/>
+</svg>

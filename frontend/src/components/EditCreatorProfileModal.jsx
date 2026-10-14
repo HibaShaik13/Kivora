@@ -27,6 +27,29 @@ export default function EditCreatorProfileModal({ isOpen, onClose, onProfileUpda
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [avatarUploadError, setAvatarUploadError] = useState(null);
+
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 15 * 1024 * 1024) {
+      setAvatarUploadError('Avatar file size exceeds 15 MB limit.');
+      return;
+    }
+    setIsUploadingAvatar(true);
+    setAvatarUploadError(null);
+    try {
+      const res = await api.uploadMedia(file, 'avatars');
+      if (res?.url) {
+        setAvatarUrl(res.url);
+      }
+    } catch (err) {
+      setAvatarUploadError(err.message || 'Failed to upload avatar image.');
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
 
   useEffect(() => {
     async function loadTaxonomy() {
@@ -241,27 +264,65 @@ export default function EditCreatorProfileModal({ isOpen, onClose, onProfileUpda
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="label-form">Avatar URL</label>
-              <input
-                type="text"
-                className="input-text w-full"
-                value={avatarUrl}
-                onChange={(e) => setAvatarUrl(e.target.value)}
-                placeholder="/assets/avatars/elena.jpg"
-              />
+          <div className="p-3.5 rounded-xl border border-black/10 bg-white/70 space-y-3">
+            <label className="label-form block mb-1">Creator Profile Portrait / Avatar</label>
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-[#7952EC] bg-[#FAF7F2] flex-shrink-0 shadow-sm">
+                <img
+                  src={avatarUrl || '/assets/creator-portraits/portrait_ai_artist.jpg'}
+                  alt="Avatar preview"
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = '/assets/creator-portraits/portrait_ai_artist.jpg';
+                  }}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
+                <div className="flex items-center gap-2">
+                  <label className="btn-secondary text-xs cursor-pointer py-1.5 px-3">
+                    {isUploadingAvatar ? 'Uploading...' : '📷 Upload New Photo'}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAvatarUpload}
+                      className="hidden"
+                      disabled={isUploadingAvatar}
+                    />
+                  </label>
+                  {avatarUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setAvatarUrl('')}
+                      className="text-xs text-red-600 hover:underline px-2 py-1"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+                <input
+                  type="text"
+                  className="input-text text-xs w-full py-1"
+                  value={avatarUrl}
+                  onChange={(e) => setAvatarUrl(e.target.value)}
+                  placeholder="/assets/creator-portraits/... or /uploads/..."
+                />
+              </div>
             </div>
-            <div>
-              <label className="label-form">Banner URL</label>
-              <input
-                type="text"
-                className="input-text w-full"
-                value={bannerUrl}
-                onChange={(e) => setBannerUrl(e.target.value)}
-                placeholder="/assets/banners/elena_banner.jpg"
-              />
-            </div>
+            {avatarUploadError && (
+              <p className="text-xs text-red-600">{avatarUploadError}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="label-form">Banner URL</label>
+            <input
+              type="text"
+              className="input-text w-full"
+              value={bannerUrl}
+              onChange={(e) => setBannerUrl(e.target.value)}
+              placeholder="/assets/banners/elena_banner.jpg"
+            />
           </div>
 
           <div>

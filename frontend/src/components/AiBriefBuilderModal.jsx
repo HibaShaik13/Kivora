@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { getCurrentUser } from '../services/authService';
 
@@ -7,10 +7,24 @@ export default function AiBriefBuilderModal({ isOpen, onClose, onBriefCreated })
   const [prompt, setPrompt] = useState('');
   const [brandIndustry, setBrandIndustry] = useState('Skincare & Beauty');
   const [targetBudget, setTargetBudget] = useState('5000');
+  const [selectedCategoryId, setSelectedCategoryId] = useState('');
+  const [categories, setCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [error, setError] = useState(null);
   const [generatedBrief, setGeneratedBrief] = useState(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      api.getCategories().then((cats) => {
+        setCategories(cats || []);
+        if (cats && cats.length > 0 && !selectedCategoryId) {
+          const defaultCat = cats.find((c) => c.slug === 'beauty-skincare') || cats[0];
+          setSelectedCategoryId(defaultCat.id);
+        }
+      }).catch(console.error);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -86,6 +100,7 @@ export default function AiBriefBuilderModal({ isOpen, onClose, onBriefCreated })
         restrictions_and_guidelines: generatedBrief.restrictions_and_guidelines || 'No competitor logos',
         disclosure_requirements: generatedBrief.disclosure_requirements || 'Must state AI Assisted Production',
         status: 'PUBLISHED',
+        category_ids: selectedCategoryId ? [selectedCategoryId] : [],
         required_skill_ids: [],
         required_tool_ids: [],
       };
@@ -105,7 +120,7 @@ export default function AiBriefBuilderModal({ isOpen, onClose, onBriefCreated })
       <div className="modal-container max-w-3xl" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div className="flex items-center gap-3">
-            <span className="badge-ai text-sm px-3 py-1 font-mono">✦ GEMINI 2.5 FLASH SYNTHESIZER</span>
+            <span className="badge-ai text-sm px-3 py-1 font-mono">✦ AI CAMPAIGN ARCHITECT</span>
             <h2 className="text-xl font-bold text-white">AI Brief Builder</h2>
           </div>
           <button className="btn-close" onClick={onClose} aria-label="Close modal">✕</button>
@@ -206,7 +221,7 @@ export default function AiBriefBuilderModal({ isOpen, onClose, onBriefCreated })
 
               <div className="modal-footer pt-4 border-t border-white/10 flex justify-between items-center">
                 <span className="text-xs text-neutral-500 font-mono">
-                  Engine: Gemini 2.5 Flash / Fallback Synthesizer
+                  Engine: Google Gemini / Deterministic Synthesizer
                 </span>
                 <button
                   type="submit"
@@ -228,7 +243,7 @@ export default function AiBriefBuilderModal({ isOpen, onClose, onBriefCreated })
             <div className="space-y-4">
               <div className="p-3 bg-brand-cyan/10 border border-brand-cyan/20 rounded-lg text-xs text-brand-cyan flex items-center justify-between">
                 <span>
-                  ✓ Generated via <strong>{generatedBrief.generation_engine || 'Gemini 2.5 Flash'}</strong>. Review & edit specifications before posting.
+                  ✓ Generated via <strong>{generatedBrief.generation_engine || 'Synthesizer'}</strong>. Review & edit specifications before posting.
                 </span>
                 <button
                   type="button"
@@ -325,6 +340,22 @@ export default function AiBriefBuilderModal({ isOpen, onClose, onBriefCreated })
                     value={generatedBrief.revision_allowance || 2}
                     onChange={(e) => handleFieldChange('revision_allowance', e.target.value)}
                   />
+                </div>
+
+                <div className="col-span-2">
+                  <label className="label-form">Primary Marketplace Category *</label>
+                  <select
+                    className="input-select"
+                    value={selectedCategoryId}
+                    onChange={(e) => setSelectedCategoryId(e.target.value)}
+                  >
+                    <option value="">Select Category...</option>
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.icon || '✦'} {c.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="col-span-2">

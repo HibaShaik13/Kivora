@@ -27,7 +27,12 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
       if (onAuthSuccess) onAuthSuccess(data);
       onClose();
     } catch (err) {
-      setError(err.message || 'Login failed. Please check your credentials.');
+      if (err.message && err.message.toLowerCase().includes('not been verified')) {
+        setMode('otp');
+        setError(err.message);
+      } else {
+        setError(err.message || 'Login failed. Please check your credentials.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -50,7 +55,11 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
         onClose();
         return;
       }
-      setSuccessInfo(res?.message || 'Account created successfully! Welcome to Kivora.');
+      setMode('otp');
+      if (res?.dev_otp) {
+        setOtpCode(res.dev_otp);
+      }
+      setSuccessInfo(res?.message || 'Account created successfully! Please enter your 6-digit verification code.');
     } catch (err) {
       setError(err.message || 'Registration failed.');
     } finally {

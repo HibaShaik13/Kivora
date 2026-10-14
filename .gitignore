@@ -25,3 +25,8 @@ dist/
 uploads/
 backend/uploads/
 
+# Scratch & Backups
+scratch/
+*.bak
+kivora.db.*
+

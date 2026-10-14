@@ -4,8 +4,8 @@ Defines input/output contracts, validation rules, and response shapes.
 """
 
 from typing import List, Optional, Dict, Any
-from datetime import datetime
-from pydantic import BaseModel, Field
+from datetime import datetime, timezone
+from pydantic import BaseModel, Field, field_serializer
 
 
 # ==========================================
@@ -67,6 +67,7 @@ class CreatorProfileSetupRequest(BaseModel):
     hourly_rate: Optional[float] = None
     skill_ids: List[str] = []
     tool_ids: List[str] = []
+    category_ids: List[str] = []
 
 
 class BrandProfileSetupRequest(BaseModel):
@@ -162,8 +163,60 @@ class MediaUploadResponse(BaseModel):
 
 
 # ==========================================
-# 1. TAXONOMY SCHEMAS (SKILLS & TOOLS)
+# 1. TAXONOMY SCHEMAS (CATEGORIES, SKILLS & TOOLS)
 # ==========================================
+
+class SubcategoryRead(BaseModel):
+    id: str
+    name: str
+    slug: str
+    description: Optional[str] = None
+    icon: Optional[str] = None
+    display_order: int = 0
+    parent_id: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class CategoryRead(BaseModel):
+    id: str
+    name: str
+    slug: str
+    description: Optional[str] = None
+    icon: Optional[str] = None
+    display_order: int = 0
+    parent_id: Optional[str] = None
+    subcategories: List[SubcategoryRead] = []
+    creator_count: int = 0
+    brief_count: int = 0
+    open_brief_count: int = 0
+
+    class Config:
+        from_attributes = True
+
+
+class CreatorCategoryRef(BaseModel):
+    category_id: str
+    name: str
+    slug: str
+    icon: Optional[str] = None
+    is_primary: bool = False
+
+    class Config:
+        from_attributes = True
+
+
+class BriefCategoryRef(BaseModel):
+    category_id: str
+    name: str
+    slug: str
+    icon: Optional[str] = None
+    is_primary: bool = False
+
+    class Config:
+        from_attributes = True
+
 
 class SkillRead(BaseModel):
     id: str
@@ -336,6 +389,7 @@ class CreatorProfileListRead(BaseModel):
     average_rating: float
     skills: List[CreatorSkillRead] = []
     tools: List[CreatorToolRead] = []
+    categories: List[CreatorCategoryRef] = []
     featured_project_thumbnail: Optional[str] = None
     featured_project_title: Optional[str] = None
 
@@ -412,8 +466,11 @@ class BriefRead(BaseModel):
     usage_territories: str
     restrictions_and_guidelines: str
     disclosure_requirements: str
+    reference_asset_url: Optional[str] = None
+    cover_image_url: Optional[str] = None
     status: str
     created_at: datetime
+    categories: List[BriefCategoryRef] = []
     required_skills: List[BriefSkillRef] = []
     required_tools: List[BriefToolRef] = []
     applications_count: int = 0
@@ -444,7 +501,10 @@ class BriefCreate(BaseModel):
     usage_territories: str
     restrictions_and_guidelines: str
     disclosure_requirements: str
+    reference_asset_url: Optional[str] = None
+    cover_image_url: Optional[str] = None
     status: Optional[str] = "PUBLISHED"  # "PUBLISHED" or "DRAFT"
+    category_ids: List[str] = []
     required_skill_ids: List[str] = []
     required_tool_ids: List[str] = []
 
@@ -470,7 +530,10 @@ class BriefUpdate(BaseModel):
     usage_territories: Optional[str] = None
     restrictions_and_guidelines: Optional[str] = None
     disclosure_requirements: Optional[str] = None
+    reference_asset_url: Optional[str] = None
+    cover_image_url: Optional[str] = None
     status: Optional[str] = None
+    category_ids: Optional[List[str]] = None
     required_skill_ids: Optional[List[str]] = None
     required_tool_ids: Optional[List[str]] = None
 
@@ -527,6 +590,12 @@ class DeliverableRead(BaseModel):
     submitted_by: str
     status: str
     feedback: Optional[str] = None
+    file_storage_key: Optional[str] = None
+    original_filename: Optional[str] = None
+    file_size_bytes: Optional[int] = None
+    content_type: Optional[str] = None
+    sha256_checksum: Optional[str] = None
+    milestone_id: Optional[str] = None
     submitted_at: datetime
     reviewed_at: Optional[datetime] = None
 
@@ -535,9 +604,15 @@ class DeliverableRead(BaseModel):
 
 
 class DeliverableSubmissionCreate(BaseModel):
-    asset_url: str = Field(..., min_length=3, description="Deliverable asset link or storage path")
+    asset_url: Optional[str] = None
     title: Optional[str] = Field("Draft Deliverable", min_length=2)
     notes: Optional[str] = None
+    file_storage_key: Optional[str] = None
+    original_filename: Optional[str] = None
+    file_size_bytes: Optional[int] = None
+    content_type: Optional[str] = None
+    sha256_checksum: Optional[str] = None
+    milestone_id: Optional[str] = None
 
 
 class RevisionRequestCreate(BaseModel):
@@ -602,10 +677,14 @@ class EngagementDetailRead(EngagementRead):
 class MatchScoreBreakdown(BaseModel):
     hard_filter_passed: bool
     skill_score: float
+    portfolio_score: float = 0.0
     tool_score: float
     style_score: float
+    budget_score: float = 0.0
     verification_score: float
-    rating_score: float
+    availability_score: float = 0.0
+    rating_score: float = 0.0
+    data_coverage: float = 100.0
     total_score: float
     match_level: str  # PERFECT, EXCELLENT, GOOD, PARTIAL, INCOMPATIBLE
 
@@ -627,6 +706,10 @@ class CreatorMatchResult(BaseModel):
     matched_tools: List[str] = []
     strengths: List[str] = []
     missing_requirements: List[str] = []
+    warnings: List[str] = []
+    relevant_portfolio_projects: List[dict] = []
+    confidence_score: float = 100.0
+    data_coverage: float = 100.0
     compatibility_disclaimer: str = "Scores represent estimated compatibility based on declared and verified portfolio evidence, not a guarantee of outcome."
     hard_requirements_met: bool = True
 
@@ -636,6 +719,21 @@ class BriefMatchResponse(BaseModel):
     brief_title: str
     total_creators_evaluated: int
     matches: List[CreatorMatchResult]
+
+
+class PitchAssistRequest(BaseModel):
+    brief_id: Optional[str] = None
+    custom_notes: Optional[str] = None
+
+
+class PitchAssistResponse(BaseModel):
+    pitch_text: str
+    proposed_rate: float
+    highlighted_skills: List[str] = []
+    highlighted_tools: List[str] = []
+    relevant_projects: List[dict] = []
+    delivery_plan_summary: str
+    generation_engine: str = "HEURISTIC_PITCH_ENGINE"
 
 
 
@@ -708,4 +806,375 @@ class ProjectRead(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# ==========================================
+# 11. PHASE 2: NOTIFICATIONS SCHEMAS
+# ==========================================
+
+class NotificationRead(BaseModel):
+    id: str
+    user_id: str
+    type: str
+    title: str
+    message: str
+    resource_type: Optional[str] = None
+    resource_id: Optional[str] = None
+    link_url: Optional[str] = None
+    is_read: bool
+    read_at: Optional[datetime] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class NotificationUnreadCountResponse(BaseModel):
+    unread_count: int
+
+
+class NotificationListResponse(BaseModel):
+    items: List[NotificationRead]
+    total: int
+    unread_count: int
+    page: int
+    page_size: int
+
+
+# ==========================================
+# 12. PHASE 2: INVITATIONS SCHEMAS
+# ==========================================
+
+class CreatorInviteRequest(BaseModel):
+    creator_id: str
+    brief_id: str
+    message: Optional[str] = None
+    proposed_rate: Optional[float] = None
+
+
+class InvitationActionRequest(BaseModel):
+    reason: Optional[str] = None
+
+
+class InvitationRead(BaseModel):
+    id: str
+    brief_id: str
+    brief_title: str
+    brief_slug: Optional[str] = None
+    brief_budget: float
+    creator_id: str
+    creator_name: Optional[str] = None
+    creator_handle: Optional[str] = None
+    creator_avatar: Optional[str] = None
+    brand_id: str
+    brand_name: Optional[str] = None
+    brand_logo: Optional[str] = None
+    status: str  # INVITED, ACCEPTED, DECLINED
+    pitch_text: Optional[str] = None
+    proposed_rate: float
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ==========================================
+# 13. PHASE 2: MESSAGING SCHEMAS
+# ==========================================
+
+class MessageCreate(BaseModel):
+    content: str = Field(..., min_length=1, max_length=5000)
+
+
+class MessageRead(BaseModel):
+    id: str
+    conversation_id: str
+    sender_id: str
+    sender_name: Optional[str] = None
+    sender_role: Optional[str] = None
+    content: str
+    is_read: bool
+    read_at: Optional[datetime] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+    @field_serializer("created_at", when_used="json")
+    def serialize_created_at(self, dt: datetime) -> str:
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+    @field_serializer("read_at", when_used="json")
+    def serialize_read_at(self, dt: Optional[datetime]) -> Optional[str]:
+        if dt is None:
+            return None
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+class ConversationRead(BaseModel):
+    id: str
+    engagement_id: Optional[str] = None
+    brief_id: Optional[str] = None
+    brief_title: Optional[str] = None
+    brand_id: str
+    brand_name: Optional[str] = None
+    brand_logo: Optional[str] = None
+    creator_id: str
+    creator_name: Optional[str] = None
+    creator_avatar: Optional[str] = None
+    creator_handle: Optional[str] = None
+    last_message: Optional[MessageRead] = None
+    unread_count: int = 0
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+    @field_serializer("created_at", "updated_at", when_used="json")
+    def serialize_conversation_timestamps(self, dt: datetime) -> str:
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+class ConversationListResponse(BaseModel):
+    items: List[ConversationRead]
+    total: int
+
+
+class ContextualConversationResponse(BaseModel):
+    status: str
+    conversation: Optional[ConversationRead] = None
+    reason: Optional[str] = None
+    required_action: Optional[str] = None
+    brand_name: Optional[str] = None
+    creator_name: Optional[str] = None
+    brief_title: Optional[str] = None
+    invitation_id: Optional[str] = None
+    application_id: Optional[str] = None
+    application_status: Optional[str] = None
+
+
+# ==========================================
+# 14. PHASE 2: SAVED ITEMS SCHEMAS
+# ==========================================
+
+class SavedStatusResponse(BaseModel):
+    is_saved: bool
+    saved_id: Optional[str] = None
+
+
+class SavedCreatorRead(BaseModel):
+    id: str
+    creator_id: str
+    user_id: str
+    created_at: datetime
+    creator: CreatorProfileListRead
+
+    class Config:
+        from_attributes = True
+
+
+class SavedBriefRead(BaseModel):
+    id: str
+    brief_id: str
+    user_id: str
+    created_at: datetime
+    brief: BriefRead
+
+    class Config:
+        from_attributes = True
+
+
+# ==========================================
+# 15. PHASE 2: SMART OPPORTUNITY ALERTS SCHEMAS
+# ==========================================
+
+class AlertPreferenceRead(BaseModel):
+    id: str
+    user_id: str
+    is_enabled: bool
+    min_budget: Optional[float] = None
+    preferred_categories: Optional[List[str]] = None
+    preferred_content_types: Optional[List[str]] = None
+    email_alerts_enabled: bool
+    in_app_alerts_enabled: bool
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AlertPreferenceUpdate(BaseModel):
+    is_enabled: Optional[bool] = None
+    min_budget: Optional[float] = None
+    preferred_categories: Optional[List[str]] = None
+    preferred_content_types: Optional[List[str]] = None
+    email_alerts_enabled: Optional[bool] = None
+    in_app_alerts_enabled: Optional[bool] = None
+
+
+class OpportunityAlertRead(BaseModel):
+    id: str
+    user_id: str
+    brief_id: str
+    match_score: float
+    match_reasons: List[str]
+    is_viewed: bool
+    created_at: datetime
+    brief: Optional[BriefRead] = None
+
+    class Config:
+        from_attributes = True
+
+
+# ==========================================
+# 16. PHASE 3: COLLABORATION, MILESTONES, REVIEWS & AI
+# ==========================================
+
+class MilestoneCreate(BaseModel):
+    title: str = Field(..., min_length=3, max_length=200)
+    description: Optional[str] = None
+    due_date: Optional[datetime] = None
+    responsible_party: str = Field("CREATOR", pattern="^(CREATOR|BRAND)$")
+    sequence_order: int = Field(1, ge=1)
+
+
+class MilestoneUpdate(BaseModel):
+    title: Optional[str] = Field(None, min_length=3, max_length=200)
+    description: Optional[str] = None
+    due_date: Optional[datetime] = None
+    status: Optional[str] = Field(None, pattern="^(PENDING|IN_PROGRESS|COMPLETED)$")
+    responsible_party: Optional[str] = Field(None, pattern="^(CREATOR|BRAND)$")
+    sequence_order: Optional[int] = Field(None, ge=1)
+
+
+class MilestoneRead(BaseModel):
+    id: str
+    engagement_id: str
+    title: str
+    description: Optional[str] = None
+    due_date: Optional[datetime] = None
+    status: str
+    sequence_order: int
+    responsible_party: str
+    created_at: datetime
+    updated_at: datetime
+    completed_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class EngagementEventRead(BaseModel):
+    id: str
+    engagement_id: str
+    event_type: str
+    actor_id: str
+    actor_role: str
+    title: str
+    description: str
+    event_metadata: Optional[dict] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class DeliverableVersionCompareResponse(BaseModel):
+    deliverable_id: str
+    engagement_id: str
+    older_version: DeliverableRead
+    newer_version: DeliverableRead
+    comparison_type: str  # IMAGE, TEXT, METADATA
+    text_diff: Optional[List[dict]] = None
+    summary: str
+
+
+class CollaborationWorkspaceRead(BaseModel):
+    engagement: EngagementDetailRead
+    brand: dict
+    creator: dict
+    brief: dict
+    milestones: List[MilestoneRead]
+    deliverables: List[DeliverableRead]
+    events: List[EngagementEventRead]
+    conversation_id: Optional[str] = None
+    progress_percentage: int
+    current_milestone_title: str
+    next_required_action: dict
+    user_role: str
+
+
+class DeliverableAiAnalysisRequest(BaseModel):
+    deliverable_id: str
+    version: Optional[int] = None
+
+
+class DeliverableAiAnalysisRead(BaseModel):
+    id: str
+    deliverable_id: str
+    version: int
+    brief_coverage_score: float
+    summary: str
+    requirement_coverage: List[str]
+    potential_omissions: List[str]
+    consistency_notes: List[str]
+    quality_observations: List[str]
+    suggested_questions: List[str]
+    recommended_checks: List[str]
+    model_name: str
+    analysis_status: str
+    disclaimer: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ReviewCreate(BaseModel):
+    rating: float = Field(..., ge=1.0, le=5.0, description="Overall star rating 1.0 - 5.0")
+    review_text: Optional[str] = Field(None, max_length=2000)
+    communication_rating: Optional[float] = Field(None, ge=1.0, le=5.0)
+    quality_rating: Optional[float] = Field(None, ge=1.0, le=5.0)
+    timeliness_rating: Optional[float] = Field(None, ge=1.0, le=5.0)
+
+
+class ReviewRead(BaseModel):
+    id: str
+    engagement_id: str
+    reviewer_id: str
+    reviewer_role: str
+    reviewer_name: Optional[str] = None
+    reviewee_id: str
+    reviewee_role: str
+    rating: float
+    review_text: Optional[str] = None
+    communication_rating: Optional[float] = None
+    quality_rating: Optional[float] = None
+    timeliness_rating: Optional[float] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ReviewSummaryRead(BaseModel):
+    average_rating: float
+    total_reviews: int
+    communication_avg: Optional[float] = None
+    quality_avg: Optional[float] = None
+    timeliness_avg: Optional[float] = None
+    rating_distribution: dict
+    recent_reviews: List[ReviewRead] = []
+
+
+
 

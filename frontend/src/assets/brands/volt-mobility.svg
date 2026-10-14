@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="180" viewBox="0 0 640 180" role="img" aria-labelledby="title desc">
+<title id="title">Volt Mobility logo</title>
+<desc id="desc">Original vector logo concept for Volt Mobility, industry: Electric Mobility.</desc>
+<rect width="640" height="180" fill="none"/>
+<g transform="translate(22 54) scale(1.1)"><g stroke="#21B9D5" stroke-width="3" fill="none"><path d="M17 20 32 12 48 22 45 43 27 51 13 37Z"/><path d="M17 20 45 43M32 12 27 51"/></g><g fill="#1D2C53"><circle cx="17" cy="20" r="5"/><circle cx="32" cy="12" r="5"/><circle cx="48" cy="22" r="5"/><circle cx="45" cy="43" r="5"/><circle cx="27" cy="51" r="5"/></g></g>
+<path d="M105 38V142" stroke="#21B9D5" stroke-width="2" opacity=".45"/>
+<text x="128" y="82" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="700" letter-spacing=".2" fill="#1D2C53">Volt Mobility</text>
+<text x="130" y="111" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="600" letter-spacing="1.8" fill="#21B9D5">ELECTRIC MOBILITY</text>
+<path d="M130 129H286" stroke="#21B9D5" stroke-width="3" stroke-linecap="round"/>
+</svg>

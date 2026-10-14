@@ -18,15 +18,21 @@ from backend.app.models.models import (
     CreatorSkill,
     Skill,
     Tool,
+    Category,
+    CreatorCategory,
     WorkflowStep,
     EvidenceRecord,
     VerificationRecord,
+    Engagement,
+    Brief,
+    BrandProfile,
 )
 from backend.app.schemas.schemas import (
     CreatorProfileListRead,
     CreatorProfileDetailRead,
     CreatorSkillRead,
     CreatorToolRead,
+    CreatorCategoryRef,
     CreatorProfileSetupRequest,
     PortfolioProjectCreate,
     PortfolioProjectRead,
@@ -69,6 +75,18 @@ def format_creator_list_item(c: CreatorProfile) -> CreatorProfileListRead:
         for ct in c.tools
     ]
 
+    cats_read = [
+        CreatorCategoryRef(
+            category_id=cc.category_id,
+            name=cc.category.name if cc.category else cc.category_id,
+            slug=cc.category.slug if cc.category else cc.category_id,
+            icon=cc.category.icon if cc.category else "✨",
+            is_primary=cc.is_primary,
+        )
+        for cc in (c.categories or [])
+        if cc is not None and cc.category is not None
+    ]
+
     return CreatorProfileListRead(
         id=c.id,
         display_name=c.display_name,
@@ -88,6 +106,7 @@ def format_creator_list_item(c: CreatorProfile) -> CreatorProfileListRead:
         average_rating=c.average_rating,
         skills=skills_read,
         tools=tools_read,
+        categories=cats_read,
         featured_project_thumbnail=feat_proj.thumbnail_url if feat_proj else None,
         featured_project_title=feat_proj.title if feat_proj else None
     )
@@ -96,6 +115,8 @@ def format_creator_list_item(c: CreatorProfile) -> CreatorProfileListRead:
 @router.get("", response_model=List[CreatorProfileListRead])
 def list_creators(
     search: Optional[str] = Query(None, description="Search term for name, bio, or specialization"),
+    category: Optional[str] = Query(None, description="Category slug, ID or name to filter by"),
+    subcategory: Optional[str] = Query(None, description="Subcategory slug, ID or name to filter by"),
     specialization: Optional[str] = Query(None, description="Primary specialization filter"),
     tool: Optional[str] = Query(None, description="Tool name or ID to filter by"),
     skill: Optional[str] = Query(None, description="Skill name or ID to filter by"),
@@ -160,9 +181,40 @@ def list_creators(
 
     creators = query.all()
 
-    # Relational filtering for tool, skill, content_type, and aspect_ratio
+    # Relational filtering for category, subcategory, tool, skill, content_type, and aspect_ratio
     matched = []
     for c in creators:
+        if category:
+            cat_low = category.lower().strip()
+            has_cat = any(
+                (cc.category and (
+                    cc.category.slug.lower() == cat_low
+                    or cc.category.id.lower() == cat_low
+                    or cc.category.name.lower() == cat_low
+                    or (cc.category.parent and (
+                        cc.category.parent.slug.lower() == cat_low
+                        or cc.category.parent.id.lower() == cat_low
+                        or cc.category.parent.name.lower() == cat_low
+                    ))
+                ))
+                for cc in (c.categories or [])
+            ) or (cat_low in (c.primary_specialization or '').lower() or cat_low.replace('-', ' ') in (c.primary_specialization or '').lower())
+            if not has_cat:
+                continue
+
+        if subcategory:
+            sub_low = subcategory.lower().strip()
+            has_sub = any(
+                (cc.category and (
+                    cc.category.slug.lower() == sub_low
+                    or cc.category.id.lower() == sub_low
+                    or cc.category.name.lower() == sub_low
+                ))
+                for cc in (c.categories or [])
+            )
+            if not has_sub:
+                continue
+
         if tool:
             tool_low = tool.lower()
             has_tool = any(
@@ -251,6 +303,57 @@ def get_my_creator_profile(
     )
 
 
+@router.get("/me/brands", response_model=List[dict])
+def get_my_collaborating_brands(
+    current_user: User = Depends(require_role(["CREATOR"])),
+    db: Session = Depends(get_db)
+):
+    """Authenticated creator retrieves all brands they have collaborated with."""
+    creator = current_user.creator_profile
+    if not creator:
+        return []
+
+    from backend.app.models.models import Engagement, Brief
+    engagements = db.query(Engagement).filter(Engagement.creator_id == creator.id).all()
+
+    brand_map = {}
+    for eng in engagements:
+        if not eng.brief or not eng.brief.brand:
+            continue
+        brand = eng.brief.brand
+        if brand.id not in brand_map:
+            brand_map[brand.id] = {
+                "brand_id": brand.id,
+                "company_name": brand.company_name,
+                "slug": brand.slug,
+                "logo_url": brand.logo_url,
+                "industry": brand.industry,
+                "collaborations_count": 0,
+                "active_collaborations": 0,
+                "completed_collaborations": 0,
+                "engagements": [],
+            }
+        brand_map[brand.id]["collaborations_count"] += 1
+        if eng.status in ["KICKOFF", "DRAFT_SUBMITTED", "REVISION_REQUESTED"]:
+            brand_map[brand.id]["active_collaborations"] += 1
+        elif eng.status in ["FINAL_APPROVED", "COMPLETED"]:
+            brand_map[brand.id]["completed_collaborations"] += 1
+
+        brand_map[brand.id]["engagements"].append({
+            "id": eng.id,
+            "engagement_id": eng.id,
+            "brief_id": eng.brief_id,
+            "brief_title": eng.brief.title,
+            "status": eng.status,
+            "agreed_amount": eng.agreed_amount,
+            "deliverables_count": len(eng.deliverables) if eng.deliverables else (1 if eng.final_deliverable_url else 0),
+            "start_date": eng.start_date.isoformat() if eng.start_date else None,
+            "completion_deadline": eng.completion_deadline.isoformat() if eng.completion_deadline else None,
+        })
+
+    return list(brand_map.values())
+
+
 @router.get("/{slug_or_id}", response_model=CreatorProfileDetailRead)
 def get_creator_detail(slug_or_id: str, db: Session = Depends(get_db)):
     creator = db.query(CreatorProfile).filter(
@@ -325,6 +428,21 @@ def setup_or_update_creator_profile(
         creator.updated_at = datetime.utcnow()
 
     db.flush()
+
+    # Link categories
+    if payload.category_ids is not None:
+        db.query(CreatorCategory).filter(CreatorCategory.creator_id == creator.id).delete()
+        for idx, cat_id in enumerate(payload.category_ids or []):
+            cat_obj = db.query(Category).filter(
+                or_(Category.id == cat_id, Category.slug == cat_id, Category.name.ilike(cat_id))
+            ).first()
+            if cat_obj:
+                db.add(CreatorCategory(
+                    id=f"cc-{creator.id}-{cat_obj.id}",
+                    creator_id=creator.id,
+                    category_id=cat_obj.id,
+                    is_primary=(idx == 0)
+                ))
 
     # Link skills (filtering to existing skills in DB to prevent foreign key errors)
     valid_skill_ids = {s.id for s in db.query(Skill).all()}

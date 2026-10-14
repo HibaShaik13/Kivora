@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import NotificationBell from './NotificationBell';
 
 export default function Navbar({
   currentView,
@@ -132,7 +133,33 @@ export default function Navbar({
         {/* Right Actions */}
         <div className="nav-actions">
           {currentUser ? (
-            <div className="user-menu-group">
+            <div className="user-menu-group" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <NotificationBell onNavigate={onNavigate} />
+
+              <button
+                type="button"
+                className="navbar-inbox-btn"
+                onClick={() => onNavigate('inbox')}
+                title="Open Discussions & Messages"
+                style={{
+                  background: currentView === 'inbox' ? '#ECE6FC' : 'rgba(255, 255, 255, 0.8)',
+                  border: currentView === 'inbox' ? '1px solid #7952EC' : '1px solid #EAE6DF',
+                  borderRadius: '50%',
+                  width: '38px',
+                  height: '38px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: '#1A1A1A',
+                  fontSize: '15px',
+                  transition: 'all 0.15s ease',
+                }}
+                aria-label="Direct Messages"
+              >
+                💬
+              </button>
+
               <button
                 type="button"
                 className="user-badge-pill"
@@ -160,6 +187,7 @@ export default function Navbar({
               </button>
             </div>
           ) : (
+
             <div className="logged-out-actions-row">
               <button
                 type="button"

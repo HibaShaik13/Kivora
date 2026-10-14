@@ -6,7 +6,7 @@ export const SPOTLIGHT_PROJECTS = [
     title: 'Solaris Anomaly: Luxury Fragrance Spec Commercial',
     creator_name: 'Elena Rostova',
     creator_handle: 'elena_creative',
-    creator_avatar: '/assets/avatars/elena.jpg',
+    creator_avatar: '/assets/creators_profiles/elena_rostova.jpg',
     creator_tier: 'TOP_STUDIO',
     content_type: 'VIDEO',
     aspect_ratio: '16:9',
@@ -26,7 +26,7 @@ export const SPOTLIGHT_PROJECTS = [
     title: 'Aura Droplet: Photorealistic Serum Dispenser',
     creator_name: 'Marcus Vance',
     creator_handle: 'vance_3d',
-    creator_avatar: '/assets/avatars/marcus.jpg',
+    creator_avatar: '/assets/creators_profiles/marcus_vance.jpg',
     creator_tier: 'VERIFIED_PRO',
     content_type: 'PRODUCT_VIZ',
     aspect_ratio: '1:1',
@@ -46,7 +46,7 @@ export const SPOTLIGHT_PROJECTS = [
     title: 'Shin-Tokyo Cyber Blades: 2.5D Anime Teaser',
     creator_name: 'Kai Tanaka',
     creator_handle: 'kai_anime',
-    creator_avatar: '/assets/avatars/kai.jpg',
+    creator_avatar: '/assets/creators_profiles/kai_tanaka.jpg',
     creator_tier: 'VERIFIED_PRO',
     content_type: 'ANIMATION',
     aspect_ratio: '16:9',
@@ -66,7 +66,7 @@ export const SPOTLIGHT_PROJECTS = [
     title: 'Liquid Organza: Virtual Couture Metamorphosis',
     creator_name: 'Maya Lin',
     creator_handle: 'mayalin_fashion',
-    creator_avatar: '/assets/avatars/maya.jpg',
+    creator_avatar: '/assets/creators_profiles/maya_lin.jpg',
     creator_tier: 'VERIFIED_PRO',
     content_type: 'VIDEO',
     aspect_ratio: '9:16',
@@ -86,7 +86,7 @@ export const SPOTLIGHT_PROJECTS = [
     title: 'Apex GT: Midnight Autobahn High-Speed Run',
     creator_name: 'Hassan Khalil',
     creator_handle: 'hassan_automotive',
-    creator_avatar: '/assets/avatars/hassan.jpg',
+    creator_avatar: '/assets/creators_profiles/hassan_khalil.jpg',
     creator_tier: 'TOP_STUDIO',
     content_type: 'VIDEO',
     aspect_ratio: '16:9',
@@ -202,6 +202,10 @@ export default function PortfolioSpotlight({ onSelectProject }) {
                       src={proj.creator_avatar}
                       alt={proj.creator_name}
                       className="spotlight-avatar"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = '/assets/creator-portraits/devon.jpg';
+                      }}
                     />
                     <div className="spotlight-creator-meta">
                       <div className="creator-name-row">

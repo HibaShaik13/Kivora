@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { creatorService } from '../services/creatorService';
+import { api } from '../services/api';
+import { getCurrentUser } from '../services/authService';
 import CreatorCard from './CreatorCard';
+import CategoryCard from './CategoryCard';
 
 const DISCIPLINE_KEYWORDS = {
   '3D & CGI': ['3d', 'cgi', 'render', 'spatial', 'architecture', 'cinema'],
@@ -9,6 +12,12 @@ const DISCIPLINE_KEYWORDS = {
   'Visual Effects': ['effect', 'vfx', 'fluid', 'particle', 'lighting', 'cinematic', 'macro'],
   'Illustration': ['illustration', 'anime', 'stylized', 'world building', 'fashion'],
   'Brand Design': ['brand', 'product', 'design', 'commercial', 'advertising', 'minimalist'],
+  'Fashion & Apparel': ['fashion', 'apparel', 'textile', 'virtual try-on', 'jewelry', 'runway'],
+  'Beauty & Skincare': ['beauty', 'skincare', 'cosmetic', 'serum', 'lotion', 'makeup'],
+  'Food & Beverage': ['food', 'beverage', 'culinary', 'coffee', 'cocktail', 'dining'],
+  'Automotive': ['automotive', 'vehicle', 'car', 'supercar', 'cockpit', 'mobility'],
+  'Technology & Gadgets': ['tech', 'technology', 'gadget', 'wearable', 'electronics', 'hardware'],
+  'Gaming': ['game', 'gaming', 'rpg', 'trailer', 'esports', 'character'],
 };
 
 const TOOL_KEYWORDS = {
@@ -17,25 +26,39 @@ const TOOL_KEYWORDS = {
   'Flux.1 Pro': ['flux'],
   'Midjourney': ['midjourney'],
   'Topaz Video AI': ['topaz'],
+  'Blender': ['blender'],
+  'Cinema 4D': ['cinema 4d', 'c4d'],
+  'Unreal Engine 5': ['unreal', 'ue5'],
 };
 
-const POPULAR_LOCATIONS = ['London', 'Tokyo', 'Berlin', 'Paris', 'USA', 'Canada'];
+const POPULAR_LOCATIONS = ['London', 'Tokyo', 'Berlin', 'Paris', 'New York', 'Sydney'];
 
-export default function CreatorDiscovery({ onSelectCreator, onInviteCreator }) {
+export default function CreatorDiscovery({ onSelectCreator, onInviteCreator, onOpenChat }) {
   const [allCreators, setAllCreators] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [savedCreatorIds, setSavedCreatorIds] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Filters
+  const currentUser = getCurrentUser();
+
+  // Category Filtering State
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedSubcategory, setSelectedSubcategory] = useState(null);
+  const [showAllCategories, setShowAllCategories] = useState(false);
+
+  // Filters State
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDisciplines, setSelectedDisciplines] = useState([]);
   const [selectedTools, setSelectedTools] = useState([]);
   const [selectedTiers, setSelectedTiers] = useState([]);
   const [locationQuery, setLocationQuery] = useState('');
-  const [maxBudget, setMaxBudget] = useState(10000);
+  const [maxBudget, setMaxBudget] = useState(15000);
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
   // Sidebar accordion states
   const [openSections, setOpenSections] = useState({
+    categories: true,
     discipline: true,
     tools: true,
     tier: true,
@@ -55,12 +78,27 @@ export default function CreatorDiscovery({ onSelectCreator, onInviteCreator }) {
     }
   };
 
-  const loadCreators = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await creatorService.getCreators();
-      setAllCreators(data || []);
+      const [creatorsData, categoriesData] = await Promise.all([
+        creatorService.getCreators(),
+        api.getCategories().catch(() => []),
+      ]);
+      setAllCreators(creatorsData || []);
+      setCategories(categoriesData || []);
+
+      if (currentUser?.role === 'BRAND') {
+        try {
+          const savedData = await api.getSavedCreators();
+          const items = Array.isArray(savedData) ? savedData : (savedData?.items || []);
+          const idSet = new Set(items.map((item) => item.creator_id || item.creator?.id).filter(Boolean));
+          setSavedCreatorIds(idSet);
+        } catch {
+          // Non-blocking saved creators prefetch
+        }
+      }
     } catch (err) {
       setError(err.message || 'Failed to load creators.');
     } finally {
@@ -69,22 +107,34 @@ export default function CreatorDiscovery({ onSelectCreator, onInviteCreator }) {
   };
 
   useEffect(() => {
-    loadCreators();
+    loadData();
   }, []);
 
+  const handleCategorySelect = (cat) => {
+    if (selectedCategory?.slug === cat?.slug) {
+      setSelectedCategory(null);
+      setSelectedSubcategory(null);
+    } else {
+      setSelectedCategory(cat);
+      setSelectedSubcategory(null);
+    }
+  };
+
   const handleResetFilters = () => {
+    setSelectedCategory(null);
+    setSelectedSubcategory(null);
     setSearchQuery('');
     setSelectedDisciplines([]);
     setSelectedTools([]);
     setSelectedTiers([]);
     setLocationQuery('');
-    setMaxBudget(10000);
+    setMaxBudget(15000);
   };
 
   // Composite multi-filter working in unison with actual creator data
   const filteredCreators = useMemo(() => {
     return allCreators.filter((c) => {
-      // Exclude test-only accounts from public creator discovery
+      // Exclude test accounts from public creator discovery
       const isTestUser = (
         c.handle?.toLowerCase().startsWith('test_') ||
         c.display_name?.toLowerCase().startsWith('test_') ||
@@ -93,7 +143,43 @@ export default function CreatorDiscovery({ onSelectCreator, onInviteCreator }) {
       );
       if (isTestUser) return false;
 
-      // 1. Search Query
+      // 1. Primary Category Filter
+      if (selectedCategory) {
+        const catSlug = selectedCategory.slug.toLowerCase();
+        const catName = selectedCategory.name.toLowerCase();
+        const creatorCats = c.categories || [];
+
+        const hasRelationalCategory = creatorCats.some((cc) => {
+          const s = (cc.slug || '').toLowerCase();
+          const n = (cc.name || '').toLowerCase();
+          return (
+            s === catSlug ||
+            n === catName ||
+            (selectedCategory.subcategories || []).some(
+              (sub) => sub.slug === s || sub.name === n
+            )
+          );
+        });
+
+        const specText = (c.primary_specialization || '').toLowerCase();
+        const bioText = (c.bio || '').toLowerCase();
+        const hasTextCategory = specText.includes(catName) || bioText.includes(catName);
+
+        if (!hasRelationalCategory && !hasTextCategory) {
+          return false;
+        }
+
+        // Subcategory check if selected
+        if (selectedSubcategory) {
+          const subSlug = selectedSubcategory.toLowerCase();
+          const hasSub = creatorCats.some(
+            (cc) => (cc.slug || '').toLowerCase() === subSlug || (cc.name || '').toLowerCase() === subSlug
+          );
+          if (!hasSub) return false;
+        }
+      }
+
+      // 2. Search Query (Name, Handle, Bio, Specialty, Location, Skills, Tools)
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
         const nameMatch = c.display_name?.toLowerCase().includes(q);
@@ -108,7 +194,7 @@ export default function CreatorDiscovery({ onSelectCreator, onInviteCreator }) {
         }
       }
 
-      // 2. Creative Discipline Filter
+      // 3. Creative Discipline Filter
       if (selectedDisciplines.length > 0) {
         const matchesDiscipline = selectedDisciplines.some((disc) => {
           const keywords = DISCIPLINE_KEYWORDS[disc] || [disc.toLowerCase()];
@@ -120,7 +206,7 @@ export default function CreatorDiscovery({ onSelectCreator, onInviteCreator }) {
         if (!matchesDiscipline) return false;
       }
 
-      // 3. Tools & Models Filter
+      // 4. Tools & Models Filter
       if (selectedTools.length > 0) {
         const matchesTool = selectedTools.some((toolKey) => {
           const keywords = TOOL_KEYWORDS[toolKey] || [toolKey.toLowerCase()];
@@ -130,7 +216,7 @@ export default function CreatorDiscovery({ onSelectCreator, onInviteCreator }) {
         if (!matchesTool) return false;
       }
 
-      // 4. Role / Tier Filter
+      // 5. Verification Tier Filter
       if (selectedTiers.length > 0) {
         const matchesTier = selectedTiers.some((tier) => {
           if (tier === 'COMMUNITY') {
@@ -141,55 +227,175 @@ export default function CreatorDiscovery({ onSelectCreator, onInviteCreator }) {
         if (!matchesTier) return false;
       }
 
-      // 5. Location Filter
+      // 6. Location Filter
       if (locationQuery.trim()) {
         const lq = locationQuery.toLowerCase().trim();
         const matchesLocation = c.location && c.location.toLowerCase().includes(lq);
         if (!matchesLocation) return false;
       }
 
-      // 6. Rate Range Filter
-      if (maxBudget < 10000) {
+      // 7. Rate Range Filter
+      if (maxBudget < 15000) {
         const creatorBudget = c.min_budget !== undefined && c.min_budget !== null ? c.min_budget : 0;
         if (creatorBudget > maxBudget) return false;
       }
 
       return true;
     });
-  }, [allCreators, searchQuery, selectedDisciplines, selectedTools, selectedTiers, locationQuery, maxBudget]);
+  }, [allCreators, selectedCategory, selectedSubcategory, searchQuery, selectedDisciplines, selectedTools, selectedTiers, locationQuery, maxBudget]);
 
   const hasActiveFilters =
+    Boolean(selectedCategory) ||
+    Boolean(selectedSubcategory) ||
     Boolean(searchQuery) ||
     selectedDisciplines.length > 0 ||
     selectedTools.length > 0 ||
     selectedTiers.length > 0 ||
     Boolean(locationQuery) ||
-    maxBudget < 10000;
+    maxBudget < 15000;
+
+  const activeFilterCount =
+    (selectedCategory ? 1 : 0) +
+    (selectedSubcategory ? 1 : 0) +
+    (searchQuery ? 1 : 0) +
+    selectedDisciplines.length +
+    selectedTools.length +
+    selectedTiers.length +
+    (locationQuery ? 1 : 0) +
+    (maxBudget < 15000 ? 1 : 0);
+
+  const displayedCategories = showAllCategories ? categories : categories.slice(0, 8);
 
   return (
     <div className="kivora-discovery-layout">
+      {/* Mobile Filter Toggle */}
+      <div className="discovery-mobile-bar">
+        <button
+          type="button"
+          className="mobile-filter-btn"
+          onClick={() => setIsMobileFilterOpen(!isMobileFilterOpen)}
+        >
+          <span className="filter-icon">⚙</span>
+          <span>Filters & Search</span>
+          {activeFilterCount > 0 && (
+            <span className="mobile-active-badge">{activeFilterCount}</span>
+          )}
+        </button>
+
+        {hasActiveFilters && (
+          <button
+            type="button"
+            className="mobile-clear-btn"
+            onClick={handleResetFilters}
+          >
+            Clear all
+          </button>
+        )}
+      </div>
+
       {/* Left Filter Sidebar */}
-      <aside className="kivora-filter-sidebar glass-panel">
+      <aside className={`kivora-filter-sidebar ${isMobileFilterOpen ? 'mobile-open' : ''}`}>
+        <div className="sidebar-header-row">
+          <div className="sidebar-title-wrap">
+            <h3 className="sidebar-main-heading">Filters</h3>
+            <span className="sidebar-count-indicator">
+              {filteredCreators.length} results
+            </span>
+          </div>
+          {hasActiveFilters && (
+            <button
+              type="button"
+              className="sidebar-reset-link"
+              onClick={handleResetFilters}
+            >
+              Reset
+            </button>
+          )}
+        </div>
+
         {/* Search Box */}
         <div className="sidebar-search-box">
-          <span className="search-mag-icon">🔍</span>
+          <svg
+            className="sidebar-search-icon"
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" x2="16.65" y1="21" y2="16.65" />
+          </svg>
           <input
             type="text"
-            placeholder="Search creators..."
+            placeholder="Search creators, skills, tools..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="sidebar-search-input"
           />
+          {searchQuery && (
+            <button
+              type="button"
+              className="search-clear-btn"
+              onClick={() => setSearchQuery('')}
+            >
+              ✕
+            </button>
+          )}
         </div>
 
-        {/* Section 1: Creative Discipline */}
+        {/* Section 0: Taxonomy Categories List */}
+        <div className="filter-accordion-group">
+          <button
+            type="button"
+            className="filter-accordion-header"
+            onClick={() => toggleSection('categories')}
+          >
+            <span>Creative Domain</span>
+            <span className="accordion-chevron">{openSections.categories ? '∧' : '∨'}</span>
+          </button>
+          {openSections.categories && (
+            <div className="filter-checkbox-list max-h-48 overflow-y-auto pr-1">
+              <label className="filter-checkbox-label">
+                <input
+                  type="radio"
+                  name="sidebar-creator-category"
+                  checked={selectedCategory === null}
+                  onChange={() => {
+                    setSelectedCategory(null);
+                    setSelectedSubcategory(null);
+                  }}
+                  className="custom-checkbox"
+                />
+                <span className="font-semibold text-xs">All Domains ({allCreators.length})</span>
+              </label>
+              {categories.map((cat) => (
+                <label key={cat.id} className="filter-checkbox-label">
+                  <input
+                    type="radio"
+                    name="sidebar-creator-category"
+                    checked={selectedCategory?.slug === cat.slug}
+                    onChange={() => handleCategorySelect(cat)}
+                    className="custom-checkbox"
+                  />
+                  <span className="text-xs">
+                    {cat.name} ({cat.creator_count || 0})
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Section 1: Creative Discipline Keywords */}
         <div className="filter-accordion-group">
           <button
             type="button"
             className="filter-accordion-header"
             onClick={() => toggleSection('discipline')}
           >
-            <span>Creative Discipline</span>
+            <span>Disciplines</span>
             <span className="accordion-chevron">{openSections.discipline ? '∧' : '∨'}</span>
           </button>
           {openSections.discipline && (
@@ -201,6 +407,10 @@ export default function CreatorDiscovery({ onSelectCreator, onInviteCreator }) {
                 'Visual Effects',
                 'Illustration',
                 'Brand Design',
+                'Fashion & Apparel',
+                'Beauty & Skincare',
+                'Food & Beverage',
+                'Automotive',
               ].map((disc) => (
                 <label key={disc} className="filter-checkbox-label">
                   <input
@@ -228,7 +438,16 @@ export default function CreatorDiscovery({ onSelectCreator, onInviteCreator }) {
           </button>
           {openSections.tools && (
             <div className="filter-checkbox-list">
-              {['Runway Gen-3', 'ComfyUI', 'Flux.1 Pro', 'Midjourney', 'Topaz Video AI'].map((tool) => (
+              {[
+                'Runway Gen-3',
+                'ComfyUI',
+                'Flux.1 Pro',
+                'Midjourney',
+                'Topaz Video AI',
+                'Blender',
+                'Cinema 4D',
+                'Unreal Engine 5',
+              ].map((tool) => (
                 <label key={tool} className="filter-checkbox-label">
                   <input
                     type="checkbox"
@@ -243,28 +462,28 @@ export default function CreatorDiscovery({ onSelectCreator, onInviteCreator }) {
           )}
         </div>
 
-        {/* Section 3: Role / Tier */}
+        {/* Section 3: Verification Tier */}
         <div className="filter-accordion-group">
           <button
             type="button"
             className="filter-accordion-header"
             onClick={() => toggleSection('tier')}
           >
-            <span>Role / Tier</span>
+            <span>Verification Tier</span>
             <span className="accordion-chevron">{openSections.tier ? '∧' : '∨'}</span>
           </button>
           {openSections.tier && (
             <div className="filter-checkbox-list">
               {[
-                { id: 'TOP_STUDIO', label: '👑 Top Studio' },
-                { id: 'VERIFIED_PRO', label: '✓ Verified Pro' },
-                { id: 'COMMUNITY', label: 'Community' },
+                { key: 'TOP_STUDIO', label: '👑 Top Studio (Audited)' },
+                { key: 'VERIFIED_PRO', label: '✓ Verified Pro' },
+                { key: 'COMMUNITY', label: '🌱 Community Member' },
               ].map((t) => (
-                <label key={t.id} className="filter-checkbox-label">
+                <label key={t.key} className="filter-checkbox-label">
                   <input
                     type="checkbox"
-                    checked={selectedTiers.includes(t.id)}
-                    onChange={() => handleCheckboxChange(selectedTiers, setSelectedTiers, t.id)}
+                    checked={selectedTiers.includes(t.key)}
+                    onChange={() => handleCheckboxChange(selectedTiers, setSelectedTiers, t.key)}
                     className="custom-checkbox"
                   />
                   <span>{t.label}</span>
@@ -285,15 +504,15 @@ export default function CreatorDiscovery({ onSelectCreator, onInviteCreator }) {
             <span className="accordion-chevron">{openSections.location ? '∧' : '∨'}</span>
           </button>
           {openSections.location && (
-            <div className="filter-location-block mt-2">
+            <div className="space-y-2 pt-1">
               <input
                 type="text"
-                placeholder="Search city, country..."
+                placeholder="City or country..."
                 value={locationQuery}
                 onChange={(e) => setLocationQuery(e.target.value)}
-                className="w-full text-xs p-2 rounded-lg border border-black/10 bg-white/80 focus:bg-white focus:outline-none"
+                className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-black/10 bg-white"
               />
-              <div className="flex flex-wrap gap-1 mt-2">
+              <div className="flex flex-wrap gap-1">
                 {POPULAR_LOCATIONS.map((loc) => (
                   <button
                     key={loc}
@@ -320,7 +539,7 @@ export default function CreatorDiscovery({ onSelectCreator, onInviteCreator }) {
             className="filter-accordion-header"
             onClick={() => toggleSection('rate')}
           >
-            <span>Rate Range</span>
+            <span>Starting Budget Ceiling</span>
             <span className="accordion-chevron">{openSections.rate ? '∧' : '∨'}</span>
           </button>
           {openSections.rate && (
@@ -328,7 +547,7 @@ export default function CreatorDiscovery({ onSelectCreator, onInviteCreator }) {
               <input
                 type="range"
                 min="500"
-                max="10000"
+                max="15000"
                 step="500"
                 value={maxBudget}
                 onChange={(e) => setMaxBudget(Number(e.target.value))}
@@ -337,7 +556,7 @@ export default function CreatorDiscovery({ onSelectCreator, onInviteCreator }) {
               <div className="flex justify-between text-xs text-neutral-500 mt-1 font-mono">
                 <span>$500</span>
                 <span className="font-bold text-purple-700">
-                  {maxBudget >= 10000 ? 'Any rate ($10k+)' : `Up to $${maxBudget.toLocaleString()}`}
+                  {maxBudget >= 15000 ? 'Any rate ($15k+)' : `Up to $${maxBudget.toLocaleString()}`}
                 </span>
               </div>
             </div>
@@ -347,54 +566,145 @@ export default function CreatorDiscovery({ onSelectCreator, onInviteCreator }) {
         {hasActiveFilters && (
           <button
             type="button"
-            className="w-full mt-4 py-2 text-xs font-semibold rounded-full bg-neutral-200 hover:bg-neutral-300 text-neutral-800 transition shadow-sm"
+            className="sidebar-clear-all-btn"
             onClick={handleResetFilters}
           >
-            Clear All Filters
+            Clear All Active Filters
           </button>
         )}
       </aside>
 
       {/* Right Main Grid Area */}
       <main className="kivora-discovery-main">
-        {/* Headline Row */}
+        {/* Top Category Discovery Section */}
+        {categories.length > 0 && (
+          <div className="category-discovery-section">
+            <div className="category-section-top-bar">
+              <div>
+                <span className="badge-editorial">
+                  <span className="badge-dot" />
+                  CREATIVE DOMAINS
+                </span>
+                <h3 className="category-section-heading">Browse by Creative Domain</h3>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {selectedCategory && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedCategory(null);
+                      setSelectedSubcategory(null);
+                    }}
+                    className="category-clear-pill-btn"
+                  >
+                    Clear Domain ✕
+                  </button>
+                )}
+                {categories.length > 8 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllCategories(!showAllCategories)}
+                    className="category-expand-toggle-btn"
+                  >
+                    {showAllCategories ? 'Show Fewer' : `View All (${categories.length})`}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Category Cards Grid */}
+            <div className="kivora-category-grid">
+              {displayedCategories.map((cat) => (
+                <CategoryCard
+                  key={cat.id}
+                  category={cat}
+                  isSelected={selectedCategory?.slug === cat.slug}
+                  onClick={() => handleCategorySelect(cat)}
+                  mode="creators"
+                />
+              ))}
+            </div>
+
+            {/* Subcategories Row if Category Selected */}
+            {selectedCategory && selectedCategory.subcategories?.length > 0 && (
+              <div className="subcategory-chips-bar">
+                <span className="subcategory-bar-label">
+                  <span className="label-icon">📂</span>
+                  <span>{selectedCategory.name} Subcategories:</span>
+                </span>
+                <button
+                  type="button"
+                  className={`subcategory-chip ${!selectedSubcategory ? 'active' : ''}`}
+                  onClick={() => setSelectedSubcategory(null)}
+                >
+                  All {selectedCategory.name}
+                </button>
+                {selectedCategory.subcategories.map((sub) => {
+                  const isSubActive = selectedSubcategory === sub.slug;
+                  return (
+                    <button
+                      key={sub.id}
+                      type="button"
+                      className={`subcategory-chip ${isSubActive ? 'active' : ''}`}
+                      onClick={() => setSelectedSubcategory(isSubActive ? null : sub.slug)}
+                    >
+                      {sub.name}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Discovery Headline Row */}
         <div className="discovery-headline-row">
           <div>
             <h2 className="discovery-main-title">
-              Creators worth a closer look.
+              {selectedCategory
+                ? `${selectedCategory.name} Creators`
+                : 'Verified Creative Directors & Studios'}
             </h2>
-            <p className="text-xs text-neutral-500 mt-0.5 font-medium">
-              Showing {filteredCreators.length} of {allCreators.length} verified creators
+            <p className="discovery-subtitle">
+              Showing <strong>{filteredCreators.length}</strong> of {allCreators.length} verified creators
+              {selectedCategory && ` in ${selectedCategory.name}`}
+              {selectedSubcategory && ` › ${selectedSubcategory}`}
             </p>
           </div>
-          <button
-            type="button"
-            className="view-all-link-btn"
-            onClick={handleResetFilters}
-          >
-            View all creators <span className="arrow-inline">→</span>
-          </button>
+
+          {hasActiveFilters && (
+            <button
+              type="button"
+              className="view-all-link-btn"
+              onClick={handleResetFilters}
+            >
+              Reset all filters <span className="arrow-inline">↺</span>
+            </button>
+          )}
         </div>
 
         {/* Content Area */}
         {loading ? (
           <div className="kivora-loading-card glass-panel">
             <div className="spinner-ring" />
-            <p>Loading curated creators...</p>
+            <p className="loading-text">Loading curated creators...</p>
           </div>
         ) : error ? (
           <div className="kivora-error-card glass-panel">
-            <p className="text-red">Error: {error}</p>
-            <button className="btn btn-secondary btn-sm" onClick={loadCreators}>
+            <p className="text-red font-semibold">Error: {error}</p>
+            <button className="btn btn-secondary btn-sm mt-3" onClick={loadData}>
               Retry Query
             </button>
           </div>
         ) : filteredCreators.length === 0 ? (
           <div className="kivora-empty-card glass-panel">
             <div className="empty-icon text-3xl">🎨</div>
-            <h3 className="font-serif text-lg font-bold">No creators match your filter</h3>
-            <p className="text-xs text-neutral-500">Try clearing or adjusting selected filters to see more creators.</p>
-            <button className="btn btn-primary btn-sm mt-3" onClick={handleResetFilters}>
+            <h3 className="empty-title">No creators match your active filters</h3>
+            <p className="empty-desc">
+              Try selecting a different domain, relaxing budget ceiling, or clearing search keywords.
+            </p>
+            <button className="btn btn-primary btn-sm mt-4" onClick={handleResetFilters}>
               Reset Filters
             </button>
           </div>
@@ -406,6 +716,16 @@ export default function CreatorDiscovery({ onSelectCreator, onInviteCreator }) {
                 creator={creator}
                 onSelectCreator={onSelectCreator}
                 onInviteCreator={onInviteCreator}
+                onOpenChat={onOpenChat}
+                isSaved={savedCreatorIds.has(creator.id)}
+                onToggleSave={(cId, isSaved) => {
+                  setSavedCreatorIds((prev) => {
+                    const next = new Set(prev);
+                    if (isSaved) next.add(cId);
+                    else next.delete(cId);
+                    return next;
+                  });
+                }}
               />
             ))}
           </div>

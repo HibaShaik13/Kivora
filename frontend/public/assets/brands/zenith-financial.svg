@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="180" viewBox="0 0 640 180" role="img" aria-labelledby="title desc">
+<title id="title">Zenith Financial logo</title>
+<desc id="desc">Original vector logo concept for Zenith Financial, industry: Finance &amp; FinTech.</desc>
+<rect width="640" height="180" fill="none"/>
+<g transform="translate(22 54) scale(1.1)"><g fill="none" stroke="#3E65B9" stroke-width="3"><ellipse cx="32" cy="18" rx="8" ry="15"/><ellipse cx="20" cy="31" rx="8" ry="15" transform="rotate(-45 20 31)"/><ellipse cx="44" cy="31" rx="8" ry="15" transform="rotate(45 44 31)"/></g></g>
+<path d="M105 38V142" stroke="#3E65B9" stroke-width="2" opacity=".45"/>
+<text x="128" y="82" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="700" letter-spacing=".2" fill="#1D2C4C">Zenith Financial</text>
+<text x="130" y="111" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="600" letter-spacing="1.8" fill="#3E65B9">FINANCE &amp; FINTECH</text>
+<path d="M130 129H322" stroke="#3E65B9" stroke-width="3" stroke-linecap="round"/>
+</svg>

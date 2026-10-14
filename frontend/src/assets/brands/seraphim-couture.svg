@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="180" viewBox="0 0 640 180" role="img" aria-labelledby="title desc">
+<title id="title">Seraphim Couture logo</title>
+<desc id="desc">Original vector logo concept for Seraphim Couture, industry: Luxury Fashion.</desc>
+<rect width="640" height="180" fill="none"/>
+<g transform="translate(22 54) scale(1.1)"><g fill="#B98C65"><path d="M32 8Q12 28 32 46Q52 28 32 8Z"/><path d="M29 43Q8 43 8 25Q24 25 29 43Z"/><path d="M35 43Q56 43 56 25Q40 25 35 43Z"/></g><path d="M13 52H51" stroke="#33233C" stroke-width="3"/></g>
+<path d="M105 38V142" stroke="#B98C65" stroke-width="2" opacity=".45"/>
+<text x="128" y="82" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="700" letter-spacing=".2" fill="#33233C">Seraphim Couture</text>
+<text x="130" y="111" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="600" letter-spacing="1.8" fill="#B98C65">LUXURY FASHION</text>
+<path d="M130 129H322" stroke="#B98C65" stroke-width="3" stroke-linecap="round"/>
+</svg>
