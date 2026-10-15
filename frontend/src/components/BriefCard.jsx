@@ -110,25 +110,11 @@ export default function BriefCard({
             {/* Save / Bookmark Button */}
             <button
               type="button"
-              className="brief-card-save-btn"
+              className={`brief-card-save-btn ${isSaved ? 'active' : ''}`}
               onClick={handleToggleSave}
               disabled={isSaving}
               title={isSaved ? 'Remove from saved briefs' : 'Save brief'}
               aria-label="Save brief to bookmarks"
-              style={{
-                background: isSaved ? '#7952EC' : 'rgba(0, 0, 0, 0.45)',
-                color: '#FFFFFF',
-                border: 'none',
-                borderRadius: '50%',
-                width: '28px',
-                height: '28px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: isSaving ? 'wait' : 'pointer',
-                opacity: isSaving ? 0.7 : 1,
-                transition: 'all 0.15s ease',
-              }}
             >
               <svg
                 width="14"

@@ -207,8 +207,8 @@ export default function CreatorProfileModal({
             {/* Middle Column: Info, Bio, Buttons */}
             <div className="profile-hero-middle">
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="profile-display-name text-xl font-bold">{creator.display_name}</h1>
-                <span className="text-xs text-neutral-500">@{creator.handle}</span>
+                <h1 className="profile-display-name">{creator.display_name}</h1>
+                <span className="profile-handle-text">@{creator.handle}</span>
                 {creator.verification_tier && creator.verification_tier !== 'COMMUNITY' && (
                   <span className="purple-check-badge-large" title="Verified Creator">
                     ✓
@@ -240,7 +240,7 @@ export default function CreatorProfileModal({
               </div>
 
               {creator.bio && (
-                <p className="profile-bio-manifesto text-xs leading-relaxed text-neutral-700 mt-2">
+                <p className="profile-bio-manifesto">
                   {creator.bio}
                 </p>
               )}
@@ -458,33 +458,33 @@ export default function CreatorProfileModal({
 
           {/* Tab Content 2: About & Rates */}
           {activeTab === 'about' && (
-            <div className="p-6 bg-white/70 rounded-2xl border border-black/5 space-y-4 text-xs">
+            <div className="p-6 bg-white/70 rounded-2xl border border-black/5 space-y-4">
               <h3 className="font-serif font-bold text-lg text-neutral-900">About {creator.display_name}</h3>
-              <p className="leading-relaxed text-neutral-700">{creator.bio || 'Verified AI creator specialized in high-fidelity commercial imagery and video generation.'}</p>
+              <p className="leading-relaxed text-neutral-700 text-sm">{creator.bio || 'Verified AI creator specialized in high-fidelity commercial imagery and video generation.'}</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-4 border-t border-black/10">
                 <div>
-                  <span className="font-bold text-neutral-500 block uppercase text-[10px]">Location</span>
-                  <span className="font-semibold text-neutral-900">{creator.location || 'Global / Remote'}</span>
+                  <span className="font-bold text-neutral-500 block uppercase text-xs mb-1">Location</span>
+                  <span className="font-semibold text-neutral-900 text-sm">{creator.location || 'Global / Remote'}</span>
                 </div>
                 <div>
-                  <span className="font-bold text-neutral-500 block uppercase text-[10px]">Min Project Budget</span>
-                  <span className="font-semibold text-purple-700">${(creator.min_budget || 2500).toLocaleString()}</span>
+                  <span className="font-bold text-neutral-500 block uppercase text-xs mb-1">Min Project Budget</span>
+                  <span className="font-semibold text-purple-700 text-sm">${(creator.min_budget || 2500).toLocaleString()}</span>
                 </div>
                 <div>
-                  <span className="font-bold text-neutral-500 block uppercase text-[10px]">Hourly Rate</span>
-                  <span className="font-semibold text-neutral-900">${creator.hourly_rate || 120}/hr</span>
+                  <span className="font-bold text-neutral-500 block uppercase text-xs mb-1">Hourly Rate</span>
+                  <span className="font-semibold text-neutral-900 text-sm">${creator.hourly_rate || 120}/hr</span>
                 </div>
                 <div>
-                  <span className="font-bold text-neutral-500 block uppercase text-[10px]">Availability</span>
-                  <span className="font-semibold text-emerald-700">{creator.availability_status || 'AVAILABLE'}</span>
+                  <span className="font-bold text-neutral-500 block uppercase text-xs mb-1">Availability</span>
+                  <span className="font-semibold text-emerald-700 text-sm">{creator.availability_status || 'AVAILABLE'}</span>
                 </div>
                 <div>
-                  <span className="font-bold text-neutral-500 block uppercase text-[10px]">Audited Claims</span>
-                  <span className="font-semibold text-neutral-900">{creator.verified_claims_count || 0} claims</span>
+                  <span className="font-bold text-neutral-500 block uppercase text-xs mb-1">Audited Claims</span>
+                  <span className="font-semibold text-neutral-900 text-sm">{creator.verified_claims_count || 0} claims</span>
                 </div>
                 <div>
-                  <span className="font-bold text-neutral-500 block uppercase text-[10px]">Verification Tier</span>
-                  <span className="font-semibold text-purple-800">{creator.verification_tier || 'COMMUNITY'}</span>
+                  <span className="font-bold text-neutral-500 block uppercase text-xs mb-1">Verification Tier</span>
+                  <span className="font-semibold text-purple-800 text-sm">{creator.verification_tier || 'COMMUNITY'}</span>
                 </div>
               </div>
             </div>

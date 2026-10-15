@@ -3,9 +3,32 @@
    ========================================================================== */
 
 :root {
-  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'Inter', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-serif: 'Playfair Display', 'Cormorant Garamond', Georgia, serif;
   --font-mono: 'JetBrains Mono', monospace;
+
+  /* Typography Scale */
+  --text-hero: clamp(2.25rem, 4.5vw, 3.25rem);
+  --text-h1: clamp(1.85rem, 3.2vw, 2.35rem);
+  --text-h2: clamp(1.45rem, 2.4vw, 1.85rem);
+  --text-h3: clamp(1.2rem, 1.8vw, 1.4rem);
+  --text-h4: 1.125rem;
+  --text-body-lg: 1.05rem;
+  --text-body: 0.95rem;
+  --text-body-sm: 0.875rem;
+  --text-caption: 0.8rem;
+  --text-meta: 0.75rem;
+
+  /* Spacing Scale */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
 
   /* Luxury Cream & Editorial Palette */
   --bg-cream: #FAF7F2;
@@ -14,8 +37,8 @@
   --bg-cream-darker: #EAE4D8;
   
   --text-main: #131316;
-  --text-muted: #6C6C75;
-  --text-light: #9B9BA5;
+  --text-muted: #555562;
+  --text-light: #8E8E9B;
 
   --accent-purple: #7952EC;
   --accent-purple-hover: #683EE6;
@@ -25,17 +48,17 @@
   --dark-btn: #111215;
   --dark-btn-hover: #26272C;
 
-  --glass-bg: rgba(255, 255, 255, 0.75);
-  --glass-border: rgba(255, 255, 255, 0.85);
-  --glass-border-subtle: rgba(19, 19, 22, 0.06);
-  --glass-shadow: 0 20px 45px -15px rgba(130, 110, 150, 0.09), 0 2px 8px rgba(0, 0, 0, 0.03);
-  --glass-shadow-hover: 0 25px 55px -12px rgba(121, 82, 236, 0.15), 0 4px 12px rgba(0, 0, 0, 0.04);
+  --glass-bg: rgba(255, 255, 255, 0.82);
+  --glass-border: rgba(255, 255, 255, 0.92);
+  --glass-border-subtle: rgba(19, 19, 22, 0.08);
+  --glass-shadow: 0 16px 40px -12px rgba(120, 100, 140, 0.08), 0 2px 8px rgba(0, 0, 0, 0.03);
+  --glass-shadow-hover: 0 24px 50px -10px rgba(121, 82, 236, 0.16), 0 4px 14px rgba(0, 0, 0, 0.04);
 
   --radius-xs: 6px;
   --radius-sm: 10px;
   --radius-md: 16px;
-  --radius-lg: 24px;
-  --radius-xl: 32px;
+  --radius-lg: 22px;
+  --radius-xl: 30px;
   --radius-pill: 9999px;
 }
 
@@ -82,7 +105,20 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-serif);
   font-weight: 600;
   color: var(--text-main);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.015em;
+  line-height: 1.28;
+}
+
+h1 { font-size: var(--text-h1); }
+h2 { font-size: var(--text-h2); }
+h3 { font-size: var(--text-h3); }
+h4 { font-size: var(--text-h4); font-family: var(--font-sans); font-weight: 700; letter-spacing: -0.01em; }
+h5 { font-size: var(--text-body); font-family: var(--font-sans); font-weight: 700; }
+h6 { font-size: var(--text-body-sm); font-family: var(--font-sans); font-weight: 600; }
+
+p {
+  line-height: 1.6;
+  color: var(--text-muted);
 }
 
 .font-sans {
@@ -124,12 +160,12 @@ button, input, select, textarea {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.35rem 0.9rem;
-  background: rgba(255, 255, 255, 0.85);
-  border: 1px solid rgba(121, 82, 236, 0.2);
+  padding: 0.4rem 1rem;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(121, 82, 236, 0.22);
   border-radius: var(--radius-pill);
   font-family: var(--font-sans);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -152,7 +188,7 @@ button, input, select, textarea {
   justify-content: center;
   gap: 0.5rem;
   padding: 0.75rem 1.6rem;
-  font-size: 0.9rem;
+  font-size: 0.92rem;
   font-weight: 600;
   border-radius: var(--radius-pill);
   border: 1px solid transparent;
@@ -207,8 +243,8 @@ button, input, select, textarea {
 }
 
 .btn-sm {
-  padding: 0.45rem 1rem;
-  font-size: 0.825rem;
+  padding: 0.5rem 1.15rem;
+  font-size: 0.85rem;
 }
 
 /* Glass Card & Panels */
@@ -231,18 +267,22 @@ button, input, select, textarea {
 /* Form Controls */
 .label-form {
   display: block;
-  font-size: 0.82rem;
+  font-family: var(--font-sans);
+  font-size: 0.84rem;
   font-weight: 600;
   color: var(--text-main);
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.45rem;
+  letter-spacing: 0.01em;
 }
 
 .input-text,
 .input-textarea,
 .input-select {
   width: 100%;
-  padding: 0.7rem 1rem;
-  font-size: 0.88rem;
+  padding: 0.75rem 1.1rem;
+  font-family: var(--font-sans);
+  font-size: 0.92rem;
+  line-height: 1.55;
   background: #FFFFFF;
   border: 1px solid rgba(19, 19, 22, 0.12);
   border-radius: var(--radius-sm);
@@ -255,7 +295,7 @@ button, input, select, textarea {
 .input-textarea:focus,
 .input-select:focus {
   border-color: var(--accent-purple);
-  box-shadow: 0 0 0 3px rgba(121, 82, 236, 0.12);
+  box-shadow: 0 0 0 3px rgba(121, 82, 236, 0.15);
 }
 
 .banner-error {

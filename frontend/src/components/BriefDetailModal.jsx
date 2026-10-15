@@ -647,47 +647,35 @@ export default function BriefDetailModal({ brief, onClose, onSelectCreator, curr
                 {applySuccess ? (
                   <div className="alert-success" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <div>✓ Application pitch successfully submitted to brand! Engagement pending review.</div>
-                    <div style={{ fontSize: '11px', color: '#047857' }}>
+                    <div style={{ fontSize: '12px', color: '#047857', lineHeight: 1.5 }}>
                       Once {brandName} reviews and accepts your proposal, direct messaging will unlock automatically.
                     </div>
                   </div>
                 ) : (
                   <form onSubmit={handleApply} className="apply-form">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                      <span style={{ fontSize: '11px', fontWeight: '700', color: '#555' }}>
-                        Proposal Pitch & Approach:
-                      </span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
+                      <label className="label-form" style={{ margin: 0 }}>
+                        Proposal Pitch & Creative Approach:
+                      </label>
                       <button
                         type="button"
                         onClick={handleAiAssistPitch}
                         disabled={isDraftingPitch}
-                        style={{
-                          fontSize: '11px',
-                          fontWeight: '700',
-                          color: '#7952EC',
-                          backgroundColor: '#ECE6FC',
-                          border: '1px solid rgba(121, 82, 236, 0.3)',
-                          borderRadius: '6px',
-                          padding: '3px 9px',
-                          cursor: isDraftingPitch ? 'wait' : 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                        }}
+                        className="btn-ai-assist"
                       >
                         {isDraftingPitch ? 'Formulating Pitch...' : '✨ Assist Pitch with AI'}
                       </button>
                     </div>
 
                     {pitchDraftedEngine && (
-                      <div style={{ fontSize: '10px', color: '#047857', marginBottom: '6px', backgroundColor: '#ECFDF5', padding: '4px 8px', borderRadius: '6px', border: '1px solid #A7F3D0' }}>
+                      <div style={{ fontSize: '11px', color: '#047857', marginBottom: '8px', backgroundColor: '#ECFDF5', padding: '6px 12px', borderRadius: '8px', border: '1px solid #A7F3D0', lineHeight: 1.4 }}>
                         ✓ Grounded pitch drafted from your verified portfolio and tools ({pitchDraftedEngine}). Review and edit before submitting.
                       </div>
                     )}
 
                     <textarea
-                      rows={4}
-                      placeholder="Explain your creative approach, tools (Runway/ComfyUI), and portfolio relevance..."
+                      rows={5}
+                      placeholder="Explain your creative approach, tools (Runway, ComfyUI, Midjourney), and portfolio relevance..."
                       value={pitchText}
                       onChange={(e) => setPitchText(e.target.value)}
                       className="apply-textarea"
@@ -701,36 +689,25 @@ export default function BriefDetailModal({ brief, onClose, onSelectCreator, curr
                           value={proposedRate}
                           onChange={(e) => setProposedRate(e.target.value)}
                           className="rate-input"
+                          min="100"
+                          step="50"
                         />
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <button
                           type="button"
-                          className="btn-chat-with-brand"
+                          className="btn-chat-pill"
                           onClick={handleChatWithBrand}
                           disabled={isCheckingChat}
-                          style={{
-                            backgroundColor: '#FAF8F5',
-                            color: '#7952EC',
-                            border: '1.5px solid #7952EC',
-                            borderRadius: '8px',
-                            padding: '8px 14px',
-                            fontSize: '12px',
-                            fontWeight: '700',
-                            cursor: isCheckingChat ? 'wait' : 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                          }}
                         >
                           💬 Chat with Brand
                         </button>
-                        <button type="submit" className="btn btn-primary btn-sm" disabled={submittingApply}>
+                        <button type="submit" className="btn btn-dark btn-sm" disabled={submittingApply}>
                           {submittingApply ? 'Submitting...' : 'Submit Pitch →'}
                         </button>
                       </div>
                     </div>
-                    {applyError && <p className="text-red text-sm mt-1">{applyError}</p>}
+                    {applyError && <p className="banner-error mt-2">{applyError}</p>}
                   </form>
                 )}
               </div>

@@ -1515,24 +1515,24 @@ export default function CreatorDashboard({
                     return (
                       <div
                         key={sb.id || briefId}
-                        className="glass-panel p-5 rounded-2xl border border-black/10 shadow-sm hover:shadow-md transition flex flex-col justify-between space-y-4"
+                        className="kivora-saved-brief-card"
                       >
                         <div>
                           {/* Brand Info & Remove Header */}
-                          <div className="flex items-start justify-between gap-3 mb-3">
-                            <div className="flex items-center gap-3 min-w-0">
+                          <div className="saved-card-header">
+                            <div className="saved-brand-info">
                               <BrandLogo
                                 brand={brand}
                                 brandName={brand.company_name || 'Brand Partner'}
-                                size={40}
+                                size={38}
                                 shape="rounded"
                                 padding="2px"
                               />
                               <div className="min-w-0">
-                                <h4 className="text-xs font-bold text-neutral-900 truncate">
+                                <h4 className="saved-brand-name">
                                   {brand.company_name || 'Brand Partner'}
                                 </h4>
-                                <span className="text-[11px] text-purple-700 font-medium block truncate">
+                                <span className="saved-brand-category">
                                   {brand.industry || brief.category || 'Commercial Campaign'}
                                 </span>
                               </div>
@@ -1541,7 +1541,7 @@ export default function CreatorDashboard({
                             <button
                               type="button"
                               onClick={() => handleUnsaveBrief(briefId)}
-                              className="shrink-0 px-2.5 py-1 text-[11px] font-semibold text-neutral-500 hover:text-red-700 hover:bg-red-50 rounded-lg border border-transparent hover:border-red-200 transition flex items-center gap-1"
+                              className="saved-remove-btn"
                               title="Remove from saved briefs"
                             >
                               <span>✕</span>
@@ -1551,31 +1551,31 @@ export default function CreatorDashboard({
 
                           {/* Brief Title & Objective */}
                           <h3
-                            className="font-bold text-sm text-neutral-900 mb-1 hover:text-purple-700 cursor-pointer transition"
+                            className="saved-brief-title"
                             onClick={() => {
                               if (onSelectBrief && brief.id) onSelectBrief(brief);
                             }}
                           >
                             {brief.title || 'Untitled Campaign'}
                           </h3>
-                          <p className="text-xs text-neutral-600 line-clamp-2 leading-relaxed">
-                            {brief.campaign_objective || brief.deliverables_description || 'No objective description provided.'}
+                          <p className="saved-brief-desc">
+                            {brief.campaign_objective || brief.deliverables_description || 'Commercial production brief requiring verified proof.'}
                           </p>
 
                           {/* Format & Specification Badges */}
-                          <div className="flex flex-wrap items-center gap-1.5 mt-3">
+                          <div className="saved-specs-row">
                             {brief.content_type && (
-                              <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-neutral-100 text-neutral-700 uppercase">
+                              <span className="saved-spec-pill">
                                 {brief.content_type}
                               </span>
                             )}
                             {brief.aspect_ratio && (
-                              <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-purple-50 text-purple-700">
+                              <span className="saved-spec-pill saved-spec-pill-purple">
                                 {brief.aspect_ratio}
                               </span>
                             )}
                             {brief.revision_allowance !== undefined && (
-                              <span className="px-2 py-0.5 text-[10px] font-medium rounded-md bg-neutral-100 text-neutral-600">
+                              <span className="saved-spec-pill">
                                 {brief.revision_allowance} {brief.revision_allowance === 1 ? 'Revision' : 'Revisions'}
                               </span>
                             )}
@@ -1583,12 +1583,12 @@ export default function CreatorDashboard({
                         </div>
 
                         {/* Card Footer: Budget & Action Button */}
-                        <div className="flex items-center justify-between pt-3 border-t border-black/5">
+                        <div className="saved-card-footer">
                           <div>
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
+                            <span className="opp-budget-label">
                               Compensation
                             </span>
-                            <span className="text-sm font-extrabold text-purple-700">
+                            <span className="saved-budget-val">
                               ${brief.budget_amount ? brief.budget_amount.toLocaleString() : 'Open'} USD
                             </span>
                           </div>
@@ -1597,7 +1597,7 @@ export default function CreatorDashboard({
                             onClick={() => {
                               if (onSelectBrief && brief.id) onSelectBrief(brief);
                             }}
-                            className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1 shadow-sm"
+                            className="saved-view-btn"
                           >
                             <span>View Brief</span>
                             <span>→</span>
@@ -1692,80 +1692,95 @@ export default function CreatorDashboard({
                   {opportunities.map((opp) => (
                     <div
                       key={opp.id}
-                      className="p-5 bg-white rounded-2xl border border-black/10 shadow-sm flex flex-col justify-between space-y-3"
+                      className="kivora-opportunity-card"
                     >
                       <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-lg">
-                            {opp.brief?.brand?.company_name || 'Brand Campaign'}
-                          </span>
-                          <span className="text-xs font-extrabold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                        {/* Brand & Fit Row */}
+                        <div className="opp-card-top-row">
+                          <div className="opp-brand-info">
+                            <span className="opp-brand-name">
+                              {opp.brief?.brand?.company_name || 'Brand Campaign'}
+                            </span>
+                          </div>
+                          <span className="opp-match-pill">
                             ★ {Math.round(opp.match_score)}% Fit
                           </span>
                         </div>
 
-                        <h3 className="font-bold text-sm text-neutral-900 mb-1">{opp.brief?.title}</h3>
-                        <p className="text-xs text-neutral-600 line-clamp-2 mb-3">
+                        {/* Campaign Title & Objective */}
+                        <h3
+                          className="opp-title"
+                          onClick={() => {
+                            if (onSelectBrief && opp.brief) onSelectBrief(opp.brief);
+                          }}
+                        >
+                          {opp.brief?.title}
+                        </h3>
+                        <p className="opp-desc">
                           {opp.brief?.campaign_objective || opp.brief?.deliverables_description}
                         </p>
 
                         {/* Match Reasons Chips */}
-                        <div className="space-y-1 mb-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
-                              Why this matched:
+                        <div className="opp-reasons-container">
+                          <div className="opp-reasons-header">
+                            <span className="opp-reasons-label">
+                              Why this matched
                             </span>
                             <button
                               type="button"
                               onClick={() => setExpandedOppId(expandedOppId === opp.id ? null : opp.id)}
-                              className="text-[10px] font-semibold text-purple-600 hover:text-purple-800 transition"
+                              className="opp-reasons-toggle"
                             >
                               {expandedOppId === opp.id ? 'Hide Details ▲' : 'Explain Match ▼'}
                             </button>
                           </div>
                           {(opp.match_reasons || []).slice(0, 2).map((reason, ri) => (
-                            <div key={ri} className="text-[11px] text-neutral-700 flex items-center gap-1.5">
-                              <span className="text-emerald-500 font-bold">✓</span>
-                              <span className="line-clamp-1">{reason}</span>
+                            <div key={ri} className="opp-reason-item">
+                              <span className="opp-reason-check">✓</span>
+                              <span className="truncate">{reason}</span>
                             </div>
                           ))}
 
                           {/* Expandable Explanation Details */}
                           {expandedOppId === opp.id && (
-                            <div className="mt-3 p-3 bg-purple-50/60 rounded-xl border border-purple-100 space-y-2 text-xs">
+                            <div className="mt-3 pt-3 border-t border-purple-100 space-y-2 text-xs">
                               <div className="font-semibold text-purple-900 text-[11px]">
                                 Detailed Compatibility Factors:
                               </div>
                               {(opp.match_reasons || []).map((reason, ri) => (
-                                <div key={ri} className="text-[11px] text-purple-800 flex items-start gap-1.5">
+                                <div key={ri} className="opp-reason-item">
                                   <span className="text-purple-600 font-bold shrink-0">✓</span>
                                   <span>{reason}</span>
                                 </div>
                               ))}
                               {opp.brief?.content_type && (
-                                <div className="text-[10px] text-neutral-500 pt-1 border-t border-purple-200/60 flex items-center justify-between">
+                                <div className="text-[11px] text-neutral-500 pt-2 border-t border-purple-100 flex items-center justify-between">
                                   <span>Format: {opp.brief.content_type} ({opp.brief.aspect_ratio || '16:9'})</span>
                                   <span>Revisions: {opp.brief.revision_allowance || 2}</span>
                                 </div>
                               )}
-                              <p className="text-[9px] text-neutral-400 italic pt-1">
-                                Disclaimer: Fit score estimated from portfolio evidence, not a guarantee of brand acceptance.
+                              <p className="text-[10px] text-neutral-400 italic pt-1">
+                                Match score determined from verified portfolio nodes, tools, and past deliverables.
                               </p>
                             </div>
                           )}
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between pt-3 border-t border-black/5">
-                        <span className="text-xs font-bold text-neutral-900">
-                          ${opp.brief?.budget_amount?.toLocaleString()} USD
-                        </span>
+                      {/* Card Footer: Budget & Primary Action */}
+                      <div className="opp-card-footer">
+                        <div>
+                          <span className="opp-budget-label">Compensation</span>
+                          <span className="opp-budget-amount">
+                            ${opp.brief?.budget_amount?.toLocaleString()} USD
+                          </span>
+                        </div>
                         <button
                           type="button"
                           onClick={() => {
                             if (onSelectBrief && opp.brief) onSelectBrief(opp.brief);
                           }}
-                          className="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg shadow-sm transition"
+                          className="opp-action-btn"
                         >
                           Review Opportunity →
                         </button>

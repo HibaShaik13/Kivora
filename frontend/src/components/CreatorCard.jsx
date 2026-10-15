@@ -198,17 +198,6 @@ export default function CreatorCard({
                   e.stopPropagation();
                   onInviteCreator(creator);
                 }}
-                style={{
-                  backgroundColor: '#ECE6FC',
-                  color: '#7952EC',
-                  border: '1px solid #D8CCFC',
-                  borderRadius: '8px',
-                  padding: '6px 12px',
-                  fontSize: '12px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
               >
                 Invite ✉️
               </button>
@@ -234,17 +223,6 @@ export default function CreatorCard({
                   } catch {
                     onSelectCreator?.(creator);
                   }
-                }}
-                style={{
-                  backgroundColor: '#FAF8F5',
-                  color: '#7952EC',
-                  border: '1px solid #D8CCFC',
-                  borderRadius: '8px',
-                  padding: '6px 12px',
-                  fontSize: '12px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
                 }}
                 title="Chat with creator"
               >

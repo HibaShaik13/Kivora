@@ -11,6 +11,11 @@ export default function Navbar({
   onOpenAdminDesk,
 }) {
   const [isScrolled, setIsScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [currentView]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -231,8 +236,82 @@ export default function Navbar({
               </button>
             </div>
           )}
+
+          {/* Mobile Hamburger Toggle */}
+          <button
+            type="button"
+            className="mobile-hamburger-btn"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label="Toggle Navigation Menu"
+            aria-expanded={mobileMenuOpen}
+          >
+            {mobileMenuOpen ? '✕' : '☰'}
+          </button>
         </div>
       </div>
+
+      {/* Mobile Drawer Dropdown */}
+      {mobileMenuOpen && (
+        <div className="mobile-nav-drawer">
+          <button
+            type="button"
+            className={`mobile-nav-link ${currentView === 'creators' ? 'active' : ''}`}
+            onClick={() => {
+              setMobileMenuOpen(false);
+              onNavigate('creators');
+            }}
+          >
+            Discover Creators
+          </button>
+          <button
+            type="button"
+            className={`mobile-nav-link ${currentView === 'briefs' ? 'active' : ''}`}
+            onClick={() => {
+              setMobileMenuOpen(false);
+              onNavigate('briefs');
+            }}
+          >
+            Explore Briefs
+          </button>
+          <button
+            type="button"
+            className="mobile-nav-link"
+            onClick={() => {
+              setMobileMenuOpen(false);
+              handleScrollToSection('how-it-works');
+            }}
+          >
+            How It Works
+          </button>
+          <button
+            type="button"
+            className="mobile-nav-link"
+            onClick={() => {
+              setMobileMenuOpen(false);
+              handleScrollToSection('about');
+            }}
+          >
+            About
+          </button>
+          {currentUser && (
+            <button
+              type="button"
+              className="mobile-nav-link mobile-nav-studio"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                if (currentUser.role === 'ADMIN') onNavigate('admin');
+                else onNavigate('dashboard');
+              }}
+            >
+              {currentUser.role === 'CREATOR'
+                ? '🎨 Creator Studio'
+                : currentUser.role === 'BRAND'
+                ? '🏢 Brand Portal'
+                : '🛡 Admin Desk'}
+            </button>
+          )}
+        </div>
+      )}
     </header>
   );
 }
