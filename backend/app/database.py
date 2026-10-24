@@ -22,9 +22,11 @@ if not raw_db_url or raw_db_url in ("sqlite:///./kivora.db", "sqlite:///kivora.d
 else:
     DATABASE_URL = raw_db_url
 
-# Normalize postgres:// to postgresql:// for SQLAlchemy 2.0 / Neon / Heroku / Supabase
+# Normalize postgres:// and postgresql:// to postgresql+psycopg2:// for SQLAlchemy 2.0
 if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
+elif DATABASE_URL.startswith("postgresql://") and not DATABASE_URL.startswith("postgresql+"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
 
 is_sqlite = "sqlite" in DATABASE_URL
 
