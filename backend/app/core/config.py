@@ -44,8 +44,26 @@ GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID")
 GITHUB_CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET")
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173").rstrip("/")
-BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
+def get_backend_url() -> str:
+    """Returns normalized backend API root URL with production auto-detection."""
+    url = os.getenv("BACKEND_URL") or os.getenv("RENDER_EXTERNAL_URL")
+    if not url:
+        is_prod = os.getenv("KIVORA_ENV") == "production"
+        url = "https://kivora-api-n7m1.onrender.com" if is_prod else "http://localhost:8000"
+    return url.rstrip("/")
+
+
+def get_frontend_url() -> str:
+    """Returns normalized frontend client URL with production auto-detection."""
+    url = os.getenv("FRONTEND_URL")
+    if not url:
+        is_prod = os.getenv("KIVORA_ENV") == "production"
+        url = "https://kivora-frontend.onrender.com" if is_prod else "http://localhost:5173"
+    return url.rstrip("/")
+
+
+FRONTEND_URL = get_frontend_url()
+BACKEND_URL = get_backend_url()
 
 
 def reload_env_if_needed():

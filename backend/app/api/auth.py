@@ -25,6 +25,8 @@ from backend.app.core.config import (
     get_google_client_secret,
     get_github_client_id,
     get_github_client_secret,
+    get_backend_url,
+    get_frontend_url,
     FRONTEND_URL,
     BACKEND_URL,
     SECRET_KEY,
@@ -521,6 +523,7 @@ def get_oauth_status():
     Returns real-time configuration status and callback endpoints
     for Google and GitHub OAuth 2.0 / OpenID Connect providers.
     """
+    backend_url = get_backend_url()
     return {
         "google": {
             "configured": is_google_oauth_configured(),
@@ -529,7 +532,7 @@ def get_oauth_status():
             "client_id": get_google_client_id() if is_google_oauth_configured() else None,
             "required_env": ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
             "setup_url": "https://console.cloud.google.com/apis/credentials",
-            "callback_url": f"{BACKEND_URL}/api/auth/oauth/google/callback"
+            "callback_url": f"{backend_url}/api/auth/oauth/google/callback"
         },
         "github": {
             "configured": is_github_oauth_configured(),
@@ -538,7 +541,7 @@ def get_oauth_status():
             "client_id": get_github_client_id() if is_github_oauth_configured() else None,
             "required_env": ["GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET"],
             "setup_url": "https://github.com/settings/developers",
-            "callback_url": f"{BACKEND_URL}/api/auth/oauth/github/callback"
+            "callback_url": f"{backend_url}/api/auth/oauth/github/callback"
         }
     }
 
@@ -561,6 +564,7 @@ def get_oauth_authorize_url(
 
     assigned_role = "BRAND" if (role or "").upper() == "BRAND" else "CREATOR"
     state_token = _encode_oauth_state(prov, assigned_role)
+    backend_url = get_backend_url()
 
     if prov == "google":
         if not is_google_oauth_configured():
@@ -568,7 +572,7 @@ def get_oauth_authorize_url(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Google OAuth is not configured. Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in backend/.env."
             )
-        redirect_uri = f"{BACKEND_URL}/api/auth/oauth/google/callback"
+        redirect_uri = f"{backend_url}/api/auth/oauth/google/callback"
         google_cid = get_google_client_id()
         auth_url = (
             f"https://accounts.google.com/o/oauth2/v2/auth?"
@@ -588,7 +592,7 @@ def get_oauth_authorize_url(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="GitHub OAuth is not configured. Please set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET in backend/.env."
             )
-        redirect_uri = f"{BACKEND_URL}/api/auth/oauth/github/callback"
+        redirect_uri = f"{backend_url}/api/auth/oauth/github/callback"
         github_cid = get_github_client_id()
         auth_url = (
             f"https://github.com/login/oauth/authorize?"
@@ -607,6 +611,7 @@ def _process_oauth_exchange(provider: str, code: str, state: Optional[str], db: 
     prov = provider.lower().strip()
     decoded_state = _decode_oauth_state(state) if state else {}
     desired_role = decoded_state.get("role", "CREATOR")
+    backend_url = get_backend_url()
 
     email = None
     display_name = None
@@ -618,7 +623,7 @@ def _process_oauth_exchange(provider: str, code: str, state: Optional[str], db: 
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Google OAuth is not configured on this server."
             )
-        redirect_uri = f"{BACKEND_URL}/api/auth/oauth/google/callback"
+        redirect_uri = f"{backend_url}/api/auth/oauth/google/callback"
         token_resp = requests.post(
             "https://oauth2.googleapis.com/token",
             data={
@@ -659,7 +664,7 @@ def _process_oauth_exchange(provider: str, code: str, state: Optional[str], db: 
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="GitHub OAuth is not configured on this server."
             )
-        redirect_uri = f"{BACKEND_URL}/api/auth/oauth/github/callback"
+        redirect_uri = f"{backend_url}/api/auth/oauth/github/callback"
         token_resp = requests.post(
             "https://github.com/login/oauth/access_token",
             json={
@@ -756,6 +761,7 @@ def _process_oauth_exchange(provider: str, code: str, state: Optional[str], db: 
                 hourly_rate=50.0,
                 availability_status="AVAILABLE",
                 verification_tier="COMMUNITY",
+                approval_status="APPROVED",
                 verified_claims_count=0,
                 completed_projects_count=0,
                 average_rating=5.0,
@@ -773,16 +779,22 @@ def _process_oauth_exchange(provider: str, code: str, state: Optional[str], db: 
                 industry="Creative & Media",
                 bio=f"Verified creative organization authenticated via {provider.capitalize()}.",
                 logo_url=avatar_url or "/assets/brands/default-brand.svg",
-                verification_status="UNVERIFIED",
+                verification_status="VERIFIED",
                 created_at=datetime.utcnow(),
                 updated_at=datetime.utcnow(),
             )
             db.add(brand)
         db.commit()
     else:
-        # User exists: ensure email is verified
+        # User exists: ensure email is verified and creator profile is approved
+        updated = False
         if not user.is_email_verified:
             user.is_email_verified = True
+            updated = True
+        if user.creator_profile and getattr(user.creator_profile, "approval_status", None) != "APPROVED":
+            user.creator_profile.approval_status = "APPROVED"
+            updated = True
+        if updated:
             db.commit()
 
     return user
@@ -803,7 +815,8 @@ def oauth_callback_get(
     access_token = create_access_token(
         data={"sub": user.id, "email": user.email, "role": user.role}
     )
-    redirect_target = f"{FRONTEND_URL}/?oauth_token={access_token}&email={user.email}&role={user.role}"
+    frontend_url = get_frontend_url()
+    redirect_target = f"{frontend_url}/?oauth_token={access_token}&email={user.email}&role={user.role}"
     return RedirectResponse(url=redirect_target)
 
 
