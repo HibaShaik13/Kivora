@@ -7,6 +7,7 @@ PyJWT token generation, and account profile retrieval.
 import uuid
 import requests
 import jwt
+import urllib.parse
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
@@ -574,16 +575,16 @@ def get_oauth_authorize_url(
             )
         redirect_uri = f"{backend_url}/api/auth/oauth/google/callback"
         google_cid = get_google_client_id()
-        auth_url = (
-            f"https://accounts.google.com/o/oauth2/v2/auth?"
-            f"client_id={google_cid}&"
-            f"redirect_uri={redirect_uri}&"
-            f"response_type=code&"
-            f"scope=openid%20email%20profile&"
-            f"state={state_token}&"
-            f"access_type=offline&"
-            f"prompt=select_account"
-        )
+        params = {
+            "client_id": google_cid,
+            "redirect_uri": redirect_uri,
+            "response_type": "code",
+            "scope": "openid email profile",
+            "state": state_token,
+            "access_type": "offline",
+            "prompt": "select_account",
+        }
+        auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?{urllib.parse.urlencode(params)}"
         return {"authorization_url": auth_url, "provider": "google", "state": state_token}
 
     elif prov == "github":
@@ -594,13 +595,13 @@ def get_oauth_authorize_url(
             )
         redirect_uri = f"{backend_url}/api/auth/oauth/github/callback"
         github_cid = get_github_client_id()
-        auth_url = (
-            f"https://github.com/login/oauth/authorize?"
-            f"client_id={github_cid}&"
-            f"redirect_uri={redirect_uri}&"
-            f"scope=read:user%20user:email&"
-            f"state={state_token}"
-        )
+        params = {
+            "client_id": github_cid,
+            "redirect_uri": redirect_uri,
+            "scope": "read:user user:email",
+            "state": state_token,
+        }
+        auth_url = f"https://github.com/login/oauth/authorize?{urllib.parse.urlencode(params)}"
         return {"authorization_url": auth_url, "provider": "github", "state": state_token}
 
 
@@ -761,7 +762,7 @@ def _process_oauth_exchange(provider: str, code: str, state: Optional[str], db: 
                 hourly_rate=50.0,
                 availability_status="AVAILABLE",
                 verification_tier="COMMUNITY",
-                approval_status="APPROVED",
+                approval_status="PENDING",
                 verified_claims_count=0,
                 completed_projects_count=0,
                 average_rating=5.0,
@@ -786,15 +787,9 @@ def _process_oauth_exchange(provider: str, code: str, state: Optional[str], db: 
             db.add(brand)
         db.commit()
     else:
-        # User exists: ensure email is verified and creator profile is approved
-        updated = False
+        # User exists: ensure email is marked verified upon successful OAuth sign-in
         if not user.is_email_verified:
             user.is_email_verified = True
-            updated = True
-        if user.creator_profile and getattr(user.creator_profile, "approval_status", None) != "APPROVED":
-            user.creator_profile.approval_status = "APPROVED"
-            updated = True
-        if updated:
             db.commit()
 
     return user
@@ -803,21 +798,36 @@ def _process_oauth_exchange(provider: str, code: str, state: Optional[str], db: 
 @router.get("/oauth/{provider}/callback")
 def oauth_callback_get(
     provider: str,
-    code: str = Query(..., description="Authorization code from OAuth provider"),
+    code: Optional[str] = Query(None, description="Authorization code from OAuth provider"),
     state: Optional[str] = Query(None, description="Signed state parameter"),
+    error: Optional[str] = Query(None, description="Error code from OAuth provider"),
+    error_description: Optional[str] = Query(None, description="Error description from OAuth provider"),
     db: Session = Depends(get_db)
 ):
     """
     Standard browser redirect callback flow for OAuth 2.0 / OpenID Connect.
     Establishes Kivora session and redirects to frontend with authenticated JWT token.
     """
-    user = _process_oauth_exchange(provider, code, state, db)
-    access_token = create_access_token(
-        data={"sub": user.id, "email": user.email, "role": user.role}
-    )
     frontend_url = get_frontend_url()
-    redirect_target = f"{frontend_url}/?oauth_token={access_token}&email={user.email}&role={user.role}"
-    return RedirectResponse(url=redirect_target)
+    if error:
+        err_msg = urllib.parse.quote(error_description or error)
+        return RedirectResponse(url=f"{frontend_url}/?oauth_error={err_msg}", status_code=status.HTTP_302_FOUND)
+    if not code:
+        return RedirectResponse(url=f"{frontend_url}/?oauth_error=missing_code", status_code=status.HTTP_302_FOUND)
+
+    try:
+        user = _process_oauth_exchange(provider, code, state, db)
+        access_token = create_access_token(
+            data={"sub": user.id, "email": user.email, "role": user.role}
+        )
+        redirect_target = f"{frontend_url}/?oauth_token={access_token}&email={user.email}&role={user.role}"
+        return RedirectResponse(url=redirect_target, status_code=status.HTTP_302_FOUND)
+    except HTTPException as exc:
+        err_msg = urllib.parse.quote(str(exc.detail))
+        return RedirectResponse(url=f"{frontend_url}/?oauth_error={err_msg}", status_code=status.HTTP_302_FOUND)
+    except Exception as exc:
+        err_msg = urllib.parse.quote(f"Authentication failed: {str(exc)}")
+        return RedirectResponse(url=f"{frontend_url}/?oauth_error={err_msg}", status_code=status.HTTP_302_FOUND)
 
 
 @router.post("/oauth/{provider}/callback", response_model=TokenResponse)
