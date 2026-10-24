@@ -29,19 +29,14 @@ def list_categories(db: Session = Depends(get_db)):
         .all()
     )
 
-    # Batch compute creator counts per category
-    creator_counts = dict(
-        db.query(CreatorCategory.category_id, func.count(func.distinct(CreatorCategory.creator_id)))
-        .group_by(CreatorCategory.category_id)
-        .all()
-    )
-
-    # Batch compute published brief counts per category
-    brief_counts = dict(
-        db.query(BriefCategory.category_id, func.count(func.distinct(BriefCategory.brief_id)))
+    # Fetch primary category-creator mappings so counts reflect true domain specialists
+    creator_links = db.query(CreatorCategory.category_id, CreatorCategory.creator_id).filter(CreatorCategory.is_primary == True).all()
+    if not creator_links:
+        creator_links = db.query(CreatorCategory.category_id, CreatorCategory.creator_id).all()
+    brief_links = (
+        db.query(BriefCategory.category_id, BriefCategory.brief_id)
         .join(Brief, BriefCategory.brief_id == Brief.id)
         .filter(Brief.status == "PUBLISHED")
-        .group_by(BriefCategory.category_id)
         .all()
     )
 
@@ -60,9 +55,10 @@ def list_categories(db: Session = Depends(get_db)):
             for s in sorted(c.subcategories, key=lambda x: (x.display_order, x.name))
         ]
 
-        # Aggregate counts for parent and all its subcategories
-        c_count = creator_counts.get(c.id, 0) + sum(creator_counts.get(s.id, 0) for s in c.subcategories)
-        b_count = brief_counts.get(c.id, 0) + sum(brief_counts.get(s.id, 0) for s in c.subcategories)
+        # Aggregate distinct creators and briefs across parent and all its subcategories
+        all_cat_ids = {c.id}.union(s.id for s in c.subcategories)
+        c_count = len({cid for cat_id, cid in creator_links if cat_id in all_cat_ids})
+        b_count = len({bid for cat_id, bid in brief_links if cat_id in all_cat_ids})
 
         results.append(
             CategoryRead(

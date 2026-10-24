@@ -139,233 +139,264 @@ export default function AddProjectModal({ isOpen, onClose, onProjectSaved, exist
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div
-        className="modal-container glass-panel max-w-2xl max-h-[90vh] overflow-y-auto"
+        className="modal-container glass-panel max-w-3xl w-[94vw] max-h-[90vh] flex flex-col p-0 overflow-hidden shadow-2xl rounded-2xl"
         onClick={(e) => e.stopPropagation()}
         style={{
-          backgroundImage: 'linear-gradient(rgba(255,255,255,0.95), rgba(255,255,255,0.95)), url(/assets/backgrounds/edit-profile.jpg)',
+          backgroundImage: 'linear-gradient(rgba(255,255,255,0.96), rgba(255,255,255,0.96)), url(/assets/backgrounds/edit-profile.jpg)',
           backgroundSize: 'cover',
         }}
       >
-        <div className="modal-header">
+        <div className="modal-header flex-shrink-0 px-6 py-4 border-b border-black/10 flex items-center justify-between bg-white/80 backdrop-blur-sm">
           <div>
             <span className="badge-editorial">
               <span className="badge-dot" />
               {isEditing ? 'UPDATE PROJECT' : 'NEW PORTFOLIO ENTRY'}
             </span>
-            <h2 className="modal-title">{isEditing ? 'Edit Portfolio Project' : 'Publish Masterpiece'}</h2>
+            <h2 className="modal-title text-xl font-bold text-neutral-900 mt-1">{isEditing ? 'Edit Portfolio Project' : 'Publish Masterpiece'}</h2>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>
+          <button type="button" className="modal-close-btn" onClick={onClose} aria-label="Close modal">
             ✕
           </button>
         </div>
 
-        {error && (
-          <div className="banner-error mb-4" style={{ padding: '0.75rem 1rem', borderRadius: '10px', background: '#FEE2E2', color: '#991B1B' }}>
-            {error}
-          </div>
-        )}
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden min-h-0">
+          <div className="modal-body overflow-y-auto flex-1 p-6 space-y-4">
+            {error && (
+              <div className="banner-error" style={{ padding: '0.75rem 1rem', borderRadius: '10px', background: '#FEE2E2', color: '#991B1B' }}>
+                {error}
+              </div>
+            )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="label-form">Project Title *</label>
-              <input
-                type="text"
-                className="input-text w-full"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. Cyberpunk Tokyo 2099 Cinematic"
-                required
-              />
-            </div>
-            <div>
-              <label className="label-form">Content Type *</label>
-              <select
-                className="input-text w-full"
-                value={contentType}
-                onChange={(e) => setContentType(e.target.value)}
-              >
-                <option value="VIDEO">Video</option>
-                <option value="IMAGE">Image</option>
-                <option value="ANIMATION">Animation</option>
-                <option value="3D_MODEL">3D Model / NeRF</option>
-                <option value="INTERACTIVE">Interactive / Real-time</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="label-form">Project Narrative / Description</label>
-            <textarea
-              className="input-text w-full"
-              rows={3}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe the aesthetic concept, creative intent, and production challenge."
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="label-form">Primary Asset URL / Video *</label>
-              <input
-                type="text"
-                className="input-text w-full"
-                value={primaryAssetUrl}
-                onChange={(e) => setPrimaryAssetUrl(e.target.value)}
-                placeholder="/assets/portfolio/my_asset.mp4"
-                required
-              />
-            </div>
-            <div>
-              <label className="label-form">Cover Thumbnail URL</label>
-              <input
-                type="text"
-                className="input-text w-full"
-                value={thumbnailUrl}
-                onChange={(e) => setThumbnailUrl(e.target.value)}
-                placeholder="/assets/portfolio/my_thumb.jpg"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="label-form">Aspect Ratio</label>
-              <select
-                className="input-text w-full"
-                value={aspectRatio}
-                onChange={(e) => setAspectRatio(e.target.value)}
-              >
-                <option value="16:9">16:9 (Landscape)</option>
-                <option value="9:16">9:16 (Vertical)</option>
-                <option value="1:1">1:1 (Square)</option>
-                <option value="4:5">4:5 (Portrait)</option>
-                <option value="21:9">21:9 (Cinematic)</option>
-              </select>
-            </div>
-            <div>
-              <label className="label-form">Resolution</label>
-              <input
-                type="text"
-                className="input-text w-full"
-                value={resolution}
-                onChange={(e) => setResolution(e.target.value)}
-                placeholder="3840x2160"
-              />
-            </div>
-            <div>
-              <label className="label-form">Duration (Sec)</label>
-              <input
-                type="number"
-                className="input-text w-full"
-                value={durationSeconds}
-                onChange={(e) => setDurationSeconds(e.target.value)}
-                disabled={contentType === 'IMAGE'}
-                min={1}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="label-form">Commercial License Type</label>
-              <select
-                className="input-text w-full"
-                value={commercialLicenseType}
-                onChange={(e) => setCommercialLicenseType(e.target.value)}
-              >
-                <option value="COMMERCIAL_BUYOUT">Full Commercial Buyout</option>
-                <option value="NON_COMMERCIAL">Non-Commercial / Portfolio Only</option>
-                <option value="EDITORIAL_ONLY">Editorial Use Only</option>
-                <option value="CC_BY">Creative Commons (CC-BY)</option>
-              </select>
-            </div>
-            <div className="flex items-center gap-4 pt-6">
-              <label className="flex items-center gap-2 cursor-pointer text-sm font-medium">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="label-form block mb-1 text-xs font-semibold text-neutral-700">Project Title *</label>
                 <input
-                  type="checkbox"
-                  checked={commercialRightsHeld}
-                  onChange={(e) => setCommercialRightsHeld(e.target.checked)}
+                  type="text"
+                  className="input-text w-full"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="e.g. Cyberpunk Tokyo 2099 Cinematic"
+                  required
                 />
-                Commercial Rights Held
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer text-sm font-medium">
-                <input
-                  type="checkbox"
-                  checked={featured}
-                  onChange={(e) => setFeatured(e.target.checked)}
-                />
-                Featured Highlight
-              </label>
+              </div>
+              <div>
+                <label className="label-form block mb-1 text-xs font-semibold text-neutral-700">Content Type *</label>
+                <select
+                  className="input-text w-full"
+                  value={contentType}
+                  onChange={(e) => setContentType(e.target.value)}
+                >
+                  <option value="VIDEO">Video</option>
+                  <option value="IMAGE">Image</option>
+                  <option value="ANIMATION">Animation</option>
+                  <option value="3D_MODEL">3D Model / NeRF</option>
+                  <option value="INTERACTIVE">Interactive / Real-time</option>
+                </select>
+              </div>
             </div>
-          </div>
 
-          {/* Workflow Steps Section */}
-          <div className="pt-3 border-t border-black/10">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-purple-700">
-                ⚡ ProofGraph Workflow Steps ({workflowSteps.length})
-              </span>
-              <button
-                type="button"
-                className="link-arrow-btn text-xs"
-                onClick={handleAddStep}
-              >
-                + Add Stage
-              </button>
+            <div>
+              <label className="label-form block mb-1 text-xs font-semibold text-neutral-700">Project Narrative / Description</label>
+              <textarea
+                className="input-text w-full"
+                rows={3}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Describe the aesthetic concept, creative intent, and production challenge."
+              />
             </div>
-            <div className="space-y-2">
-              {workflowSteps.map((step, idx) => (
-                <div key={idx} className="p-2.5 rounded-lg border border-black/5 bg-white/70 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold">Stage {idx + 1}</span>
-                    {workflowSteps.length > 1 && (
-                      <button
-                        type="button"
-                        className="text-xs text-red-500 hover:underline"
-                        onClick={() => handleRemoveStep(idx)}
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      type="text"
-                      className="input-text text-xs"
-                      placeholder="Stage Name (e.g. Prompt Architecture)"
-                      value={step.stage_name}
-                      onChange={(e) => handleStepChange(idx, 'stage_name', e.target.value)}
-                    />
-                    <input
-                      type="text"
-                      className="input-text text-xs"
-                      placeholder="Tools Used (e.g. ComfyUI, Runway)"
-                      value={step.tools_used}
-                      onChange={(e) => handleStepChange(idx, 'tools_used', e.target.value)}
-                    />
-                  </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="label-form block mb-1 text-xs font-semibold text-neutral-700">Primary Asset URL / Video *</label>
+                <input
+                  type="text"
+                  className="input-text w-full"
+                  value={primaryAssetUrl}
+                  onChange={(e) => setPrimaryAssetUrl(e.target.value)}
+                  placeholder="/assets/portfolio/my_asset.mp4"
+                  required
+                />
+              </div>
+              <div>
+                <label className="label-form block mb-1 text-xs font-semibold text-neutral-700">Cover Thumbnail URL</label>
+                <input
+                  type="text"
+                  className="input-text w-full"
+                  value={thumbnailUrl}
+                  onChange={(e) => setThumbnailUrl(e.target.value)}
+                  placeholder="/assets/portfolio/my_thumb.jpg"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="label-form block mb-1 text-xs font-semibold text-neutral-700">Aspect Ratio</label>
+                <select
+                  className="input-text w-full"
+                  value={aspectRatio}
+                  onChange={(e) => setAspectRatio(e.target.value)}
+                >
+                  <option value="16:9">16:9 (Landscape)</option>
+                  <option value="9:16">9:16 (Vertical)</option>
+                  <option value="1:1">1:1 (Square)</option>
+                  <option value="4:5">4:5 (Portrait)</option>
+                  <option value="21:9">21:9 (Cinematic)</option>
+                </select>
+              </div>
+              <div>
+                <label className="label-form block mb-1 text-xs font-semibold text-neutral-700">Resolution</label>
+                <input
+                  type="text"
+                  className="input-text w-full"
+                  value={resolution}
+                  onChange={(e) => setResolution(e.target.value)}
+                  placeholder="3840x2160"
+                />
+              </div>
+              <div>
+                <label className="label-form block mb-1 text-xs font-semibold text-neutral-700">Duration (Sec)</label>
+                <input
+                  type="number"
+                  className="input-text w-full"
+                  value={durationSeconds}
+                  onChange={(e) => setDurationSeconds(e.target.value)}
+                  disabled={contentType === 'IMAGE'}
+                  min={1}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="label-form block mb-1 text-xs font-semibold text-neutral-700">Commercial License Type</label>
+                <select
+                  className="input-text w-full"
+                  value={commercialLicenseType}
+                  onChange={(e) => setCommercialLicenseType(e.target.value)}
+                >
+                  <option value="COMMERCIAL_BUYOUT">Full Commercial Buyout</option>
+                  <option value="NON_COMMERCIAL">Non-Commercial / Portfolio Only</option>
+                  <option value="EDITORIAL_ONLY">Editorial Use Only</option>
+                  <option value="CC_BY">Creative Commons (CC-BY)</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-4 pt-1 sm:pt-6 flex-wrap">
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-neutral-700">
                   <input
-                    type="text"
-                    className="input-text text-xs w-full"
-                    placeholder="Brief description of parameters & technique"
-                    value={step.description}
-                    onChange={(e) => handleStepChange(idx, 'description', e.target.value)}
+                    type="checkbox"
+                    checked={commercialRightsHeld}
+                    onChange={(e) => setCommercialRightsHeld(e.target.checked)}
+                    className="rounded text-purple-600"
                   />
+                  Commercial Rights Held
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-neutral-700">
                   <input
-                    type="text"
-                    className="input-text text-xs font-mono w-full"
-                    placeholder='Parameters JSON snippet (e.g. {"seed": 1234, "cfg": 7})'
-                    value={step.parameters_snippet || ''}
-                    onChange={(e) => handleStepChange(idx, 'parameters_snippet', e.target.value)}
+                    type="checkbox"
+                    checked={featured}
+                    onChange={(e) => setFeatured(e.target.checked)}
+                    className="rounded text-purple-600"
                   />
+                  Featured Highlight ★
+                </label>
+              </div>
+            </div>
+
+            {/* ProofGraph Workflow Steps Section */}
+            <div className="pt-4 border-t border-black/10">
+              <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-purple-700 block">
+                    ⚡ ProofGraph Workflow Architecture ({workflowSteps.length} Stages)
+                  </span>
+                  <span className="text-[11px] text-neutral-500">
+                    Transparent generation pipeline audited by Kivora verification authority.
+                  </span>
                 </div>
-              ))}
+                <button
+                  type="button"
+                  className="btn-secondary text-xs py-1.5 px-3 flex items-center gap-1 font-semibold"
+                  onClick={handleAddStep}
+                >
+                  + Add Stage
+                </button>
+              </div>
+              <div className="space-y-3">
+                {workflowSteps.map((step, idx) => (
+                  <div key={idx} className="p-3.5 rounded-xl border border-black/10 bg-white/80 space-y-2.5 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-purple-100 text-purple-800 font-mono">
+                          STAGE {idx + 1}
+                        </span>
+                        <span className="text-xs font-bold text-neutral-800">
+                          {step.stage_name || `Stage ${idx + 1}`}
+                        </span>
+                      </div>
+                      {workflowSteps.length > 1 && (
+                        <button
+                          type="button"
+                          className="text-xs text-red-500 hover:text-red-700 hover:underline font-semibold"
+                          onClick={() => handleRemoveStep(idx)}
+                        >
+                          Remove Stage
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-neutral-600 mb-1">Stage Name</label>
+                        <input
+                          type="text"
+                          className="input-text text-xs w-full"
+                          placeholder="e.g. Concept & Prompt Architecture"
+                          value={step.stage_name}
+                          onChange={(e) => handleStepChange(idx, 'stage_name', e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-neutral-600 mb-1">Tools & Models Used</label>
+                        <input
+                          type="text"
+                          className="input-text text-xs w-full"
+                          placeholder="e.g. Midjourney v6.1 & Claude 3.5"
+                          value={step.tools_used}
+                          onChange={(e) => handleStepChange(idx, 'tools_used', e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-neutral-600 mb-1">Technique & Parameter Details</label>
+                      <input
+                        type="text"
+                        className="input-text text-xs w-full"
+                        placeholder="Brief description of camera trajectory, optics, or interpolation"
+                        value={step.description}
+                        onChange={(e) => handleStepChange(idx, 'description', e.target.value)}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-neutral-600 mb-1">Parameters JSON / Seed Metadata</label>
+                      <input
+                        type="text"
+                        className="input-text text-xs font-mono w-full text-purple-900 bg-purple-50/40"
+                        placeholder='{"cfg_scale": 6.5, "sampler": "Euler A", "seed": 849204}'
+                        value={step.parameters_snippet || ''}
+                        onChange={(e) => handleStepChange(idx, 'parameters_snippet', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-black/10">
+          <div className="modal-footer flex-shrink-0 px-6 py-4 border-t border-black/10 bg-white/90 backdrop-blur-sm flex items-center justify-end gap-3">
             <button type="button" className="btn-secondary" onClick={onClose} disabled={isLoading}>
               Cancel
             </button>

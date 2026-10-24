@@ -4,6 +4,8 @@ import { api } from '../services/api';
 import { getCurrentUser } from '../services/authService';
 import CategoryCard from './CategoryCard';
 import BriefCard from './BriefCard';
+import { resolveBriefDomain, CATEGORY_SLUG_TO_DOMAIN } from '../utils/briefImageMap';
+import { formatINR } from '../utils/indianLocalization';
 
 export default function BriefsExplorer({
   onSelectBrief,
@@ -41,7 +43,7 @@ export default function BriefsExplorer({
 
   // Filters State
   const [searchQuery, setSearchQuery] = useState('');
-  const [maxBudget, setMaxBudget] = useState(35000);
+  const [maxBudget, setMaxBudget] = useState(49999);
   const [selectedProjectTypes, setSelectedProjectTypes] = useState([]);
   const [selectedTimelines, setSelectedTimelines] = useState([]);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
@@ -84,7 +86,7 @@ export default function BriefsExplorer({
     setSelectedCategory(null);
     setSelectedSubcategory(null);
     setSearchQuery('');
-    setMaxBudget(35000);
+    setMaxBudget(49999);
     setSelectedProjectTypes([]);
     setSelectedTimelines([]);
   };
@@ -159,10 +161,14 @@ export default function BriefsExplorer({
           );
         });
 
-        const textCorpus = `${b.title} ${b.creative_style_mood} ${b.campaign_objective} ${b.content_type}`.toLowerCase();
-        const hasTextCat = textCorpus.includes(catName) || textCorpus.includes(catSlug.replace('-', ' '));
+        const targetDomain = CATEGORY_SLUG_TO_DOMAIN[catSlug];
+        const briefDomain = resolveBriefDomain(b);
+        const hasDomainMatch = Boolean(targetDomain && briefDomain === targetDomain);
 
-        if (!hasRelationalCat && !hasTextCat) return false;
+        const textCorpus = `${b.title} ${b.creative_style_mood} ${b.campaign_objective} ${b.content_type}`.toLowerCase();
+        const hasTextCat = textCorpus.includes(catName) || textCorpus.includes(catSlug.replace(/-/g, ' '));
+
+        if (!hasRelationalCat && !hasDomainMatch && !hasTextCat) return false;
 
         // Subcategory check
         if (selectedSubcategory) {
@@ -170,7 +176,7 @@ export default function BriefsExplorer({
           const hasSub = briefCats.some(
             (bc) => (bc.slug || '').toLowerCase() === subSlug || (bc.name || '').toLowerCase() === subSlug
           );
-          if (!hasSub && !textCorpus.includes(subSlug.replace('-', ' '))) return false;
+          if (!hasSub && !textCorpus.includes(subSlug.replace(/-/g, ' '))) return false;
         }
       }
 
@@ -188,8 +194,8 @@ export default function BriefsExplorer({
         }
       }
 
-      // 3. Budget filter
-      if (maxBudget < 35000) {
+      // 3. Budget filter (INR ₹10,000 - ₹49,999)
+      if (maxBudget < 49999) {
         if ((b.budget_amount || 0) > maxBudget) return false;
       }
 
@@ -207,7 +213,7 @@ export default function BriefsExplorer({
     Boolean(selectedCategory) ||
     Boolean(selectedSubcategory) ||
     Boolean(searchQuery) ||
-    maxBudget < 35000 ||
+    maxBudget < 49999 ||
     selectedProjectTypes.length > 0 ||
     selectedTimelines.length > 0;
 
@@ -215,7 +221,7 @@ export default function BriefsExplorer({
     (selectedCategory ? 1 : 0) +
     (selectedSubcategory ? 1 : 0) +
     (searchQuery ? 1 : 0) +
-    (maxBudget < 35000 ? 1 : 0) +
+    (maxBudget < 49999 ? 1 : 0) +
     selectedProjectTypes.length +
     selectedTimelines.length;
 
@@ -357,17 +363,17 @@ export default function BriefsExplorer({
             <div className="filter-range-block">
               <input
                 type="range"
-                min="1000"
-                max="35000"
+                min="10000"
+                max="49999"
                 step="1000"
                 value={maxBudget}
                 onChange={(e) => setMaxBudget(Number(e.target.value))}
                 className="w-full accent-purple-600 cursor-pointer"
               />
               <div className="flex justify-between text-xs text-neutral-500 mt-1 font-mono">
-                <span>$1k</span>
+                <span>{formatINR(10000)}</span>
                 <span className="font-bold text-purple-700">
-                  {maxBudget >= 35000 ? 'Any Budget ($35k+)' : `Up to $${maxBudget.toLocaleString()}`}
+                  {maxBudget >= 49999 ? 'Any Budget (₹50k)' : `Up to ${formatINR(maxBudget)}`}
                 </span>
               </div>
             </div>

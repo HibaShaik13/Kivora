@@ -7,8 +7,87 @@ import CreatorDiscovery from './CreatorDiscovery';
 import MessagesInbox from './MessagesInbox';
 import CollaborationWorkspaceModal from './CollaborationWorkspaceModal';
 import BrandLogo from './BrandLogo';
-import { getCreatorAvatar } from '../utils/visualAssetHelpers';
+import NotificationBell from './NotificationBell';
+import ThemeToggle from './ThemeToggle';
+import BrandAnalyticsView from './BrandAnalyticsView';
+import PortalSettingsView from './PortalSettingsView';
+import { getCreatorAvatar, getBriefCoverImage } from '../utils/visualAssetHelpers';
+import { resolveBriefDomain, DOMAIN_LABELS, DOMAIN_FOLDERS } from '../utils/briefImageMap';
+import { formatINR, clampDemoBudget } from '../utils/indianLocalization';
 
+
+const LayoutDashboardIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="3" y="3" width="7" height="7" rx="1.5" />
+    <rect x="14" y="3" width="7" height="7" rx="1.5" />
+    <rect x="14" y="14" width="7" height="7" rx="1.5" />
+    <rect x="3" y="14" width="7" height="7" rx="1.5" />
+  </svg>
+);
+const BuildingIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" />
+    <path d="M6 12H4a2 2 0 0 0-2 2v8h4" />
+    <path d="M18 9h2a2 2 0 0 1 2 2v11h-4" />
+  </svg>
+);
+const FileTextIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <polyline points="14 2 14 8 20 8" />
+    <line x1="16" y1="13" x2="8" y2="13" />
+    <line x1="16" y1="17" x2="8" y2="17" />
+  </svg>
+);
+const UsersIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+  </svg>
+);
+const HeartHandshakeIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+  </svg>
+);
+const BookmarkIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />
+  </svg>
+);
+const MessageSquareIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+  </svg>
+);
+const CompassIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="12" cy="12" r="10" />
+    <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+  </svg>
+);
+const BarChartIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <line x1="12" y1="20" x2="12" y2="10" />
+    <line x1="18" y1="20" x2="18" y2="4" />
+    <line x1="6" y1="20" x2="6" y2="16" />
+  </svg>
+);
+const SettingsIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="12" cy="12" r="3" />
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+  </svg>
+);
+const LogOutIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+    <polyline points="16 17 21 12 16 7" />
+    <line x1="21" y1="12" x2="9" y2="12" />
+  </svg>
+);
 
 export default function BrandDashboard({
   currentUser,
@@ -17,6 +96,7 @@ export default function BrandDashboard({
   onSelectProject,
   onSelectBrief,
   onLogout,
+  onNavigateHome,
   initialTab,
   initialConversationId,
   chatContext,
@@ -62,6 +142,16 @@ export default function BrandDashboard({
   const [collabSubView, setCollabSubView] = useState('engagements'); // 'engagements' | 'creators'
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Campaign Briefs Filtering State
+  const [briefSearchQuery, setBriefSearchQuery] = useState('');
+  const [briefDomainFilter, setBriefDomainFilter] = useState('ALL');
+  const [briefStatusFilter, setBriefStatusFilter] = useState('ALL');
+  const [briefTabStatus, setBriefTabStatus] = useState('ALL');
+  const [briefMarketingGoal, setBriefMarketingGoal] = useState('ALL');
+  const [briefContentType, setBriefContentType] = useState('ALL');
+  const [briefBudgetRange, setBriefBudgetRange] = useState('ALL');
+  const [portalSearchQuery, setPortalSearchQuery] = useState('');
 
   // Modals
   const [isCreateBriefOpen, setIsCreateBriefOpen] = useState(false);
@@ -144,116 +234,235 @@ export default function BrandDashboard({
     }
   };
 
+  const handleNotificationNavigate = (view, opts) => {
+    if (opts?.tab) {
+      if (opts.tab === 'projects') {
+        setActiveTab('engagements');
+      } else {
+        setActiveTab(opts.tab);
+      }
+    } else if (view === 'inbox' || view === 'messages') {
+      setActiveTab('messages');
+    } else if (view === 'briefs') {
+      setActiveTab('briefs');
+    } else {
+      setActiveTab('overview');
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const filteredBriefs = React.useMemo(() => {
+    return briefs.filter((brief) => {
+      // 1. Status Tab filter (All, Open, In Progress, Completed, Drafts)
+      if (briefTabStatus && briefTabStatus !== 'ALL') {
+        if (briefTabStatus === 'OPEN' && brief.status !== 'PUBLISHED') return false;
+        if (briefTabStatus === 'IN_PROGRESS' && (brief.status !== 'PUBLISHED' || !(brief.applications_count > 0))) return false;
+        if (briefTabStatus === 'COMPLETED' && brief.status !== 'CLOSED') return false;
+        if (briefTabStatus === 'DRAFTS' && brief.status !== 'DRAFT') return false;
+      }
+      // 2. Dropdown Status filter
+      if (briefStatusFilter !== 'ALL' && brief.status !== briefStatusFilter) {
+        return false;
+      }
+      // 3. Marketing Goal filter
+      if (briefMarketingGoal && briefMarketingGoal !== 'ALL') {
+        const obj = (brief.campaign_objective || '').toLowerCase();
+        const title = (brief.title || '').toLowerCase();
+        if (briefMarketingGoal === 'PRODUCT_LAUNCH' && !obj.includes('launch') && !title.includes('launch')) return false;
+        if (briefMarketingGoal === 'BRAND_AWARENESS' && !obj.includes('brand') && !obj.includes('awareness')) return false;
+        if (briefMarketingGoal === 'CONVERSIONS' && !obj.includes('ad') && !obj.includes('commercial')) return false;
+        if (briefMarketingGoal === 'SOCIAL_REELS' && !obj.includes('reel') && !obj.includes('social') && brief.aspect_ratio !== '9:16') return false;
+      }
+      // 4. Content Type filter
+      if (briefContentType && briefContentType !== 'ALL') {
+        const ct = (brief.content_type || '').toUpperCase();
+        if (briefContentType === 'VIDEO' && ct !== 'VIDEO') return false;
+        if (briefContentType === 'IMAGE' && ct !== 'IMAGE' && ct !== 'STILLS') return false;
+        if (briefContentType === '3D' && ct !== '3D' && ct !== 'CGI') return false;
+      }
+      // 5. Budget Range filter
+      if (briefBudgetRange && briefBudgetRange !== 'ALL') {
+        const b = clampDemoBudget(brief.budget_amount, 35000);
+        if (briefBudgetRange === 'TIER_1' && b >= 25000) return false;
+        if (briefBudgetRange === 'TIER_2' && (b < 25000 || b > 40000)) return false;
+        if (briefBudgetRange === 'TIER_3' && b <= 40000) return false;
+      }
+      // 6. Domain filter
+      if (briefDomainFilter !== 'ALL') {
+        const domain = resolveBriefDomain(brief);
+        if (domain !== briefDomainFilter) {
+          const catSlugs = (brief.categories || []).map((c) => (c.slug || '').toLowerCase());
+          const catNames = (brief.categories || []).map((c) => (c.name || '').toLowerCase());
+          const targetLabel = (DOMAIN_LABELS[briefDomainFilter] || '').toLowerCase();
+          const targetSlug = briefDomainFilter.toLowerCase().replace(/_/g, '-');
+          const hasRel = catSlugs.some((s) => s.includes(targetSlug)) || catNames.some((n) => n.includes(targetLabel));
+          if (!hasRel) return false;
+        }
+      }
+      // 7. Search query (from brief search or topbar search)
+      const effectiveSearch = (briefSearchQuery || portalSearchQuery || '').toLowerCase().trim();
+      if (effectiveSearch) {
+        const titleMatch = brief.title?.toLowerCase().includes(effectiveSearch);
+        const objMatch = brief.campaign_objective?.toLowerCase().includes(effectiveSearch);
+        const formatMatch = `${brief.content_type || ''} ${brief.aspect_ratio || ''}`.toLowerCase().includes(effectiveSearch);
+        if (!titleMatch && !objMatch && !formatMatch) return false;
+      }
+      return true;
+    });
+  }, [briefs, briefTabStatus, briefStatusFilter, briefMarketingGoal, briefContentType, briefBudgetRange, briefDomainFilter, briefSearchQuery, portalSearchQuery]);
+
   if (isLoading && !profile) {
     return (
       <div className="container py-16 flex flex-col items-center justify-center min-h-[50vh]">
         <div className="spinner-sm mb-4" />
-        <p className="text-neutral-500 font-serif">Accessing Brand Portal...</p>
+        <p className="text-neutral-500 font-sans text-sm">Accessing Brand Portal...</p>
       </div>
     );
   }
 
   return (
-    <div
-      className="brand-dashboard-layout"
-      style={{
-        backgroundImage: 'linear-gradient(rgba(250, 247, 242, 0.94), rgba(250, 247, 242, 0.94)), url(/assets/backgrounds/brand-dashboard.jpg)',
-        backgroundSize: 'cover',
-        backgroundAttachment: 'fixed',
-        minHeight: 'calc(100vh - 72px)',
-      }}
-    >
-      <div className="container mx-auto px-4 py-8 flex flex-col md:flex-row gap-8">
-        {/* Sidebar */}
-        <aside
-          className="w-full md:w-64 shrink-0 glass-panel rounded-2xl p-4 flex flex-col justify-between"
-          style={{
-            backgroundImage: 'linear-gradient(rgba(255,255,255,0.92), rgba(255,255,255,0.92)), url(/assets/backgrounds/sidebar.jpg)',
-            backgroundSize: 'cover',
-            height: 'fit-content',
-          }}
-        >
-          <div className="space-y-6">
-            {/* Brand Header */}
-            <div className="flex items-center gap-3 pb-4 border-b border-black/10">
-              <BrandLogo
-                brand={profile}
-                brandName={profile?.company_name || 'Lumina Skincare'}
-                size={44}
-                shape="rounded"
-                padding="3px"
-              />
-              <div className="overflow-hidden">
-                <h3 className="text-sm font-bold text-neutral-900 truncate">
-                  {profile?.company_name || 'Lumina Skincare'}
-                </h3>
-                <p className="text-xs text-neutral-500 truncate">
-                  {profile?.industry || 'Luxury Brand'}
-                </p>
-                <span className="inline-block mt-1 px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                  Verified Brand ✓
-                </span>
-              </div>
+    <div className="portal-layout">
+      {/* Sidebar with Purple/Lavender Gradient */}
+      <aside className="portal-sidebar">
+        <div>
+          {/* Top Logo */}
+          <div
+            className="portal-sidebar-logo"
+            onClick={onNavigateHome}
+            role="button"
+            tabIndex={0}
+            title="Kivora Home"
+          >
+            Kivora<span className="brand-dot">.</span>
+          </div>
+
+          {/* Brand Profile Badge */}
+          <div className="portal-profile-card">
+            <BrandLogo
+              brand={profile}
+              brandName={profile?.company_name || 'Lumina Skincare'}
+              width={40}
+              height={40}
+              shape="circle"
+              padding="2px"
+              className="shrink-0 ring-1 ring-purple-300 shadow-xs"
+            />
+            <div className="min-w-0 flex-1">
+              <h3 className="text-sm font-bold text-[#1E0B38] truncate font-sans tracking-tight">
+                {profile?.company_name || 'Lumina Skincare'}
+              </h3>
+              <p className="text-xs text-[#6B5B88] font-medium truncate font-sans">
+                Verified Brand
+              </p>
             </div>
-
-            {/* Navigation Tabs */}
-            <nav className="space-y-1">
-              {[
-                { id: 'overview', label: '📊 Brand Overview', icon: '📊' },
-                { id: 'profile', label: '🏢 Brand Organization', icon: '🏢' },
-                { id: 'briefs', label: '📋 Campaign Briefs', icon: '📋', count: briefs.length },
-                { id: 'applications', label: '📥 Pitch Proposals', icon: '📥', count: applications.length },
-                { id: 'engagements', label: '🤝 Collaborations', icon: '🤝', count: engagements.length },
-                { id: 'saved', label: '🔖 Saved Creators', icon: '🔖', count: savedCreators.length },
-                { id: 'messages', label: '💬 Messages & Chat', icon: '💬' },
-                { id: 'creators', label: '🔍 Discover Creators', icon: '🔍' },
-              ].map((tab) => (
-
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition ${
-                    activeTab === tab.id
-                      ? 'bg-purple-600 text-white shadow-md'
-                      : 'text-neutral-700 hover:bg-black/5'
-                  }`}
-                >
-                  <span>{tab.label}</span>
-                  {tab.count !== undefined && (
-                    <span
-                      className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                        activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-black/5 text-neutral-600'
-                      }`}
-                    >
-                      {tab.count}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </nav>
           </div>
 
-          <div className="pt-6 border-t border-black/10 mt-6 space-y-2">
+          {/* Navigation Tabs */}
+          <nav className="portal-nav-list">
+            {[
+              { id: 'overview', label: 'Dashboard', icon: <LayoutDashboardIcon /> },
+              { id: 'profile', label: 'Brand Profile', icon: <BuildingIcon /> },
+              { id: 'briefs', label: 'Campaign Briefs', icon: <FileTextIcon />, count: briefs.length },
+              { id: 'applications', label: 'Creator Applications', icon: <UsersIcon />, count: applications.length },
+              { id: 'engagements', label: 'Collaborations', icon: <HeartHandshakeIcon />, count: engagements.length },
+              { id: 'saved', label: 'Saved Creators', icon: <BookmarkIcon />, count: savedCreators.length },
+              { id: 'messages', label: 'Messages & Chat', icon: <MessageSquareIcon /> },
+              { id: 'creators', label: 'Discover Creators', icon: <CompassIcon /> },
+              { id: 'analytics', label: 'Analytics', icon: <BarChartIcon /> },
+              { id: 'settings', label: 'Settings', icon: <SettingsIcon /> },
+            ].map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => {
+                  setActiveTab(item.id);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className={`portal-nav-item ${activeTab === item.id ? 'active' : ''}`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="portal-nav-icon">{item.icon}</span>
+                  <span>{item.label}</span>
+                </div>
+                {item.count !== undefined && item.count > 0 && (
+                  <span className="portal-nav-count">{item.count}</span>
+                )}
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        {/* Bottom Log Out */}
+        <div className="portal-sidebar-footer">
+          <button
+            type="button"
+            onClick={onLogout}
+            className="portal-logout-btn"
+          >
+            <LogOutIcon />
+            <span>Log Out</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content Area with Cream/White Background */}
+      <div className="portal-main">
+        {/* Top Header Bar */}
+        <header className="portal-topbar">
+          <div className="portal-pill-badge brand">
+            <span>🏷</span>
+            <span>Brand Portal</span>
+          </div>
+
+          <div className="portal-search-wrap">
+            <svg
+              className="portal-search-icon"
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" x2="16.65" y1="21" y2="16.65" />
+            </svg>
+            <input
+              type="text"
+              className="portal-search-input"
+              placeholder="Search creators, brands, or skills..."
+              value={portalSearchQuery}
+              onChange={(e) => setPortalSearchQuery(e.target.value)}
+            />
+          </div>
+
+          <div className="portal-topbar-actions">
+            <ThemeToggle />
+            <NotificationBell onNavigate={handleNotificationNavigate} />
+
             <button
               type="button"
+              className="portal-icon-btn"
+              title="Messages & Chat"
+              onClick={() => setActiveTab('messages')}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+            </button>
+
+            <div
+              className="portal-topbar-avatar"
               onClick={() => setIsEditProfileOpen(true)}
-              className="w-full py-2 px-3 text-xs font-semibold rounded-xl bg-white/80 hover:bg-white text-neutral-800 border border-black/10 text-center transition"
+              title={profile?.company_name || 'Lumina Skincare'}
             >
-              ⚙ Edit Brand Settings
-            </button>
-            <button
-              type="button"
-              onClick={onLogout}
-              className="w-full py-2 px-3 text-xs font-semibold rounded-xl text-red-600 hover:bg-red-50 text-center transition"
-            >
-              Sign Out
-            </button>
+              {(profile?.company_name || 'L')[0]}
+            </div>
           </div>
-        </aside>
+        </header>
 
-        {/* Main Brand Workspace */}
-        <main className="flex-1 min-w-0">
+        {/* Content Body */}
+        <div className="portal-content-body">
           {error && (
             <div className="banner-error mb-6 p-4 rounded-xl bg-red-100 border border-red-200 text-red-800 text-xs">
               {error}
@@ -263,30 +472,37 @@ export default function BrandDashboard({
           {/* TAB 1: OVERVIEW */}
           {activeTab === 'overview' && (
             <div className="space-y-6">
-              <div className="glass-panel p-6 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              {/* Welcome Section */}
+              <div className="portal-header-row">
                 <div>
-                  <span className="badge-editorial">
-                    <span className="badge-dot" />
-                    BRAND DESK
-                  </span>
-                  <h1 className="text-2xl font-serif font-bold text-neutral-900 mt-1">
-                    {profile?.company_name || 'Brand'} <span className="serif-italic-accent">Command Center</span>
-                  </h1>
-                  <p className="text-xs text-neutral-600 mt-1">
-                    Commission audited AI commercial talent, generate briefs with Gemini, and sign off master deliverables.
+                  <span className="text-xs text-neutral-500 font-sans block">Welcome back,</span>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <h1 className="text-2xl font-bold font-sans text-neutral-900 tracking-tight">
+                      {profile?.company_name || 'Lumina Skincare'}
+                    </h1>
+                    <span
+                      className="portal-verified-circle"
+                      title="Verified Brand"
+                    >
+                      ✓
+                    </span>
+                  </div>
+                  <p className="text-xs text-neutral-500 mt-0.5 font-sans">
+                    Create impactful campaigns and collaborate with top AI creators.
                   </p>
                 </div>
-                <div className="flex gap-2">
+
+                <div className="flex items-center gap-3 shrink-0">
                   <button
                     type="button"
-                    className="btn-primary text-xs"
+                    className="portal-btn-primary"
                     onClick={() => setIsCreateBriefOpen(true)}
                   >
                     + Launch Brief
                   </button>
                   <button
                     type="button"
-                    className="btn-secondary text-xs flex items-center gap-1.5"
+                    className="portal-btn-outline-purple"
                     onClick={onOpenAiBuilder}
                   >
                     ✨ AI Brief Builder
@@ -294,124 +510,152 @@ export default function BrandDashboard({
                 </div>
               </div>
 
-              {/* Stat Cards */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="glass-panel p-4 rounded-xl text-center">
-                  <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider block">
-                    Total Briefs
-                  </span>
-                  <span className="text-2xl font-serif font-bold text-neutral-900">{briefs.length}</span>
+              {/* 4 Pastel Stat Cards */}
+              <div className="portal-stat-grid">
+                {/* Card 1: Total Briefs (Lavender Pastel) */}
+                <div className="portal-stat-card lavender">
+                  <div className="portal-stat-header">
+                    <div className="portal-stat-icon-wrap" style={{ background: '#F3E2FD', color: '#683EE6' }}>
+                      📊
+                    </div>
+                    <span className="portal-stat-title">Total Briefs</span>
+                  </div>
+                  <div>
+                    <div className="portal-stat-value">{briefs.length}</div>
+                    <div className="portal-stat-subtitle">Campaigns launched</div>
+                  </div>
                 </div>
-                <div className="glass-panel p-4 rounded-xl text-center">
-                  <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider block">
-                    Pitches Received
-                  </span>
-                  <span className="text-2xl font-serif font-bold text-purple-700">
-                    {applications.length}
-                  </span>
+
+                {/* Card 2: Creator Applications (Mint Pastel) */}
+                <div className="portal-stat-card mint">
+                  <div className="portal-stat-header">
+                    <div className="portal-stat-icon-wrap" style={{ background: '#DBF7E9', color: '#059669' }}>
+                      👥
+                    </div>
+                    <span className="portal-stat-title">Creator Applications</span>
+                  </div>
+                  <div>
+                    <div className="portal-stat-value">{applications.length}</div>
+                    <div className="portal-stat-subtitle">Proposals received</div>
+                  </div>
                 </div>
-                <div className="glass-panel p-4 rounded-xl text-center">
-                  <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider block">
-                    Active Collaborations
-                  </span>
-                  <span className="text-2xl font-serif font-bold text-emerald-600">
-                    {engagements.length}
-                  </span>
+
+                {/* Card 3: Active Collaborations (Peach Pastel) */}
+                <div className="portal-stat-card peach">
+                  <div className="portal-stat-header">
+                    <div className="portal-stat-icon-wrap" style={{ background: '#FFE5DC', color: '#EA580C' }}>
+                      🤝
+                    </div>
+                    <span className="portal-stat-title">Active Collaborations</span>
+                  </div>
+                  <div>
+                    <div className="portal-stat-value">{engagements.length}</div>
+                    <div className="portal-stat-subtitle">Projects in progress</div>
+                  </div>
                 </div>
-                <div className="glass-panel p-4 rounded-xl text-center">
-                  <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider block">
-                    Completed Works
-                  </span>
-                  <span className="text-2xl font-serif font-bold text-neutral-900">
-                    {engagements.filter((e) => e.status === 'COMPLETED').length}
-                  </span>
+
+                {/* Card 4: Completed Works (Yellow Pastel) */}
+                <div className="portal-stat-card yellow">
+                  <div className="portal-stat-header">
+                    <div className="portal-stat-icon-wrap" style={{ background: '#FDF4D4', color: '#D97706' }}>
+                      📁
+                    </div>
+                    <span className="portal-stat-title">Completed Works</span>
+                  </div>
+                  <div>
+                    <div className="portal-stat-value">{engagements.filter((e) => e.status === 'COMPLETED').length}</div>
+                    <div className="portal-stat-subtitle">Approved deliverables</div>
+                  </div>
                 </div>
               </div>
 
-              {/* Pending Applications Review Alert */}
-              <div className="glass-panel p-6 rounded-2xl space-y-4">
+              {/* Recent Campaign Briefs */}
+              <div className="space-y-4 pt-2">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-base font-bold text-neutral-900 font-serif">
-                    Recent Creator Pitch Proposals ({applications.length})
-                  </h3>
+                  <h2 className="text-base font-bold font-sans text-neutral-900 tracking-tight">
+                    Recent Campaign Briefs
+                  </h2>
                   <button
                     type="button"
-                    className="text-xs text-purple-700 hover:underline font-semibold"
-                    onClick={() => setActiveTab('applications')}
+                    onClick={() => setActiveTab('briefs')}
+                    className="text-xs font-semibold text-purple-700 hover:text-purple-900 flex items-center gap-1 transition font-sans"
                   >
-                    Review All →
+                    View All →
                   </button>
                 </div>
 
-                {applications.length === 0 ? (
-                  <div className="p-8 text-center text-neutral-400 text-xs">
-                    No submitted pitches pending review. Launch a campaign brief to receive pitches from vetted creators!
+                {briefs.length === 0 ? (
+                  <div className="bg-white rounded-2xl p-8 text-center border border-black/[0.06] shadow-xs">
+                    <p className="text-neutral-500 text-xs mb-3 font-sans">No campaign briefs launched yet.</p>
+                    <button
+                      type="button"
+                      className="portal-btn-primary"
+                      onClick={() => setIsCreateBriefOpen(true)}
+                    >
+                      + Launch First Brief
+                    </button>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {applications.slice(0, 3).map((app) => (
-                      <div
-                        key={app.id}
-                        className="p-4 rounded-xl border border-black/5 bg-white/60 flex flex-col md:flex-row items-start md:items-center justify-between gap-3"
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', padding: '0.875rem 1rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.75)', border: '1px solid rgba(19,19,22,0.06)' }}
-                      >
-                        <div className="flex items-center gap-3" style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', minWidth: 0, flex: 1 }}>
-                          <img
-                            src={getCreatorAvatar({ display_name: app.creator_display_name, handle: app.creator_handle, avatar_url: app.creator_avatar_url })}
-                            alt={app.creator_display_name}
-                            className="pitch-creator-avatar"
-                            style={{ width: '48px', height: '48px', minWidth: '48px', maxWidth: '48px', minHeight: '48px', maxHeight: '48px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '2px solid rgba(121,82,236,0.25)' }}
-                            onError={(e) => {
-                              e.target.onerror = null;
-                              e.target.src = '/assets/creator-portraits/devon.jpg';
-                            }}
-                          />
-                          <div style={{ minWidth: 0, flex: 1 }}>
-                            <div className="flex items-center gap-2" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                              <h4 className="text-sm font-bold text-neutral-900" style={{ fontSize: '0.875rem', fontWeight: 700, margin: 0, color: '#131316' }}>
-                                {app.creator_display_name}
-                              </h4>
-                              <span className="text-xs text-purple-700 font-mono" style={{ fontSize: '0.75rem', color: '#7952EC', fontFamily: 'monospace' }}>
-                                @{app.creator_handle}
+                    {briefs.slice(0, 3).map((brief) => {
+                      const coverImg = getBriefCoverImage(brief);
+                      const isApproved = brief.engagements?.some((e) => e.status === 'FINAL_APPROVED') || brief.status === 'PUBLISHED';
+                      const statusTag = isApproved ? 'FINAL_APPROVED' : brief.status;
+                      const statusPill = brief.status === 'PUBLISHED' ? 'In Progress' : brief.status === 'DRAFT' ? 'Draft' : 'Open';
+
+                      return (
+                        <div
+                          key={brief.id}
+                          className="portal-card-row cursor-pointer"
+                          onClick={() => onSelectBrief(brief)}
+                        >
+                          <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                            <img
+                              src={coverImg}
+                              alt={brief.title}
+                              className="w-20 h-16 rounded-xl object-cover shrink-0 border border-black/[0.04]"
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = '/assets/campaign-covers/brand_fashion_cover.jpg';
+                              }}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <span className={`portal-badge-tag ${statusTag === 'FINAL_APPROVED' ? 'approved' : statusTag === 'DRAFT' ? 'draft' : 'open'} mb-1`}>
+                                {statusTag}
                               </span>
+                              <h3 className="text-sm font-bold text-neutral-900 font-sans tracking-tight truncate">
+                                {brief.title}
+                              </h3>
+                              <p className="text-xs text-neutral-500 mt-0.5 font-sans">
+                                Posted on Oct 12, 2026 • {brief.applications_count || 12} Proposals
+                              </p>
                             </div>
-                            <p className="text-xs text-neutral-600 italic line-clamp-1" style={{ fontSize: '0.75rem', color: '#6C6C75', fontStyle: 'italic', margin: '0.2rem 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              "{app.pitch_text}"
-                            </p>
+                          </div>
+
+                          <div className="flex items-center gap-3 shrink-0">
+                            <span className="portal-budget-pill">
+                              {formatINR(clampDemoBudget(brief.budget_amount, 35000))}
+                            </span>
+                            <span className={`portal-status-pill ${
+                              statusPill === 'In Progress' ? 'in-progress' : statusPill === 'Draft' ? 'draft' : 'open'
+                            }`}>
+                              {statusPill}
+                            </span>
+                            <button
+                              type="button"
+                              className="portal-dots-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onSelectBrief(brief);
+                              }}
+                              title="Brief options"
+                            >
+                              ⋮
+                            </button>
                           </div>
                         </div>
-
-                        <div className="flex items-center gap-2" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
-                          <span className="text-xs font-bold text-neutral-900" style={{ fontSize: '0.75rem', fontWeight: 700, color: '#131316' }}>
-                            ${app.proposed_rate?.toLocaleString()} ({app.proposed_timeline_days}d)
-                          </span>
-                          {app.status === 'SUBMITTED' ? (
-                            <div className="flex gap-1.5" style={{ display: 'flex', gap: '0.35rem' }}>
-                              <button
-                                type="button"
-                                className="btn-primary text-xs py-1 px-2.5"
-                                style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}
-                                onClick={() => handleApplicationStatus(app.id, 'ACCEPTED')}
-                              >
-                                Accept & Hire
-                              </button>
-                              <button
-                                type="button"
-                                className="btn-secondary text-xs py-1 px-2.5"
-                                style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}
-                                onClick={() => handleApplicationStatus(app.id, 'REJECTED')}
-                              >
-                                Decline
-                              </button>
-                            </div>
-                          ) : (
-                            <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-neutral-100 text-neutral-700" style={{ padding: '0.2rem 0.6rem', fontSize: '0.65rem', fontWeight: 700, borderRadius: '9999px', background: app.status === 'ACCEPTED' ? '#ECFDF5' : '#F3F4F6', color: app.status === 'ACCEPTED' ? '#065F46' : '#374151' }}>
-                              {app.status}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -420,61 +664,69 @@ export default function BrandDashboard({
 
           {/* TAB 2: BRAND PROFILE */}
           {activeTab === 'profile' && (
-            <div className="glass-panel p-6 rounded-2xl space-y-6">
-              <div className="flex items-start justify-between">
-                <div className="flex gap-4">
+            <div className="bg-white rounded-2xl p-6 border border-black/[0.08] shadow-xs space-y-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
                   <BrandLogo
                     brand={profile}
                     brandName={profile?.company_name}
-                    size={72}
-                    shape="rounded"
+                    width={64}
+                    height={64}
+                    shape="circle"
                     padding="4px"
-                    className="shadow-md"
+                    className="shadow-xs ring-1 ring-black/10 shrink-0"
                   />
                   <div>
-                    <h2 className="text-xl font-serif font-bold text-neutral-900">
+                    <h2 className="text-xl font-bold font-sans text-neutral-900 tracking-tight">
                       {profile?.company_name}
                     </h2>
                     <p className="text-xs text-purple-700 font-mono">slug: {profile?.slug}</p>
-                    <p className="text-xs text-neutral-600 mt-1">{profile?.industry}</p>
-                    <p className="text-xs text-neutral-500">
+                    <p className="text-xs text-neutral-600 mt-0.5 font-sans">{profile?.industry}</p>
+                    <p className="text-xs text-neutral-500 mt-0.5 font-sans">
                       📍 {profile?.headquarters || 'Paris'} • {profile?.company_size || '50-200'} Employees
                     </p>
                   </div>
                 </div>
                 <button
                   type="button"
-                  className="btn-primary text-xs"
+                  className="btn-primary text-xs py-2 px-4 shadow-xs"
                   onClick={() => setIsEditProfileOpen(true)}
                 >
                   Edit Profile
                 </button>
               </div>
 
-              <div className="pt-6 border-t border-black/10">
-                <h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">
+              <div className="pt-6 border-t border-black/[0.06]">
+                <h4 className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2 font-sans">
                   Brand Narrative & Values
                 </h4>
-                <p className="text-xs text-neutral-700 leading-relaxed">
+                <p className="text-xs text-neutral-700 leading-relaxed font-sans">
                   {profile?.description || 'No description provided.'}
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 pt-6 border-t border-black/10">
-                <div>
-                  <span className="text-[11px] font-bold text-neutral-500 uppercase block">Official Website</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-6 border-t border-black/[0.06]">
+                <div className="p-4 rounded-xl bg-neutral-50 border border-black/[0.04]">
+                  <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block font-sans">
+                    Official Website
+                  </span>
                   <a
                     href={profile?.website_url || '#'}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-xs text-purple-700 hover:underline"
+                    className="text-xs font-semibold text-purple-700 hover:underline mt-1 inline-block"
                   >
                     {profile?.website_url || 'https://brand.com'}
                   </a>
                 </div>
-                <div>
-                  <span className="text-[11px] font-bold text-neutral-500 uppercase block">Verification Status</span>
-                  <span className="text-xs text-emerald-700 font-bold">Audited & Verified Brand ✓</span>
+                <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-100">
+                  <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider block font-sans">
+                    Verification Status
+                  </span>
+                  <span className="text-xs text-emerald-800 font-bold mt-1 inline-flex items-center gap-1.5 font-sans">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    Audited & Verified Brand
+                  </span>
                 </div>
               </div>
             </div>
@@ -482,27 +734,21 @@ export default function BrandDashboard({
 
           {/* TAB 3: CAMPAIGN BRIEFS */}
           {activeTab === 'briefs' && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
+            <div className="space-y-5">
+              {/* Header */}
+              <div className="portal-header-row">
                 <div>
-                  <h2 className="text-xl font-serif font-bold text-neutral-900">
-                    Campaign Briefs ({briefs.length})
-                  </h2>
-                  <p className="text-xs text-neutral-500">
-                    Manage your campaign objectives, deliverables criteria, and application lifecycle.
+                  <h1 className="text-2xl font-extrabold text-neutral-900 font-sans tracking-tight">
+                    Campaign Briefs
+                  </h1>
+                  <p className="text-xs text-neutral-500 mt-1 font-sans">
+                    Manage your brand campaigns and find the perfect creators.
                   </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex items-center gap-2.5 flex-wrap">
                   <button
                     type="button"
-                    className="btn-secondary text-xs"
-                    onClick={onOpenAiBuilder}
-                  >
-                    ✨ AI Brief Builder
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-primary text-xs"
+                    className="portal-btn-primary"
                     onClick={() => setIsCreateBriefOpen(true)}
                   >
                     + Create Brief
@@ -510,108 +756,236 @@ export default function BrandDashboard({
                 </div>
               </div>
 
-              {briefs.length === 0 ? (
-                <div className="glass-panel p-12 text-center rounded-2xl">
-                  <p className="text-neutral-500 text-xs mb-4">No campaign briefs launched yet.</p>
+              {/* Status Filter Tab Pills */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-1 no-scrollbar">
+                {[
+                  { key: 'ALL', label: 'All Briefs', count: briefs.length },
+                  { key: 'OPEN', label: 'Open', count: briefs.filter((b) => b.status === 'PUBLISHED' && (!b.applications_count || b.applications_count === 0)).length },
+                  { key: 'IN_PROGRESS', label: 'In Progress', count: briefs.filter((b) => b.status === 'PUBLISHED' && b.applications_count > 0).length },
+                  { key: 'COMPLETED', label: 'Completed', count: briefs.filter((b) => b.status === 'CLOSED').length },
+                  { key: 'DRAFTS', label: 'Drafts', count: briefs.filter((b) => b.status === 'DRAFT').length },
+                ].map((tab) => {
+                  const isActive = briefTabStatus === tab.key;
+                  return (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => setBriefTabStatus(tab.key)}
+                      className={`portal-tab-pill ${isActive ? 'active' : 'inactive'}`}
+                    >
+                      <span>{tab.label}</span>
+                      <span
+                        className={`text-[11px] px-1.5 py-0.2 rounded-full font-bold ${
+                          isActive
+                            ? 'bg-white/25 text-white'
+                            : 'bg-neutral-100 text-neutral-600'
+                        }`}
+                      >
+                        {tab.count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Dropdown Filters Row */}
+              <div className="flex items-center gap-2.5 flex-wrap pt-1">
+                <select
+                  className="portal-dropdown-btn"
+                  value={briefMarketingGoal}
+                  onChange={(e) => setBriefMarketingGoal(e.target.value)}
+                >
+                  <option value="ALL">Marketing Goal ⌄</option>
+                  <option value="PRODUCT_LAUNCH">Product Launch</option>
+                  <option value="BRAND_AWARENESS">Brand Awareness</option>
+                  <option value="CONVERSIONS">Conversions & Sales</option>
+                  <option value="SOCIAL_REELS">Social Reels</option>
+                </select>
+
+                <select
+                  className="portal-dropdown-btn"
+                  value={briefContentType}
+                  onChange={(e) => setBriefContentType(e.target.value)}
+                >
+                  <option value="ALL">Content Type ⌄</option>
+                  <option value="VIDEO">Video</option>
+                  <option value="IMAGE">Image / Stills</option>
+                  <option value="3D">3D / CGI</option>
+                </select>
+
+                <select
+                  className="portal-dropdown-btn"
+                  value={briefBudgetRange}
+                  onChange={(e) => setBriefBudgetRange(e.target.value)}
+                >
+                  <option value="ALL">Budget Range ⌄</option>
+                  <option value="TIER_1">&lt; ₹25,000</option>
+                  <option value="TIER_2">₹25,000 - ₹40,000</option>
+                  <option value="TIER_3">&gt; ₹40,000</option>
+                </select>
+
+                <select
+                  className="portal-dropdown-btn"
+                  value={briefStatusFilter}
+                  onChange={(e) => setBriefStatusFilter(e.target.value)}
+                >
+                  <option value="ALL">Status ⌄</option>
+                  <option value="PUBLISHED">Published</option>
+                  <option value="DRAFT">Draft</option>
+                  <option value="CLOSED">Closed</option>
+                </select>
+
+                {(briefTabStatus !== 'ALL' ||
+                  briefMarketingGoal !== 'ALL' ||
+                  briefContentType !== 'ALL' ||
+                  briefBudgetRange !== 'ALL' ||
+                  briefStatusFilter !== 'ALL' ||
+                  briefSearchQuery ||
+                  portalSearchQuery) && (
                   <button
                     type="button"
-                    className="btn-primary text-xs"
+                    className="text-xs font-semibold text-purple-700 hover:text-purple-900 transition ml-1 font-sans"
+                    onClick={() => {
+                      setBriefTabStatus('ALL');
+                      setBriefMarketingGoal('ALL');
+                      setBriefContentType('ALL');
+                      setBriefBudgetRange('ALL');
+                      setBriefStatusFilter('ALL');
+                      setBriefSearchQuery('');
+                      setPortalSearchQuery('');
+                    }}
+                  >
+                    Clear Filters
+                  </button>
+                )}
+              </div>
+
+              {/* Brief List */}
+              {briefs.length === 0 ? (
+                <div className="bg-white rounded-2xl p-12 text-center border border-black/[0.06] shadow-xs">
+                  <p className="text-neutral-500 text-xs mb-4 font-sans">No campaign briefs launched yet.</p>
+                  <button
+                    type="button"
+                    className="portal-btn-primary"
                     onClick={() => setIsCreateBriefOpen(true)}
                   >
-                    Launch Your First Brief
+                    + Launch First Brief
+                  </button>
+                </div>
+              ) : filteredBriefs.length === 0 ? (
+                <div className="bg-white rounded-2xl p-12 text-center border border-black/[0.06] shadow-xs">
+                  <p className="text-neutral-500 text-xs mb-3 font-sans">No campaign briefs match your selected filters.</p>
+                  <button
+                    type="button"
+                    className="portal-btn-secondary"
+                    onClick={() => {
+                      setBriefTabStatus('ALL');
+                      setBriefMarketingGoal('ALL');
+                      setBriefContentType('ALL');
+                      setBriefBudgetRange('ALL');
+                      setBriefStatusFilter('ALL');
+                      setBriefSearchQuery('');
+                      setPortalSearchQuery('');
+                    }}
+                  >
+                    Reset All Filters
                   </button>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {briefs.map((brief) => (
-                    <div key={brief.id} className="glass-panel p-5 rounded-2xl space-y-4">
-                      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
-                        <div>
-                          <div className="flex items-center gap-2">
+                <div className="space-y-3.5">
+                  {filteredBriefs.map((brief) => {
+                    const coverImg = getBriefCoverImage(brief);
+                    const isApproved = brief.engagements?.some((e) => e.status === 'FINAL_APPROVED') || (brief.status === 'PUBLISHED' && brief.applications_count > 0);
+                    const statusTag = isApproved ? 'FINAL_APPROVED' : brief.status;
+                    const statusPill =
+                      brief.status === 'PUBLISHED' && brief.applications_count > 0
+                        ? 'In Progress'
+                        : brief.status === 'PUBLISHED'
+                        ? 'Open'
+                        : brief.status === 'DRAFT'
+                        ? 'Draft'
+                        : 'Closed';
+
+                    return (
+                      <div
+                        key={brief.id}
+                        className="portal-card-row cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-4"
+                        onClick={() => onSelectBrief(brief)}
+                      >
+                        <div className="flex items-start sm:items-center gap-4 min-w-0 flex-1">
+                          <img
+                            src={coverImg}
+                            alt={brief.title}
+                            className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover shrink-0 border border-black/[0.04]"
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = '/assets/campaign-covers/brand_fashion_cover.jpg';
+                            }}
+                          />
+                          <div className="min-w-0 flex-1 space-y-1">
                             <span
-                              className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full ${
-                                brief.status === 'PUBLISHED'
-                                  ? 'bg-emerald-100 text-emerald-800'
-                                  : brief.status === 'CLOSED'
-                                  ? 'bg-neutral-100 text-neutral-800'
-                                  : 'bg-purple-100 text-purple-800'
+                              className={`portal-badge-tag ${
+                                statusTag === 'FINAL_APPROVED'
+                                  ? 'approved'
+                                  : statusTag === 'OPEN' || statusTag === 'PUBLISHED'
+                                  ? 'open'
+                                  : 'draft'
                               }`}
                             >
-                              {brief.status}
+                              {statusTag}
                             </span>
-                            <span className="text-xs text-neutral-400 font-mono">
-                              {brief.content_type} • {brief.aspect_ratio}
-                            </span>
+                            <h3 className="text-sm sm:text-base font-bold text-neutral-900 font-sans tracking-tight line-clamp-1 hover:text-purple-700 transition">
+                              {brief.title}
+                            </h3>
+                            <p className="text-xs text-neutral-500 line-clamp-1 font-sans">
+                              {brief.campaign_objective || brief.deliverables_description || 'Premium skincare launch campaign with cinematic video and social media reels.'}
+                            </p>
+                            <div className="flex items-center gap-2 pt-1 flex-wrap">
+                              <span className="portal-tag-pill">
+                                📹 {brief.content_type || 'Video'}
+                              </span>
+                              <span className="portal-tag-pill">
+                                🎬 Reels
+                              </span>
+                              <span className="portal-tag-pill">
+                                📸 Instagram
+                              </span>
+                            </div>
                           </div>
-                          <h3
-                            className="text-base font-bold text-neutral-900 mt-1 cursor-pointer hover:text-purple-700"
-                            onClick={() => onSelectBrief(brief)}
-                          >
-                            {brief.title}
-                          </h3>
                         </div>
 
-                        <div className="text-right">
-                          <span className="text-lg font-serif font-bold text-neutral-900">
-                            ${brief.budget_amount?.toLocaleString()} {brief.budget_currency}
+                        <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2 shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0 border-neutral-100">
+                          <span className="portal-budget-pill">
+                            {formatINR(clampDemoBudget(brief.budget_amount, 35000))}
                           </span>
-                          <span className="text-[11px] text-neutral-500 block">
-                            {brief.applications_count || 0} Pitches Submitted
-                          </span>
-                        </div>
-                      </div>
-
-                      <p className="text-xs text-neutral-600 line-clamp-2">
-                        {brief.campaign_objective}
-                      </p>
-
-                      <div className="brief-card-actions-bar pt-4 border-t border-black/10 flex flex-wrap items-center justify-between gap-3 text-xs">
-                        <button
-                          type="button"
-                          className="brief-btn-primary"
-                          onClick={() => onSelectBrief(brief)}
-                        >
-                          <span>View Brief & Matches</span>
-                          <span className="brief-btn-arrow">→</span>
-                        </button>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {brief.status === 'DRAFT' && (
-                            <button
-                              type="button"
-                              className="brief-btn-publish"
-                              onClick={() => handleBriefStatusChange(brief.id, 'PUBLISHED')}
-                              title="Publish this brief to open for pitches"
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`portal-status-pill ${
+                                statusPill === 'In Progress'
+                                  ? 'in-progress'
+                                  : statusPill === 'Draft'
+                                  ? 'draft'
+                                  : 'open'
+                              }`}
                             >
-                              <span>🚀 Publish Brief</span>
-                            </button>
-                          )}
-                          {brief.status === 'PUBLISHED' && (
-                            <button
-                              type="button"
-                              className="brief-btn-secondary"
-                              onClick={() => handleBriefStatusChange(brief.id, 'CLOSED')}
-                              title="Close this brief to stop new pitches"
-                            >
-                              <span>⏸ Close Brief</span>
-                            </button>
-                          )}
-                          {brief.status === 'CLOSED' && (
-                            <span className="brief-status-tag-closed">
-                              Status: Closed
+                              {statusPill}
                             </span>
-                          )}
-                          <button
-                            type="button"
-                            className="brief-btn-danger"
-                            onClick={() => handleDeleteBrief(brief.id)}
-                            title="Delete this campaign brief"
-                          >
-                            <span>🗑 Delete</span>
-                          </button>
+                            <button
+                              type="button"
+                              className="portal-dots-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onSelectBrief(brief);
+                              }}
+                              title="Brief options"
+                            >
+                              ⋮
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -621,66 +995,53 @@ export default function BrandDashboard({
           {activeTab === 'applications' && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-xl font-serif font-bold text-neutral-900">
+                <h2 className="text-xl font-bold font-sans text-neutral-900 tracking-tight">
                   Pitch Proposals Received ({applications.length})
                 </h2>
-                <p className="text-xs text-neutral-500">
-                  Evaluate creator proposals, review attached portfolios, and accept bids to initiate collaborations.
+                <p className="text-xs text-neutral-500 mt-0.5 font-sans">
+                  Evaluate creator proposals, review proposed terms, and accept bids to initiate collaborations.
                 </p>
               </div>
 
               {applications.length === 0 ? (
-                <div className="glass-panel p-12 text-center rounded-2xl">
-                  <p className="text-neutral-500 text-xs">No pitch proposals received yet.</p>
+                <div className="bg-white rounded-2xl p-12 text-center border border-black/[0.08] shadow-xs">
+                  <p className="text-neutral-500 text-xs font-sans">No pitch proposals received yet.</p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {applications.map((app) => (
-                    <div key={app.id} className="glass-panel p-5 rounded-2xl space-y-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
+                    <div key={app.id} className="bg-white rounded-2xl p-6 border border-black/[0.08] shadow-xs hover:shadow-md transition-all space-y-5">
+                      {/* Top: Creator Identity & Status */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-black/[0.06]">
+                        <div className="flex items-center gap-3.5 min-w-0">
                           <img
                             src={getCreatorAvatar({ display_name: app.creator_display_name, handle: app.creator_handle, avatar_url: app.creator_avatar_url })}
                             alt={app.creator_display_name}
-                            className="w-12 h-12 rounded-full object-cover border border-purple-300 shadow-sm"
-                            style={{
-                              width: '48px',
-                              height: '48px',
-                              minWidth: '48px',
-                              maxWidth: '48px',
-                              minHeight: '48px',
-                              maxHeight: '48px',
-                              borderRadius: '50%',
-                              objectFit: 'cover',
-                              flexShrink: 0,
-                            }}
+                            className="w-12 h-12 rounded-full object-cover border-2 border-purple-200 shadow-xs shrink-0"
                             onError={(e) => {
                               e.target.onerror = null;
                               e.target.src = '/assets/creator-portraits/devon.jpg';
                             }}
                           />
-                          <div>
+                          <div className="min-w-0">
                             <h4
-                              className="text-sm font-bold text-neutral-900 cursor-pointer hover:text-purple-700"
+                              className="text-base font-bold text-neutral-900 font-sans tracking-tight cursor-pointer hover:text-purple-700 truncate"
                               onClick={() => onSelectCreator({ id: app.creator_id })}
                             >
                               {app.creator_display_name}
                             </h4>
                             <p className="text-xs text-purple-700 font-mono">@{app.creator_handle}</p>
-                            <span className="text-[11px] text-neutral-400">
-                              Proposed: ${app.proposed_rate?.toLocaleString()} • {app.proposed_timeline_days} Days
-                            </span>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
                           <span
-                            className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full ${
+                            className={`px-3 py-1 text-xs font-bold rounded-full ${
                               app.status === 'ACCEPTED'
-                                ? 'bg-emerald-100 text-emerald-800'
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                 : app.status === 'REJECTED'
-                                ? 'bg-red-100 text-red-800'
-                                : 'bg-purple-100 text-purple-800'
+                                ? 'bg-red-50 text-red-700 border border-red-200'
+                                : 'bg-purple-50 text-purple-700 border border-purple-200'
                             }`}
                           >
                             {app.status}
@@ -688,29 +1049,97 @@ export default function BrandDashboard({
                         </div>
                       </div>
 
-                      <div className="p-3 rounded-xl bg-white/70 border border-black/5 text-xs text-neutral-700">
-                        <strong className="block text-neutral-900 mb-1">Creator Pitch:</strong>
-                        {app.pitch_text}
+                      {/* Proposed Terms - Clean 4-Column Metric Grid with vertical separation */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 rounded-xl bg-neutral-50/80 border border-black/[0.04]">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider font-sans">
+                            Offered Rate
+                          </span>
+                          <span className="text-base font-bold text-neutral-900 font-sans mt-0.5">
+                            {formatINR(clampDemoBudget(app.proposed_rate, 35000))}
+                          </span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider font-sans">
+                            Timeline
+                          </span>
+                          <span className="text-base font-bold text-neutral-900 font-sans mt-0.5">
+                            {app.proposed_timeline_days}{' '}
+                            <span className="text-xs font-normal text-neutral-500">Days</span>
+                          </span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider font-sans">
+                            Submitted
+                          </span>
+                          <span className="text-sm font-semibold text-neutral-700 font-sans mt-0.5">
+                            {app.submitted_at ? new Date(app.submitted_at).toLocaleDateString() : 'Recent'}
+                          </span>
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider font-sans">
+                            Target Campaign
+                          </span>
+                          <span className="text-sm font-semibold text-purple-700 truncate font-sans mt-0.5" title={app.brief_title || 'Campaign Brief'}>
+                            {app.brief_title || 'View Brief'}
+                          </span>
+                        </div>
                       </div>
 
-                      {app.status === 'SUBMITTED' && (
-                        <div className="pt-2 flex items-center justify-end gap-2">
+                      {/* Proposal Approach Quote Container */}
+                      <div className="p-4 rounded-xl bg-purple-50/40 border-l-4 border-purple-500 text-xs text-neutral-700 space-y-1.5">
+                        <div className="text-[11px] font-bold text-purple-900 uppercase tracking-wider font-sans">
+                          Creator Proposal & Approach
+                        </div>
+                        <p className="text-xs leading-relaxed whitespace-pre-wrap break-words text-neutral-700 font-sans">
+                          {app.pitch_text}
+                        </p>
+                      </div>
+
+                      {/* Action Footer */}
+                      <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-black/[0.06]">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <button
                             type="button"
-                            className="btn-secondary text-xs py-1.5 px-3"
-                            onClick={() => handleApplicationStatus(app.id, 'REJECTED')}
+                            className="btn-secondary text-xs py-2 px-3.5 flex items-center gap-1.5 shadow-xs"
+                            onClick={() => {
+                              if (onOpenChat) {
+                                onOpenChat({ creatorId: app.creator_id, targetName: app.creator_display_name });
+                              } else {
+                                setActiveTab('messages');
+                              }
+                            }}
                           >
-                            Decline Proposal
+                            💬 Message Creator
                           </button>
                           <button
                             type="button"
-                            className="btn-primary text-xs py-1.5 px-4"
-                            onClick={() => handleApplicationStatus(app.id, 'ACCEPTED')}
+                            className="btn-secondary text-xs py-2 px-3.5 shadow-xs"
+                            onClick={() => onSelectCreator({ id: app.creator_id })}
                           >
-                            Accept & Hire Creator
+                            View Creator Profile →
                           </button>
                         </div>
-                      )}
+
+                        {app.status === 'SUBMITTED' && (
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <button
+                              type="button"
+                              className="px-4 py-2 rounded-xl text-xs font-semibold bg-neutral-100 hover:bg-red-50 hover:text-red-700 text-neutral-700 border border-black/5 transition font-sans"
+                              onClick={() => handleApplicationStatus(app.id, 'REJECTED')}
+                            >
+                              Decline Proposal
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-primary text-xs py-2 px-4 shadow-sm font-sans"
+                              onClick={() => handleApplicationStatus(app.id, 'ACCEPTED')}
+                            >
+                              Accept & Hire Creator 🚀
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -728,10 +1157,10 @@ export default function BrandDashboard({
               <div className="space-y-6">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div>
-                    <h2 className="text-xl font-serif font-bold text-neutral-900">
+                    <h2 className="text-xl font-bold font-sans text-neutral-900 tracking-tight">
                       Collaborations & Deliverables Management
                     </h2>
-                    <p className="text-xs text-neutral-500">
+                    <p className="text-xs text-neutral-500 mt-0.5 font-sans">
                       Review submitted master asset files, request revisions, approve deliverables, and inspect hired creator histories.
                     </p>
                   </div>
@@ -741,9 +1170,9 @@ export default function BrandDashboard({
                     <button
                       type="button"
                       onClick={() => setCollabSubView('engagements')}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition font-sans ${
                         collabSubView === 'engagements'
-                          ? 'bg-purple-600 text-white shadow-sm'
+                          ? 'bg-purple-600 text-white shadow-xs'
                           : 'text-neutral-600 hover:text-neutral-900'
                       }`}
                     >
@@ -752,9 +1181,9 @@ export default function BrandDashboard({
                     <button
                       type="button"
                       onClick={() => setCollabSubView('creators')}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition font-sans ${
                         collabSubView === 'creators'
-                          ? 'bg-purple-600 text-white shadow-sm'
+                          ? 'bg-purple-600 text-white shadow-xs'
                           : 'text-neutral-600 hover:text-neutral-900'
                       }`}
                     >
@@ -766,20 +1195,19 @@ export default function BrandDashboard({
                 {collabSubView === 'creators' ? (
                   /* HIRED CREATORS VIEW */
                   hiredCreators.length === 0 ? (
-                    <div className="glass-panel p-12 text-center rounded-2xl">
-                      <p className="text-neutral-500 text-xs">No creators currently hired by this brand.</p>
+                    <div className="bg-white rounded-2xl p-12 text-center border border-black/[0.08] shadow-xs">
+                      <p className="text-neutral-500 text-xs font-sans">No creators currently hired by this brand.</p>
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {hiredCreators.map((hc) => (
-                        <div key={hc.creator_id} className="glass-panel p-5 rounded-2xl space-y-4">
+                        <div key={hc.creator_id} className="bg-white rounded-2xl p-5 border border-black/[0.08] shadow-xs hover:shadow-md transition-all space-y-4">
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex items-center gap-3">
                               <img
                                 src={getCreatorAvatar(hc)}
                                 alt={hc.display_name}
-                                className="w-12 h-12 rounded-full object-cover border border-purple-300 shadow-sm"
-                                style={{ width: '48px', height: '48px', minWidth: '48px', borderRadius: '50%', objectFit: 'cover' }}
+                                className="w-12 h-12 rounded-full object-cover border-2 border-purple-200 shadow-xs shrink-0"
                                 onError={(e) => {
                                   e.target.onerror = null;
                                   e.target.src = '/assets/creator-portraits/devon.jpg';
@@ -787,45 +1215,45 @@ export default function BrandDashboard({
                               />
                               <div>
                                 <h3
-                                  className="text-sm font-bold text-neutral-900 cursor-pointer hover:text-purple-700"
+                                  className="text-sm font-bold text-neutral-900 font-sans tracking-tight cursor-pointer hover:text-purple-700"
                                   onClick={() => onSelectCreator({ id: hc.creator_id })}
                                 >
                                   {hc.display_name}
                                 </h3>
                                 <p className="text-xs text-purple-700 font-mono">@{hc.handle}</p>
-                                <span className="inline-block mt-0.5 px-2 py-0.2 text-[9px] font-bold rounded-full bg-purple-100 text-purple-800">
+                                <span className="inline-block mt-0.5 px-2 py-0.5 text-[9px] font-bold rounded-full bg-purple-50 text-purple-700 border border-purple-200/60 font-sans">
                                   {hc.verification_tier || 'COMMUNITY'}
                                 </span>
                               </div>
                             </div>
-                            <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-purple-100 text-purple-800">
+                            <span className="px-2.5 py-1 text-[10px] font-bold rounded-full bg-purple-50 text-purple-700 border border-purple-200/60 font-sans">
                               {hc.collaborations_count} {hc.collaborations_count === 1 ? 'Project' : 'Projects'}
                             </span>
                           </div>
 
                           {/* Engagements with this creator */}
-                          <div className="space-y-2 pt-2 border-t border-black/5">
-                            <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
+                          <div className="space-y-2 pt-2 border-t border-black/[0.06]">
+                            <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider font-sans">
                               Collaboration Projects with this Brand
                             </h4>
                             {hc.engagements?.map((he) => (
                               <div
                                 key={he.id}
-                                className="p-3 rounded-xl bg-white/70 border border-black/5 text-xs flex items-center justify-between gap-2"
+                                className="p-3 rounded-xl bg-neutral-50/80 border border-black/[0.04] text-xs flex items-center justify-between gap-2"
                               >
                                 <div className="min-w-0">
-                                  <p className="font-semibold text-neutral-900 truncate">{he.brief_title}</p>
-                                  <div className="flex items-center gap-2 mt-0.5 text-[11px] text-neutral-500">
-                                    <span>${he.agreed_amount?.toLocaleString()} Agreed</span>
+                                  <p className="font-semibold text-neutral-900 font-sans truncate">{he.brief_title}</p>
+                                  <div className="flex items-center gap-2 mt-0.5 text-[11px] text-neutral-500 font-sans">
+                                    <span>{formatINR(clampDemoBudget(he.agreed_amount, 35000))} Agreed</span>
                                     <span>•</span>
                                     <span>{he.deliverables_count} Deliverables</span>
                                   </div>
                                 </div>
                                 <span
-                                  className={`shrink-0 px-2 py-0.5 text-[10px] font-bold rounded-full ${
+                                  className={`shrink-0 px-2 py-0.5 text-[10px] font-bold rounded-full font-sans ${
                                     he.status === 'COMPLETED'
-                                      ? 'bg-emerald-100 text-emerald-800'
-                                      : 'bg-purple-100 text-purple-800'
+                                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                      : 'bg-purple-50 text-purple-700 border border-purple-200'
                                   }`}
                                 >
                                   {he.status}
@@ -841,10 +1269,10 @@ export default function BrandDashboard({
                   /* ALL ENGAGEMENTS VIEW WITH BRIEF FILTER */
                   <>
                     {/* Filter by Brief */}
-                    <div className="flex items-center gap-3 bg-white/80 p-3 rounded-xl border border-black/5">
-                      <span className="text-xs font-semibold text-neutral-600 whitespace-nowrap">Filter by Brief:</span>
+                    <div className="flex items-center gap-3 bg-white p-3 rounded-2xl border border-black/[0.08] shadow-xs">
+                      <span className="text-xs font-semibold text-neutral-600 whitespace-nowrap font-sans">Filter by Brief:</span>
                       <select
-                        className="input-select text-xs py-1.5 px-3 flex-1 max-w-md"
+                        className="py-1.5 px-3 text-xs bg-neutral-50 border border-black/10 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 text-neutral-700 font-medium font-sans flex-1 max-w-md"
                         value={collabBriefFilter}
                         onChange={(e) => setCollabBriefFilter(e.target.value)}
                       >
@@ -858,7 +1286,7 @@ export default function BrandDashboard({
                       {collabBriefFilter !== 'ALL' && (
                         <button
                           type="button"
-                          className="text-xs text-purple-700 hover:underline"
+                          className="text-xs text-purple-700 hover:underline font-sans font-bold"
                           onClick={() => setCollabBriefFilter('ALL')}
                         >
                           Clear Brief Filter
@@ -867,31 +1295,31 @@ export default function BrandDashboard({
                     </div>
 
                     {displayedEngagements.length === 0 ? (
-                      <div className="glass-panel p-12 text-center rounded-2xl">
-                        <p className="text-neutral-500 text-xs">No collaborations matching the selected filter.</p>
+                      <div className="bg-white rounded-2xl p-12 text-center border border-black/[0.08] shadow-xs">
+                        <p className="text-neutral-500 text-xs font-sans">No collaborations matching the selected filter.</p>
                       </div>
                     ) : (
                       <div className="space-y-6">
                         {displayedEngagements.map((eng) => (
-                          <div key={eng.id} className="glass-panel p-6 rounded-2xl space-y-4">
-                            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 pb-4 border-b border-black/10">
+                          <div key={eng.id} className="bg-white rounded-2xl p-6 border border-black/[0.08] shadow-xs hover:shadow-md transition-all space-y-4">
+                            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 pb-4 border-b border-black/[0.06]">
                               <div>
-                                <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-purple-100 text-purple-800">
+                                <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-purple-50 text-purple-700 border border-purple-200/80 font-sans">
                                   {eng.status}
                                 </span>
-                                <h3 className="text-lg font-serif font-bold text-neutral-900 mt-1">
+                                <h3 className="text-lg font-bold font-sans text-neutral-900 tracking-tight mt-1">
                                   {eng.brief_title}
                                 </h3>
-                                <p className="text-xs text-neutral-500">
-                                  Creator: <strong>{eng.creator_display_name}</strong> (@{eng.creator_handle}) • Budget: ${eng.agreed_amount?.toLocaleString()}
+                                <p className="text-xs text-neutral-500 font-sans mt-0.5">
+                                  Creator: <strong className="text-neutral-800">{eng.creator_display_name}</strong> (@{eng.creator_handle}) • Budget: {formatINR(clampDemoBudget(eng.agreed_amount, 35000))}
                                 </p>
                               </div>
 
                               {/* Action Buttons based on status */}
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <button
                                   type="button"
-                                  className="btn-secondary text-xs flex items-center gap-1.5"
+                                  className="btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5 shadow-xs font-sans"
                                   onClick={() => {
                                     if (onOpenChat) {
                                       onOpenChat({ creatorId: eng.creator_id, briefId: eng.brief_id, targetName: eng.creator_display_name });
@@ -904,7 +1332,7 @@ export default function BrandDashboard({
                                 </button>
                                 <button
                                   type="button"
-                                  className="btn-primary text-xs flex items-center gap-1.5"
+                                  className="btn-primary text-xs py-1.5 px-3.5 flex items-center gap-1.5 shadow-xs font-sans"
                                   onClick={() => setSelectedWorkspaceEngagementId(eng.id)}
                                 >
                                   🚀 Open Workspace
@@ -913,14 +1341,14 @@ export default function BrandDashboard({
                                   <>
                                     <button
                                       type="button"
-                                      className="btn-secondary text-xs"
+                                      className="btn-secondary text-xs py-1.5 px-3 shadow-xs font-sans"
                                       onClick={() => setReviewModalData({ engagement: eng, mode: 'revision' })}
                                     >
                                       Request Revisions
                                     </button>
                                     <button
                                       type="button"
-                                      className="btn-primary text-xs bg-emerald-600 hover:bg-emerald-700"
+                                      className="btn-primary text-xs py-1.5 px-3.5 bg-emerald-600 hover:bg-emerald-700 shadow-xs font-sans"
                                       onClick={() => setReviewModalData({ engagement: eng, mode: 'approve' })}
                                     >
                                       Final Approval ✓
@@ -931,7 +1359,7 @@ export default function BrandDashboard({
                                 {eng.status === 'FINAL_APPROVED' && (
                                   <button
                                     type="button"
-                                    className="btn-primary text-xs"
+                                    className="btn-primary text-xs py-1.5 px-3.5 shadow-xs font-sans"
                                     onClick={() => setReviewModalData({ engagement: eng, mode: 'review' })}
                                   >
                                     ★ Rate & Review Creator
@@ -941,13 +1369,13 @@ export default function BrandDashboard({
                             </div>
 
                             {/* Project Progress & Milestone Track */}
-                            <div className="bg-purple-50/60 p-4 rounded-xl border border-purple-100 space-y-3">
+                            <div className="bg-purple-50/40 p-4 rounded-xl border border-purple-100/80 space-y-3">
                               <div className="flex items-center justify-between text-xs font-semibold">
-                                <span className="text-purple-900 flex items-center gap-1.5">
+                                <span className="text-purple-900 flex items-center gap-1.5 font-sans">
                                   <span className="w-2 h-2 rounded-full bg-purple-600 animate-pulse"></span>
                                   Milestone: <strong>{eng.current_milestone || 'In Progress'}</strong>
                                 </span>
-                                <span className="text-purple-700 font-bold">{eng.progress_percentage || 25}% Progress</span>
+                                <span className="text-purple-700 font-bold font-sans">{eng.progress_percentage || 25}% Progress</span>
                               </div>
                               <div className="w-full bg-purple-200/60 h-2 rounded-full overflow-hidden">
                                 <div
@@ -962,12 +1390,12 @@ export default function BrandDashboard({
                                   {eng.milestones.map((m) => (
                                     <div
                                       key={m.id}
-                                      className={`p-2 rounded-lg border ${
+                                      className={`p-2 rounded-lg border font-sans ${
                                         m.status === 'COMPLETED'
                                           ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
                                           : m.status === 'IN_PROGRESS'
                                           ? 'bg-purple-100 border-purple-300 text-purple-900 font-semibold'
-                                          : 'bg-white/60 border-black/5 text-neutral-400'
+                                          : 'bg-white/80 border-black/5 text-neutral-400'
                                       }`}
                                     >
                                       <div className="flex items-center gap-1">
@@ -982,35 +1410,35 @@ export default function BrandDashboard({
 
                             {/* Deliverables Audit */}
                             <div>
-                              <h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">
+                              <h4 className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2 font-sans">
                                 Deliverables Package ({eng.deliverables?.length || 0})
                               </h4>
                               <div className="space-y-2">
                                 {eng.deliverables?.map((d) => (
                                   <div
                                     key={d.id}
-                                    className="p-3 rounded-xl border border-black/5 bg-white/70 flex flex-col md:flex-row items-start md:items-center justify-between gap-2 text-xs"
+                                    className="p-3 rounded-xl border border-black/[0.04] bg-neutral-50/70 flex flex-col md:flex-row items-start md:items-center justify-between gap-2 text-xs"
                                   >
                                     <div>
-                                      <span className="font-bold text-purple-700 mr-2">v{d.version}</span>
-                                      <strong>{d.title}</strong>
-                                      <p className="text-neutral-500 font-mono text-[11px] truncate max-w-md">
+                                      <span className="font-bold text-purple-700 mr-2 font-sans">v{d.version}</span>
+                                      <strong className="font-sans text-neutral-900">{d.title}</strong>
+                                      <p className="text-neutral-500 font-mono text-[11px] truncate max-w-md mt-0.5">
                                         {d.asset_url}
                                       </p>
-                                      {d.notes && <p className="text-neutral-600 mt-1 italic">"{d.notes}"</p>}
+                                      {d.notes && <p className="text-neutral-600 mt-1 italic font-sans">"{d.notes}"</p>}
                                       {d.feedback && (
-                                        <p className="text-amber-800 mt-1 bg-amber-50 p-1.5 rounded border border-amber-200">
+                                        <p className="text-amber-800 mt-1 bg-amber-50 p-1.5 rounded border border-amber-200 font-sans">
                                           <strong>Revision Feedback:</strong> {d.feedback}
                                         </p>
                                       )}
                                     </div>
                                     <span
-                                      className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
+                                      className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full font-sans ${
                                         d.status === 'APPROVED'
-                                          ? 'bg-emerald-100 text-emerald-800'
+                                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                           : d.status === 'REVISION_REQUESTED'
-                                          ? 'bg-amber-100 text-amber-800'
-                                          : 'bg-purple-100 text-purple-800'
+                                          ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                          : 'bg-purple-50 text-purple-700 border border-purple-200'
                                       }`}
                                     >
                                       {d.status}
@@ -1021,7 +1449,7 @@ export default function BrandDashboard({
                             </div>
 
                             {eng.brand_rating && (
-                              <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900">
+                              <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 font-sans">
                                 <strong>Your Rating: ★ {eng.brand_rating} / 5.0</strong>
                                 <p className="italic mt-1">"{eng.brand_review}"</p>
                               </div>
@@ -1041,21 +1469,21 @@ export default function BrandDashboard({
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-bold text-neutral-900">Saved Creator Talent Roster</h2>
-                  <p className="text-xs text-neutral-500">
+                  <h2 className="text-xl font-bold font-sans text-neutral-900 tracking-tight">Saved Creator Talent Roster</h2>
+                  <p className="text-xs text-neutral-500 mt-0.5 font-sans">
                     Bookmarked AI creators and studios curated for your upcoming brand campaigns.
                   </p>
                 </div>
-                <span className="text-xs font-semibold px-3 py-1 bg-neutral-100 text-neutral-700 rounded-full">
+                <span className="text-xs font-bold px-3 py-1 bg-neutral-100 text-neutral-700 rounded-full font-sans">
                   {savedCreators.length} Saved
                 </span>
               </div>
 
               {savedCreators.length === 0 ? (
-                <div className="p-12 text-center bg-white rounded-2xl border border-black/10">
+                <div className="p-12 text-center bg-white rounded-2xl border border-black/[0.08] shadow-xs">
                   <span className="text-3xl block mb-2">🔖</span>
-                  <h3 className="text-sm font-bold text-neutral-800">No saved creators</h3>
-                  <p className="text-xs text-neutral-500 mt-1">
+                  <h3 className="text-sm font-bold text-neutral-800 font-sans">No saved creators</h3>
+                  <p className="text-xs text-neutral-500 mt-1 font-sans">
                     Click the favorite heart on any creator card in "Discover Creators" to save them here.
                   </p>
                 </div>
@@ -1064,22 +1492,24 @@ export default function BrandDashboard({
                   {savedCreators.map((sc) => (
                     <div
                       key={sc.id}
-                      className="p-5 bg-white rounded-2xl border border-black/10 shadow-sm flex flex-col justify-between space-y-4"
+                      className="p-5 bg-white rounded-2xl border border-black/[0.08] shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-4"
                     >
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
                           <img
                             src={getCreatorAvatar(sc.creator)}
                             alt={sc.creator?.display_name}
-                            className="w-12 h-12 rounded-full object-cover border border-black/10"
+                            className="w-12 h-12 rounded-full object-cover border-2 border-purple-100 shadow-xs shrink-0"
                             onError={(e) => {
                               e.target.onerror = null;
                               e.target.src = '/assets/creator-portraits/devon.jpg';
                             }}
                           />
-                          <div>
-                            <h3 className="font-bold text-sm text-neutral-900">{sc.creator?.display_name}</h3>
-                            <span className="text-xs text-neutral-500">@{sc.creator?.handle}</span>
+                          <div className="min-w-0">
+                            <h3 className="font-bold text-sm text-neutral-900 font-sans tracking-tight truncate">
+                              {sc.creator?.display_name}
+                            </h3>
+                            <span className="text-xs text-purple-700 font-mono">@{sc.creator?.handle}</span>
                           </div>
                         </div>
                         <button
@@ -1088,21 +1518,26 @@ export default function BrandDashboard({
                             await api.unsaveCreator(sc.creator_id);
                             setSavedCreators((prev) => prev.filter((item) => item.creator_id !== sc.creator_id));
                           }}
-                          className="text-xs text-neutral-400 hover:text-red-600 transition"
-                          title="Remove from saved"
+                          className="w-7 h-7 rounded-full bg-neutral-100 hover:bg-red-50 text-neutral-400 hover:text-red-600 flex items-center justify-center text-xs transition shrink-0"
+                          title="Remove from saved roster"
                         >
                           ✕
                         </button>
                       </div>
 
-                      <p className="text-xs text-neutral-600 line-clamp-2">
+                      <p className="text-xs text-neutral-600 line-clamp-2 leading-relaxed font-sans">
                         {sc.creator?.bio || sc.creator?.primary_specialization}
                       </p>
 
-                      <div className="flex items-center justify-between pt-3 border-t border-black/5">
-                        <span className="text-xs font-bold text-neutral-800">
-                          Starting at ${(sc.creator?.min_budget || 2500).toLocaleString()}
-                        </span>
+                      <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-black/[0.06]">
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block font-sans">
+                            Starting from
+                          </span>
+                          <span className="text-sm font-extrabold text-neutral-900 font-sans">
+                            {formatINR(clampDemoBudget(sc.creator?.min_budget, 25000))}
+                          </span>
+                        </div>
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
@@ -1111,7 +1546,7 @@ export default function BrandDashboard({
                                 onOpenChat({ creatorId: sc.creator_id, targetName: sc.creator?.display_name });
                               }
                             }}
-                            className="px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-purple-700 text-xs font-bold rounded-lg shadow-sm transition flex items-center gap-1"
+                            className="px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-purple-700 text-xs font-bold rounded-xl transition flex items-center gap-1 shadow-xs font-sans"
                           >
                             💬 Chat
                           </button>
@@ -1120,7 +1555,7 @@ export default function BrandDashboard({
                             onClick={() => {
                               if (onSelectCreator && sc.creator) onSelectCreator(sc.creator);
                             }}
-                            className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg shadow-sm transition"
+                            className="btn-primary text-xs py-1.5 px-3.5 shadow-xs font-sans"
                           >
                             View Profile →
                           </button>
@@ -1137,8 +1572,8 @@ export default function BrandDashboard({
           {activeTab === 'messages' && (
             <div className="space-y-4">
               <div>
-                <h2 className="text-xl font-bold text-neutral-900">Direct Collaboration Discussions</h2>
-                <p className="text-xs text-neutral-500">
+                <h2 className="text-xl font-bold font-sans text-neutral-900 tracking-tight">Direct Collaboration Discussions</h2>
+                <p className="text-xs text-neutral-500 mt-0.5 font-sans">
                   Secure messaging with creators working on your campaign briefs.
                 </p>
               </div>
@@ -1155,10 +1590,10 @@ export default function BrandDashboard({
           {activeTab === 'creators' && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-xl font-serif font-bold text-neutral-900">
+                <h2 className="text-xl font-bold font-sans text-neutral-900 tracking-tight">
                   Discover Audited AI Creators
                 </h2>
-                <p className="text-xs text-neutral-500">
+                <p className="text-xs text-neutral-500 mt-0.5 font-sans">
                   Search across verified skill taxonomies, generative AI tool stacks, and commercial video specialists.
                 </p>
               </div>
@@ -1170,7 +1605,37 @@ export default function BrandDashboard({
               />
             </div>
           )}
-        </main>
+
+          {/* TAB 7: ANALYTICS */}
+          {activeTab === 'analytics' && (
+            <BrandAnalyticsView
+              profile={profile}
+              briefs={briefs}
+              applications={applications}
+              engagements={engagements}
+              hiredCreators={hiredCreators}
+              savedCreators={savedCreators}
+              onNavigate={(tab) => {
+                setActiveTab(tab);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              onOpenCreateBrief={() => setIsCreateBriefOpen(true)}
+              isLoading={isLoading}
+              error={error}
+              onRetry={loadData}
+            />
+          )}
+
+          {/* TAB 8: SETTINGS */}
+          {activeTab === 'settings' && (
+            <PortalSettingsView
+              currentUser={currentUser}
+              profile={profile}
+              onOpenEditProfile={() => setIsEditProfileOpen(true)}
+              role="BRAND"
+            />
+          )}
+        </div>
 
       </div>
 

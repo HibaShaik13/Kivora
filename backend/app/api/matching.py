@@ -6,6 +6,7 @@ Provides privacy-safe creator matching against campaign briefs and AI-assisted p
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.security import HTTPAuthorizationCredentials
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from backend.app.database import get_db
@@ -13,7 +14,7 @@ from backend.app.models.models import Brief, CreatorProfile, User
 from backend.app.schemas.schemas import BriefMatchResponse, PitchAssistRequest, PitchAssistResponse
 from backend.app.services.matching import match_creators_for_brief
 from backend.app.services.pitch_assistant import assist_creator_pitch
-from backend.app.core.deps import security_bearer, require_role, get_current_user
+from backend.app.core.deps import security_bearer, require_role, get_current_user, require_approved_creator_user
 from backend.app.core.security import decode_access_token
 
 router = APIRouter(prefix="/api/match", tags=["Matching"])
@@ -74,7 +75,7 @@ def get_brief_creator_matches(
     # Enforce draft campaign privacy
     verify_brief_visibility(brief, credentials, db)
 
-    total_creators = db.query(CreatorProfile).count()
+    total_creators = db.query(func.count(CreatorProfile.id)).scalar() or 0
 
     matches = match_creators_for_brief(
         db,
@@ -96,7 +97,7 @@ def get_brief_creator_matches(
 def assist_proposal_pitch(
     brief_id: str,
     payload: PitchAssistRequest,
-    current_user: User = Depends(require_role(["CREATOR"])),
+    current_user: User = Depends(require_approved_creator_user),
     db: Session = Depends(get_db),
 ):
     """

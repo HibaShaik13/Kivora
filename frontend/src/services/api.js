@@ -2,7 +2,21 @@
  * Central API Client configuration for Kivora Frontend
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+import {
+  localizeCreators,
+  localizeCreator,
+  localizeConversations,
+  localizeConversation,
+  localizeMessages,
+  localizeApplications,
+  localizeApplication,
+  localizeEngagements,
+  localizeEngagement,
+  localizeWorkspace,
+} from '../utils/indianLocalization';
+
+const rawBaseUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
+const API_BASE_URL = rawBaseUrl ? rawBaseUrl.replace(/\/+$/, '') : '';
 
 export async function fetchApi(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
@@ -29,12 +43,16 @@ export async function fetchApi(endpoint, options = {}) {
       } else if (typeof message === 'object') {
         message = JSON.stringify(message);
       }
-      throw new Error(message);
+      const err = new Error(message);
+      err.status = response.status;
+      throw err;
     }
     return response.json();
   } catch (err) {
-    // If relative fetch failed, try direct localhost:8000 fallback in dev mode
-    if (!API_BASE_URL && url.startsWith('/api')) {
+    // Only attempt direct localhost:8000 fallback if relative fetch had a true network error (e.g. dev server without proxy)
+    // Never retry on HTTP 400, 401, 403, 404 responses that were returned directly by the server
+    const isNetworkError = err instanceof TypeError || (err.message && err.message.includes('Failed to fetch'));
+    if (!API_BASE_URL && url.startsWith('/api') && isNetworkError) {
       try {
         const fallbackUrl = `http://localhost:8000${endpoint}`;
         const response = await fetch(fallbackUrl, config);
@@ -42,17 +60,7 @@ export async function fetchApi(endpoint, options = {}) {
           return response.json();
         }
       } catch {
-        // Localhost:8000 unavailable, try deployed backend fallback
-      }
-
-      try {
-        const prodFallbackUrl = `https://kivora-api-jffe.onrender.com${endpoint}`;
-        const prodResponse = await fetch(prodFallbackUrl, config);
-        if (prodResponse.ok) {
-          return prodResponse.json();
-        }
-      } catch {
-        // Both local and fallback failed
+        // Localhost fallback failed
       }
     }
     throw err;
@@ -67,7 +75,7 @@ export const api = {
   getTools: () => fetchApi('/api/taxonomy/tools'),
 
   // --- Creators ---
-  getCreators: (params = {}) => {
+  getCreators: async (params = {}) => {
     const query = new URLSearchParams();
     if (params.search) query.append('search', params.search);
     if (params.category) query.append('category', params.category);
@@ -88,11 +96,20 @@ export const api = {
     if (params.page) query.append('page', params.page);
 
     const qs = query.toString();
-    return fetchApi(`/api/creators${qs ? `?${qs}` : ''}`);
+    const res = await fetchApi(`/api/creators${qs ? `?${qs}` : ''}`);
+    if (Array.isArray(res)) return localizeCreators(res);
+    if (res && Array.isArray(res.items)) return { ...res, items: localizeCreators(res.items) };
+    return res;
   },
 
-  getCreator: (idOrHandle) => fetchApi(`/api/creators/${idOrHandle}`),
-  getMyCreatorProfile: () => fetchApi('/api/creators/me'),
+  getCreator: async (idOrHandle) => {
+    const res = await fetchApi(`/api/creators/${idOrHandle}`);
+    return localizeCreator(res);
+  },
+  getMyCreatorProfile: async () => {
+    const res = await fetchApi('/api/creators/me');
+    return localizeCreator(res);
+  },
   getCollaboratingBrands: () => fetchApi('/api/creators/me/brands'),
   setupOrUpdateCreatorProfile: (payload) =>
     fetchApi('/api/creators/profile', {
@@ -132,10 +149,30 @@ export const api = {
       body: JSON.stringify(payload),
     }),
 
+  // --- Media & Assets ---
+  uploadMedia: (file, category = 'briefs') => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('category', category);
+    return fetchApi('/api/media/upload', {
+      method: 'POST',
+      body: formData,
+    });
+  },
+
+  kivoChat: (payload) =>
+    fetchApi('/api/ai/kivo-chat', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
   // --- Brands ---
   getBrands: () => fetchApi('/api/brands'),
   getMyBrandProfile: () => fetchApi('/api/brands/me'),
-  getHiredCreators: () => fetchApi('/api/brands/me/creators'),
+  getHiredCreators: async () => {
+    const res = await fetchApi('/api/brands/me/creators');
+    return localizeCreators(res);
+  },
   getBrand: (idOrSlug) => fetchApi(`/api/brands/${idOrSlug}`),
   setupBrandProfile: (payload) =>
     fetchApi('/api/brands/profile', {
@@ -202,8 +239,14 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
-  getMyApplications: () => fetchApi('/api/briefs/applications/my-applications'),
-  getBriefApplications: (briefId) => fetchApi(`/api/briefs/${briefId}/applications`),
+  getMyApplications: async () => {
+    const res = await fetchApi('/api/briefs/applications/my-applications');
+    return localizeApplications(res);
+  },
+  getBriefApplications: async (briefId) => {
+    const res = await fetchApi(`/api/briefs/${briefId}/applications`);
+    return localizeApplications(res);
+  },
   updateApplicationStatus: (applicationId, payload) =>
     fetchApi(`/api/briefs/applications/${applicationId}/status`, {
       method: 'PATCH',
@@ -211,11 +254,15 @@ export const api = {
     }),
 
   // --- Active Projects & Collaborations ---
-  getProjects: (status) => {
+  getProjects: async (status) => {
     const qs = status ? `?status=${encodeURIComponent(status)}` : '';
-    return fetchApi(`/api/projects${qs}`);
+    const res = await fetchApi(`/api/projects${qs}`);
+    return localizeEngagements(res);
   },
-  getProject: (id) => fetchApi(`/api/projects/${id}`),
+  getProject: async (id) => {
+    const res = await fetchApi(`/api/projects/${id}`);
+    return localizeEngagement(res);
+  },
   submitProjectDeliverable: (projectId, payload) =>
     fetchApi(`/api/projects/${projectId}/deliverables`, {
       method: 'POST',
@@ -242,19 +289,25 @@ export const api = {
     }),
 
   // --- Engagements & Collaborations (Legacy & Direct) ---
-  getEngagements: (filter) => {
+  getEngagements: async (filter) => {
+    let res;
     if (typeof filter === 'string') {
       const qs = filter ? `?status=${encodeURIComponent(filter)}` : '';
-      return fetchApi(`/api/engagements${qs}`);
+      res = await fetchApi(`/api/engagements${qs}`);
+    } else {
+      const query = new URLSearchParams();
+      if (filter?.status) query.append('status', filter.status);
+      if (filter?.brief_id) query.append('brief_id', filter.brief_id);
+      if (filter?.creator_id) query.append('creator_id', filter.creator_id);
+      const qs = query.toString();
+      res = await fetchApi(`/api/engagements${qs ? `?${qs}` : ''}`);
     }
-    const query = new URLSearchParams();
-    if (filter?.status) query.append('status', filter.status);
-    if (filter?.brief_id) query.append('brief_id', filter.brief_id);
-    if (filter?.creator_id) query.append('creator_id', filter.creator_id);
-    const qs = query.toString();
-    return fetchApi(`/api/engagements${qs ? `?${qs}` : ''}`);
+    return localizeEngagements(res);
   },
-  getEngagement: (id) => fetchApi(`/api/engagements/${id}`),
+  getEngagement: async (id) => {
+    const res = await fetchApi(`/api/engagements/${id}`);
+    return localizeEngagement(res);
+  },
   submitDeliverable: (engagementId, payload) =>
     fetchApi(`/api/engagements/${engagementId}/deliverables`, {
       method: 'POST',
@@ -302,6 +355,26 @@ export const api = {
     }),
   getVerificationAiAnalysis: (id) => fetchApi(`/api/verification/requests/${id}/ai-analysis`),
 
+  // --- Creator Approval & Onboarding (Phase 2 & 3) ---
+  getMyApprovalStatus: () => fetchApi('/api/verification/my-approval-status'),
+  submitCreatorForReview: () =>
+    fetchApi('/api/verification/creator/submit-for-review', {
+      method: 'POST',
+    }),
+  getAdminCreators: (status) => {
+    const qs = status ? `?status=${encodeURIComponent(status)}` : '';
+    return fetchApi(`/api/verification/admin/creators${qs}`);
+  },
+  getAdminCreatorApprovalQueue: (status) => {
+    const qs = status ? `?status=${encodeURIComponent(status)}` : '';
+    return fetchApi(`/api/verification/admin/creators/approval-queue${qs}`);
+  },
+  reviewCreatorApprovalAdmin: (creatorId, payload) =>
+    fetchApi(`/api/verification/admin/creators/${creatorId}/approval`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+
   // --- Matching ---
   getMatchesForBrief: (briefId, params = {}) => {
     const query = new URLSearchParams();
@@ -323,17 +396,6 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
-
-  // --- Media Upload ---
-  uploadMedia: async (file, category = 'general') => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('category', category);
-    return fetchApi('/api/media/upload', {
-      method: 'POST',
-      body: formData,
-    });
-  },
 
   // ==========================================
   // PHASE 2: NOTIFICATIONS
@@ -389,19 +451,21 @@ export const api = {
   // ==========================================
   // PHASE 2: IN-APP MESSAGING
   // ==========================================
-  getConversations: (params = {}) => {
+  getConversations: async (params = {}) => {
     const query = new URLSearchParams();
     if (params.page) query.append('page', params.page);
     if (params.page_size) query.append('page_size', params.page_size);
     const qs = query.toString();
-    return fetchApi(`/api/messages/conversations${qs ? `?${qs}` : ''}`);
+    const res = await fetchApi(`/api/messages/conversations${qs ? `?${qs}` : ''}`);
+    return localizeConversations(res);
   },
-  getConversationMessages: (conversationId, params = {}) => {
+  getConversationMessages: async (conversationId, params = {}) => {
     const query = new URLSearchParams();
     if (params.page) query.append('page', params.page);
     if (params.page_size) query.append('page_size', params.page_size);
     const qs = query.toString();
-    return fetchApi(`/api/messages/conversations/${conversationId}/messages${qs ? `?${qs}` : ''}`);
+    const res = await fetchApi(`/api/messages/conversations/${conversationId}/messages${qs ? `?${qs}` : ''}`);
+    return localizeMessages(res);
   },
   sendMessage: (conversationId, content) =>
     fetchApi(`/api/messages/conversations/${conversationId}/messages`, {
@@ -412,15 +476,21 @@ export const api = {
     fetchApi(`/api/messages/conversations/${conversationId}/read`, {
       method: 'PATCH',
     }),
-  getConversation: (conversationId) =>
-    fetchApi(`/api/messages/conversations/${conversationId}`),
-  getContextualConversation: (params = {}) => {
+  getConversation: async (conversationId) => {
+    const res = await fetchApi(`/api/messages/conversations/${conversationId}`);
+    return localizeConversation(res);
+  },
+  getContextualConversation: async (params = {}) => {
     const query = new URLSearchParams();
     if (params.creator_id) query.append('creator_id', params.creator_id);
     if (params.brief_id) query.append('brief_id', params.brief_id);
     if (params.brand_id) query.append('brand_id', params.brand_id);
     const qs = query.toString();
-    return fetchApi(`/api/messages/contextual-conversation${qs ? `?${qs}` : ''}`);
+    const res = await fetchApi(`/api/messages/contextual-conversation${qs ? `?${qs}` : ''}`);
+    if (res && res.conversation) {
+      return { ...res, conversation: localizeConversation(res.conversation) };
+    }
+    return res;
   },
   getUnreadMessagesCount: () => fetchApi('/api/messages/unread-count'),
   startEngagementConversation: (engagementId) =>
@@ -456,12 +526,22 @@ export const api = {
       method: 'DELETE',
     }),
   getCreatorSavedStatus: (creatorId) => fetchApi(`/api/saved/creators/${creatorId}/status`),
-  getSavedCreators: (params = {}) => {
+  getSavedCreators: async (params = {}) => {
     const query = new URLSearchParams();
     if (params.page) query.append('page', params.page);
     if (params.page_size) query.append('page_size', params.page_size);
     const qs = query.toString();
-    return fetchApi(`/api/saved/creators${qs ? `?${qs}` : ''}`);
+    const res = await fetchApi(`/api/saved/creators${qs ? `?${qs}` : ''}`);
+    if (Array.isArray(res)) {
+      return res.map((item) => (item.creator ? { ...item, creator: localizeCreator(item.creator) } : item));
+    }
+    if (res && Array.isArray(res.items)) {
+      return {
+        ...res,
+        items: res.items.map((item) => (item.creator ? { ...item, creator: localizeCreator(item.creator) } : item)),
+      };
+    }
+    return res;
   },
 
   // ==========================================
@@ -493,7 +573,10 @@ export const api = {
   // ==========================================
   // PHASE 3: COLLABORATION WORKSPACE, MILESTONES & REVIEWS
   // ==========================================
-  getWorkspace: (engagementId) => fetchApi(`/api/workspaces/${engagementId}`),
+  getWorkspace: async (engagementId) => {
+    const res = await fetchApi(`/api/workspaces/${engagementId}`);
+    return localizeWorkspace(res);
+  },
   getWorkspaceTimeline: (engagementId) => fetchApi(`/api/workspaces/${engagementId}/timeline`),
   createWorkspaceMilestone: (engagementId, payload) =>
     fetchApi(`/api/workspaces/${engagementId}/milestones`, {
@@ -509,9 +592,7 @@ export const api = {
     const token = localStorage.getItem('kivora_token') || localStorage.getItem('token');
     return fetch(`${API_BASE_URL}/api/workspaces/${engagementId}/upload-deliverable`, {
       method: 'POST',
-      headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: formData,
     }).then(async (res) => {
       if (!res.ok) {
@@ -556,22 +637,29 @@ export const api = {
     }),
   getProfileReviewSummary: (profileId, role = 'CREATOR') =>
     fetchApi(`/api/workspaces/reviews/summary/${profileId}?role=${role}`),
-  getBrandCollaborationHistory: (params = {}) => {
+  getBrandCollaborationHistory: async (params = {}) => {
     const query = new URLSearchParams();
     if (params.status) query.append('status', params.status);
     if (params.skip) query.append('skip', params.skip);
     if (params.limit) query.append('limit', params.limit);
     const qs = query.toString();
-    return fetchApi(`/api/workspaces/history/brand${qs ? `?${qs}` : ''}`);
+    const res = await fetchApi(`/api/workspaces/history/brand${qs ? `?${qs}` : ''}`);
+    return localizeEngagements(res);
   },
-  getCreatorCollaborationHistory: (params = {}) => {
+  getCreatorCollaborationHistory: async (params = {}) => {
     const query = new URLSearchParams();
     if (params.status) query.append('status', params.status);
     if (params.skip) query.append('skip', params.skip);
     if (params.limit) query.append('limit', params.limit);
     const qs = query.toString();
-    return fetchApi(`/api/workspaces/history/creator${qs ? `?${qs}` : ''}`);
+    const res = await fetchApi(`/api/workspaces/history/creator${qs ? `?${qs}` : ''}`);
+    return localizeEngagements(res);
   },
+  changePassword: (payload) =>
+    fetchApi('/api/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
 };
 
 export default api;

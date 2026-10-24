@@ -6,16 +6,6 @@ from backend.app.main import app
 from backend.app.database import get_db, SessionLocal
 from backend.app.models.models import User, OtpCode
 
-client = TestClient(app)
-
-@pytest.fixture
-def db_session():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
 @pytest.fixture
 def mock_smtp_env(monkeypatch):
     import backend.app.services.email_service as email_service
@@ -28,7 +18,7 @@ def mock_smtp_env(monkeypatch):
         return {"sent": True, "provider": "smtp", "status": "delivered"}
     monkeypatch.setattr(email_service, "_send_via_smtp", mock_send)
 
-def test_login_invalid_password(db_session, mock_smtp_env):
+def test_login_invalid_password(client, db_session, mock_smtp_env):
     email = f"test_{uuid.uuid4()}@login.com"
     client.post("/api/auth/register", json={
         "email": email, "password": "Password123!", "role": "CREATOR"
@@ -42,7 +32,7 @@ def test_login_invalid_password(db_session, mock_smtp_env):
     assert res.status_code == 401
     assert "Invalid email or password" in res.json()["detail"]
 
-def test_login_unverified_account(db_session, mock_smtp_env):
+def test_login_unverified_account(client, db_session, mock_smtp_env):
     email = f"test_{uuid.uuid4()}@unverified.com"
     client.post("/api/auth/register", json={
         "email": email, "password": "Password123!", "role": "CREATOR"
@@ -51,9 +41,9 @@ def test_login_unverified_account(db_session, mock_smtp_env):
     # Try logging in before verifying
     res = client.post("/api/auth/login", json={"email": email, "password": "Password123!"})
     assert res.status_code == 403
-    assert "Email address not verified" in res.json()["detail"]
+    assert "not been verified" in res.json()["detail"].lower() or "not verified" in res.json()["detail"].lower()
 
-def test_duplicate_registration(db_session, mock_smtp_env):
+def test_duplicate_registration(client, db_session, mock_smtp_env):
     email = f"test_{uuid.uuid4()}@dup.com"
     res1 = client.post("/api/auth/register", json={
         "email": email, "password": "Password123!", "role": "CREATOR"
@@ -66,7 +56,7 @@ def test_duplicate_registration(db_session, mock_smtp_env):
     assert res2.status_code == 400
     assert "An account with this email address already exists" in res2.json()["detail"]
 
-def test_resend_cooldown(db_session, mock_smtp_env):
+def test_resend_cooldown(client, db_session, mock_smtp_env):
     email = f"test_{uuid.uuid4()}@resend.com"
     client.post("/api/auth/register", json={
         "email": email, "password": "Password123!", "role": "CREATOR"

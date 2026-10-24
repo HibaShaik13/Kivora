@@ -11,6 +11,49 @@ from backend.app.models.models import CreatorProfile, Brief, PortfolioProject, C
 from backend.app.schemas.schemas import CreatorMatchResult, MatchScoreBreakdown
 
 
+CONTENT_TYPE_COMPATIBILITY_GROUPS = {
+    "VIDEO": {"VIDEO", "ANIMATION", "MOTION_GRAPHICS", "CINEMATIC", "TRAILER", "SHORT_FILM"},
+    "ANIMATION": {"ANIMATION", "VIDEO", "MOTION_GRAPHICS", "2D_ANIMATION", "3D_ANIMATION"},
+    "IMAGE": {"IMAGE", "STILL_IMAGE", "CONCEPT_ART", "ILLUSTRATION", "PRODUCT_VIZ", "KEYART", "STILL"},
+    "STILL_IMAGE": {"STILL_IMAGE", "IMAGE", "CONCEPT_ART", "ILLUSTRATION", "PRODUCT_VIZ", "KEYART", "STILL"},
+    "CONCEPT_ART": {"CONCEPT_ART", "IMAGE", "STILL_IMAGE", "ILLUSTRATION", "MATTE_PAINTING", "VISUAL_DEVELOPMENT"},
+    "PRODUCT_VIZ": {"PRODUCT_VIZ", "3D_MODEL", "IMAGE", "STILL_IMAGE", "CGI_RENDER", "COMMERCIAL_STILL", "VIDEO", "ANIMATION"},
+    "3D_MODEL": {"3D_MODEL", "PRODUCT_VIZ", "CGI_RENDER", "ASSET_PACK", "ENVIRONMENT_3D", "IMAGE", "VIDEO"},
+}
+
+
+def normalize_text(val: Optional[str]) -> str:
+    if not val:
+        return ""
+    return val.replace("_", " ").replace("-", " ").strip().lower()
+
+
+def are_content_types_compatible(brief_ctype: Optional[str], item_ctype: Optional[str]) -> Tuple[bool, bool]:
+    """
+    Returns (is_compatible, is_exact_match).
+    """
+    if not brief_ctype or not item_ctype:
+        return (False, False)
+
+    b_norm = normalize_text(brief_ctype)
+    i_norm = normalize_text(item_ctype)
+    if b_norm == i_norm:
+        return (True, True)
+
+    b_key = brief_ctype.upper().replace(" ", "_")
+    i_key = item_ctype.upper().replace(" ", "_")
+    if i_key in CONTENT_TYPE_COMPATIBILITY_GROUPS.get(b_key, set()):
+        return (True, False)
+
+    # Token overlap check (e.g. 'concept art' vs 'concept', 'animation' vs 'anime animation')
+    b_tokens = set(b_norm.split())
+    i_tokens = set(i_norm.split())
+    if b_tokens and (b_tokens.issubset(i_tokens) or b_norm in i_norm or i_norm in b_norm):
+        return (True, False)
+
+    return (False, False)
+
+
 def evaluate_creator_for_brief(creator: CreatorProfile, brief: Brief) -> CreatorMatchResult:
     reasons: List[str] = []
     gaps: List[str] = []
@@ -39,21 +82,41 @@ def evaluate_creator_for_brief(creator: CreatorProfile, brief: Brief) -> Creator
     hard_filter_passed = True
 
     # 1. Content Type Compatibility
-    matching_content_projs = [
-        p for p in (creator.portfolio_projects or [])
-        if p.content_type == brief.content_type
-    ]
-    if not matching_content_projs:
-        # Check if primary specialization loosely aligns, otherwise hard failure
-        spec_text = (creator.primary_specialization or "").lower()
-        b_ctype = (brief.content_type or "").lower()
-        if b_ctype not in spec_text:
-            hard_filter_passed = False
-            gaps.append(f"No proven {brief.content_type} portfolio project found.")
-        else:
-            warnings.append(f"Self-declared {brief.content_type} specialization without direct portfolio sample.")
+    b_ctype = brief.content_type or ""
+    exact_content_matches = []
+    compatible_content_matches = []
+    for p in (creator.portfolio_projects or []):
+        is_compat, is_exact = are_content_types_compatible(b_ctype, p.content_type)
+        if is_exact:
+            exact_content_matches.append(p)
+        elif is_compat:
+            compatible_content_matches.append(p)
+
+    spec_norm = normalize_text(creator.primary_specialization)
+    bio_norm = normalize_text(creator.bio)
+    skills_norm = " ".join(normalize_text(cs.skill.name if cs.skill and hasattr(cs.skill, 'name') else cs.skill_id) for cs in (creator.skills or []))
+    cats_norm = " ".join(normalize_text(cat.category.name if cat.category and hasattr(cat.category, 'name') else cat.category_id) for cat in (creator.categories or []))
+    b_ctype_norm = normalize_text(b_ctype)
+    creator_corpus = f"{spec_norm} {bio_norm} {skills_norm} {cats_norm}"
+    b_tokens = [token for token in b_ctype_norm.split() if len(token) > 3]
+
+    discipline_aligned = (
+        (b_ctype_norm in spec_norm)
+        or (b_ctype_norm in bio_norm)
+        or (b_ctype_norm in skills_norm)
+        or (b_ctype_norm in cats_norm)
+        or any(token in creator_corpus for token in b_tokens)
+    )
+
+    if exact_content_matches:
+        reasons.append(f"Portfolio includes {len(exact_content_matches)} verified {b_ctype} project(s).")
+    elif compatible_content_matches:
+        reasons.append(f"Demonstrated production in related creative deliverable formats ({compatible_content_matches[0].content_type}).")
+    elif discipline_aligned:
+        warnings.append(f"Specialization & expertise align with {b_ctype} production without direct portfolio sample.")
     else:
-        reasons.append(f"Portfolio includes {len(matching_content_projs)} verified {brief.content_type} project(s).")
+        hard_filter_passed = False
+        gaps.append(f"No proven {b_ctype} portfolio project or creative discipline alignment found.")
 
     # 2. Aspect Ratio Capability
     matching_ar_projs = [
@@ -113,10 +176,16 @@ def evaluate_creator_for_brief(creator: CreatorProfile, brief: Brief) -> Creator
         relevant_matches = []
         for p in projs:
             score_contrib = 0
-            if p.content_type == brief.content_type:
+            is_compat, is_exact = are_content_types_compatible(brief.content_type, p.content_type)
+            if is_exact:
                 score_contrib += 40
+            elif is_compat:
+                score_contrib += 32
+
             if p.aspect_ratio == brief.aspect_ratio:
                 score_contrib += 25
+            elif p.aspect_ratio:
+                score_contrib += 12
             
             # Text / tag matching
             brief_text = f"{brief.title or ''} {brief.creative_style_mood or ''} {brief.campaign_objective or ''}".lower()
@@ -134,7 +203,7 @@ def evaluate_creator_for_brief(creator: CreatorProfile, brief: Brief) -> Creator
             if len(ev_records) > 0:
                 score_contrib += 10
 
-            if score_contrib >= 30 or p.content_type == brief.content_type:
+            if score_contrib >= 25 or is_exact or is_compat:
                 relevant_matches.append((p, score_contrib))
 
         if relevant_matches:
@@ -152,12 +221,16 @@ def evaluate_creator_for_brief(creator: CreatorProfile, brief: Brief) -> Creator
             portfolio_score = min(100.0, float(top_score))
             reasons.append(f"Direct portfolio evidence: '{relevant_matches[0][0].title}' matches campaign deliverable.")
         else:
-            portfolio_score = 35.0
+            portfolio_score = 40.0 if discipline_aligned else 25.0
             gaps.append("Portfolio contains no directly matching deliverables or media formats.")
     else:
-        portfolio_score = 15.0
-        gaps.append("Creator profile has no portfolio projects uploaded.")
-        warnings.append("Low portfolio evidence available for automated validation.")
+        if discipline_aligned:
+            portfolio_score = 45.0
+            warnings.append("Creator profile has no portfolio samples uploaded; scored based on declared discipline mastery.")
+        else:
+            portfolio_score = 15.0
+            gaps.append("Creator profile has no portfolio projects uploaded.")
+            warnings.append("Low portfolio evidence available for automated validation.")
 
     # 3. TOOL & MODEL SCORE (Weight: 15%)
     creator_tool_map = {ct.tool_id: ct for ct in (creator.tools or [])}
@@ -276,16 +349,16 @@ def evaluate_creator_for_brief(creator: CreatorProfile, brief: Brief) -> Creator
     )
 
     if not hard_filter_passed:
-        # Severe dampening for hard filter failure while retaining explanation
-        final_score = round(min(raw_composite * 0.45, 45.0), 1)
+        # Dampening for hard filter failure while retaining explanation
+        final_score = round(min(raw_composite * 0.55, 45.0), 1)
         match_level = "INCOMPATIBLE"
     else:
         final_score = round(raw_composite, 1)
-        if final_score >= 90.0:
+        if final_score >= 85.0:
             match_level = "PERFECT"
-        elif final_score >= 80.0:
+        elif final_score >= 75.0:
             match_level = "EXCELLENT"
-        elif final_score >= 68.0:
+        elif final_score >= 60.0:
             match_level = "GOOD"
         else:
             match_level = "PARTIAL"
@@ -322,6 +395,7 @@ def evaluate_creator_for_brief(creator: CreatorProfile, brief: Brief) -> Creator
         display_name=creator.display_name,
         handle=creator.handle,
         avatar_url=creator.avatar_url or "",
+        location=getattr(creator, "location", None) or "Bengaluru, Karnataka",
         primary_specialization=creator.primary_specialization or "Generative Media Creator",
         verification_tier=creator.verification_tier or "NONE",
         min_budget=creator.min_budget or 0.0,
@@ -351,6 +425,8 @@ def match_creators_for_brief(
     limit: Optional[int] = None,
 ) -> List[CreatorMatchResult]:
     creators = db.query(CreatorProfile).all()
+    # Filter out explicitly rejected creators from brief matching
+    creators = [c for c in creators if getattr(c, "approval_status", "APPROVED") != "REJECTED"]
     results = [evaluate_creator_for_brief(c, brief) for c in creators]
 
     # Filter by hard filters if requested

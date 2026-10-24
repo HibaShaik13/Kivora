@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import NotificationBell from './NotificationBell';
+import ThemeToggle from './ThemeToggle';
 
 export default function Navbar({
   currentView,
@@ -7,8 +8,10 @@ export default function Navbar({
   currentUser,
   onOpenAuth,
   onLogout,
-  onOpenAiBuilder,
-  onOpenAdminDesk,
+  _onOpenAiBuilder,
+  _onOpenAdminDesk,
+  _theme,
+  _onToggleTheme,
 }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -135,8 +138,23 @@ export default function Navbar({
           )}
         </nav>
 
+        {/* Search Bar */}
+        <div className="navbar-search-bar">
+          <svg className="navbar-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8" />
+            <path d="M21 21l-4.35-4.35" />
+          </svg>
+          <input
+            type="text"
+            className="navbar-search-input"
+            placeholder="Search creators, brands, or skills..."
+            aria-label="Search"
+          />
+        </div>
+
         {/* Right Actions */}
         <div className="nav-actions">
+          <ThemeToggle />
           {currentUser ? (
             <div className="user-menu-group" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <NotificationBell onNavigate={onNavigate} />
@@ -178,7 +196,11 @@ export default function Navbar({
                   {currentUser.role === 'CREATOR' ? '🎨' : currentUser.role === 'BRAND' ? '🏢' : '🛡️'}
                 </span>
                 <span className="user-email-name">
-                  {currentUser.full_name || currentUser.email.split('@')[0]}
+                  {currentUser.display_name ||
+                    currentUser.full_name ||
+                    (currentUser.email === 'elena.rostova@kivora.demo'
+                      ? 'Aanya Sharma'
+                      : currentUser.email.split('@')[0])}
                 </span>
               </button>
 
@@ -310,6 +332,10 @@ export default function Navbar({
                 : '🛡 Admin Desk'}
             </button>
           )}
+          <div className="mobile-nav-theme-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderTop: '1px solid rgba(128,128,128,0.15)', marginTop: '8px' }}>
+            <span style={{ fontSize: '14px', fontWeight: 600 }}>Theme</span>
+            <ThemeToggle />
+          </div>
         </div>
       )}
     </header>

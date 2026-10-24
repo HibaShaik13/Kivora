@@ -1,20 +1,100 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../services/api';
 import AddProjectModal from './AddProjectModal';
 import EditCreatorProfileModal from './EditCreatorProfileModal';
 import SubmitDeliverableModal from './SubmitDeliverableModal';
-import BriefsExplorer from './BriefsExplorer';
 import MessagesInbox from './MessagesInbox';
 import CollaborationWorkspaceModal from './CollaborationWorkspaceModal';
 import BrandLogo from './BrandLogo';
-import { getCreatorAvatar } from '../utils/visualAssetHelpers';
+import NotificationBell from './NotificationBell';
+import ThemeToggle from './ThemeToggle';
+import CreatorAnalyticsView from './CreatorAnalyticsView';
+import PortalSettingsView from './PortalSettingsView';
+import { getCreatorAvatar, getBriefCoverImage } from '../utils/visualAssetHelpers';
+import { resolveBriefDomain, DOMAIN_LABELS, DOMAIN_FOLDERS } from '../utils/briefImageMap';
+import { formatINR, clampDemoBudget } from '../utils/indianLocalization';
 
+// SVG Icon Helpers matching Reference Design
+const LayoutDashboardIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="3" y="3" width="7" height="9" rx="1" />
+    <rect x="14" y="3" width="7" height="5" rx="1" />
+    <rect x="14" y="12" width="7" height="9" rx="1" />
+    <rect x="3" y="16" width="7" height="5" rx="1" />
+  </svg>
+);
+const UserIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
+  </svg>
+);
+const PaletteIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
+    <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
+    <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
+    <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
+    <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.563-2.512 5.563-5.563C22 6.5 17.5 2 12 2z" />
+  </svg>
+);
+const CompassIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="12" cy="12" r="10" />
+    <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+  </svg>
+);
+const FileTextIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <polyline points="14 2 14 8 20 8" />
+    <line x1="16" y1="13" x2="8" y2="13" />
+    <line x1="16" y1="17" x2="8" y2="17" />
+  </svg>
+);
+const HeartHandshakeIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+  </svg>
+);
+const MessageSquareIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+  </svg>
+);
+const SparklesIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+  </svg>
+);
+const BarChartIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <line x1="12" y1="20" x2="12" y2="10" />
+    <line x1="18" y1="20" x2="18" y2="4" />
+    <line x1="6" y1="20" x2="6" y2="16" />
+  </svg>
+);
+const SettingsIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="12" cy="12" r="3" />
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+  </svg>
+);
+const LogOutIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+    <polyline points="16 17 21 12 16 7" />
+    <line x1="21" y1="12" x2="9" y2="12" />
+  </svg>
+);
 
 export default function CreatorDashboard({
   currentUser,
+  approvalStatus = null,
   onSelectProject,
   onSelectBrief,
   onLogout,
+  onNavigateHome,
   initialTab,
   initialConversationId,
   chatContext,
@@ -55,9 +135,27 @@ export default function CreatorDashboard({
     setActiveTab(tabId);
     try {
       localStorage.setItem('kivora_creator_tab', tabId);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch {
       // ignore
     }
+  };
+
+  const handleNotificationNavigate = (view, opts) => {
+    if (opts?.tab) {
+      if (opts.tab === 'projects') {
+        handleTabChange('collaborations');
+      } else {
+        handleTabChange(opts.tab);
+      }
+    } else if (view === 'inbox' || view === 'messages') {
+      handleTabChange('messages');
+    } else if (view === 'briefs') {
+      handleTabChange('briefs');
+    } else {
+      handleTabChange('overview');
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const [profile, setProfile] = useState(null);
@@ -94,6 +192,20 @@ export default function CreatorDashboard({
   const [actionSuccessMsg, setActionSuccessMsg] = useState(null);
   const [expandedOppId, setExpandedOppId] = useState(null);
 
+  // Portal Search & Brief Filters matching reference
+  const [portalSearchQuery, setPortalSearchQuery] = useState('');
+  const [creatorBriefCategory, setCreatorBriefCategory] = useState('ALL');
+  const [creatorContentType, setCreatorContentType] = useState('ALL');
+  const [creatorBudgetRange, setCreatorBudgetRange] = useState('ALL');
+  const [creatorPlatform, setCreatorPlatform] = useState('ALL');
+  const [creatorCampaignGoal, setCreatorCampaignGoal] = useState('ALL');
+  const [creatorSortBy, setCreatorSortBy] = useState('LATEST');
+  const [allBriefs, setAllBriefs] = useState([]);
+
+  // Smart Opportunities Domain & Search Filter State
+  const [oppSearchQuery, setOppSearchQuery] = useState('');
+  const [oppDomainFilter, setOppDomainFilter] = useState('ALL');
+
   const refreshInvitations = async (silent = false) => {
     try {
       if (!silent) setIsLoadingInvitations(true);
@@ -124,7 +236,7 @@ export default function CreatorDashboard({
     try {
       setIsLoading(true);
       setError(null);
-      const [profData, appsData, engsData, verData, brandsData, invData, savedData, oppsData, prefData] = await Promise.all([
+      const [profData, appsData, engsData, verData, brandsData, invData, savedData, oppsData, prefData, briefsData] = await Promise.all([
         api.getMyCreatorProfile().catch(() => null),
         api.getMyApplications().catch(() => []),
         api.getEngagements().catch(() => []),
@@ -134,6 +246,7 @@ export default function CreatorDashboard({
         api.getSavedBriefs().catch(() => []),
         api.getOpportunityAlerts().catch(() => []),
         api.getAlertPreferences().catch(() => null),
+        api.getBriefs().catch(() => []),
       ]);
 
       setProfile(profData);
@@ -146,6 +259,7 @@ export default function CreatorDashboard({
       setSavedBriefs(savedData || []);
       setOpportunities(oppsData || []);
       setAlertPreferences(prefData);
+      setAllBriefs(Array.isArray(briefsData) ? briefsData : []);
     } catch (err) {
       console.error('Error loading creator dashboard:', err);
       setError(err.message || 'Failed to load dashboard data.');
@@ -153,6 +267,77 @@ export default function CreatorDashboard({
       setIsLoading(false);
     }
   };
+
+  const filteredDiscoverBriefs = useMemo(() => {
+    return allBriefs.filter((brief) => {
+      // 1. Category pill filter
+      if (creatorBriefCategory !== 'ALL') {
+        const cat = creatorBriefCategory.toLowerCase();
+        const briefDomain = resolveBriefDomain(brief).toLowerCase();
+        const briefCats = (brief.categories || []).map((c) => (c.name || c.slug || '').toLowerCase());
+        const title = (brief.title || '').toLowerCase();
+        const obj = (brief.campaign_objective || '').toLowerCase();
+        const match =
+          briefDomain.includes(cat) ||
+          briefCats.some((c) => c.includes(cat)) ||
+          title.includes(cat) ||
+          obj.includes(cat);
+        if (!match) return false;
+      }
+
+      // 2. Content Type
+      if (creatorContentType !== 'ALL') {
+        const ct = (brief.content_type || '').toUpperCase();
+        if (creatorContentType === 'VIDEO' && ct !== 'VIDEO') return false;
+        if (creatorContentType === 'REELS' && (ct !== 'VIDEO' || brief.aspect_ratio !== '9:16')) return false;
+        if (creatorContentType === 'ANIMATION' && !ct.includes('ANIMATION') && !ct.includes('3D')) return false;
+        if (creatorContentType === 'STILLS' && ct !== 'IMAGE' && ct !== 'STILL_IMAGE') return false;
+      }
+
+      // 3. Budget Range
+      if (creatorBudgetRange !== 'ALL') {
+        const amt = clampDemoBudget(brief.budget_amount, 35000);
+        if (creatorBudgetRange === 'TIER_1' && amt >= 25000) return false;
+        if (creatorBudgetRange === 'TIER_2' && (amt < 25000 || amt > 40000)) return false;
+        if (creatorBudgetRange === 'TIER_3' && amt <= 40000) return false;
+      }
+
+      // 4. Platform
+      if (creatorPlatform !== 'ALL') {
+        const target = creatorPlatform.toLowerCase();
+        const platforms = (brief.target_platforms || []).map((p) => p.toLowerCase());
+        const desc = (brief.deliverables_description || '').toLowerCase();
+        if (platforms.length > 0) {
+          if (!platforms.some((p) => p.includes(target))) return false;
+        } else if (!desc.includes(target) && !(brief.title || '').toLowerCase().includes(target)) {
+          // pass through if generic
+        }
+      }
+
+      // 5. Campaign Goal
+      if (creatorCampaignGoal !== 'ALL') {
+        const goal = (brief.campaign_objective || '').toLowerCase();
+        if (creatorCampaignGoal === 'AWARENESS' && !goal.includes('awareness') && !goal.includes('launch')) return false;
+        if (creatorCampaignGoal === 'CONVERSIONS' && !goal.includes('sales') && !goal.includes('conversion') && !goal.includes('ad')) return false;
+        if (creatorCampaignGoal === 'REELS' && !goal.includes('reel') && brief.aspect_ratio !== '9:16') return false;
+      }
+
+      // 6. Search query
+      if (portalSearchQuery.trim()) {
+        const q = portalSearchQuery.toLowerCase();
+        const title = (brief.title || '').toLowerCase();
+        const brand = (brief.brand_company_name || brief.brand?.company_name || '').toLowerCase();
+        const obj = (brief.campaign_objective || '').toLowerCase();
+        if (!title.includes(q) && !brand.includes(q) && !obj.includes(q)) return false;
+      }
+
+      return true;
+    }).sort((a, b) => {
+      if (creatorSortBy === 'BUDGET_HIGH') return (Number(b.budget_amount) || 0) - (Number(a.budget_amount) || 0);
+      if (creatorSortBy === 'BUDGET_LOW') return (Number(a.budget_amount) || 0) - (Number(b.budget_amount) || 0);
+      return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+    });
+  }, [allBriefs, creatorBriefCategory, creatorContentType, creatorBudgetRange, creatorPlatform, creatorCampaignGoal, creatorSortBy, portalSearchQuery]);
 
   const handleAcceptInvitation = async (invId, briefId) => {
     try {
@@ -226,6 +411,44 @@ export default function CreatorDashboard({
     }
   };
 
+  const filteredOpportunities = React.useMemo(() => {
+    if (!opportunities || !Array.isArray(opportunities)) return [];
+    return opportunities.filter((opp) => {
+      const brief = opp.brief;
+      if (!brief) return false;
+
+      // 1. Creative Domain filter
+      if (oppDomainFilter && oppDomainFilter !== 'ALL') {
+        const domain = resolveBriefDomain(brief);
+        if (domain !== oppDomainFilter) return false;
+      }
+
+      // 2. Search query filter
+      if (oppSearchQuery && oppSearchQuery.trim()) {
+        const q = oppSearchQuery.toLowerCase().trim();
+        const title = (brief.title || '').toLowerCase();
+        const obj = (brief.campaign_objective || '').toLowerCase();
+        const brand = (brief.brand?.company_name || '').toLowerCase();
+        const desc = (brief.deliverables_description || '').toLowerCase();
+        const format = (brief.content_type || '').toLowerCase();
+        const reasons = (opp.match_reasons || []).join(' ').toLowerCase();
+
+        if (
+          !title.includes(q) &&
+          !obj.includes(q) &&
+          !brand.includes(q) &&
+          !desc.includes(q) &&
+          !format.includes(q) &&
+          !reasons.includes(q)
+        ) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [opportunities, oppDomainFilter, oppSearchQuery]);
+
   useEffect(() => {
     loadData();
   }, []);
@@ -296,127 +519,192 @@ export default function CreatorDashboard({
   }
 
   return (
-    <div
-      className="creator-dashboard-layout"
-      style={{
-        backgroundImage: 'linear-gradient(rgba(250, 247, 242, 0.94), rgba(250, 247, 242, 0.94)), url(/assets/backgrounds/creator-dashboard.jpg)',
-        backgroundSize: 'cover',
-        backgroundAttachment: 'fixed',
-        minHeight: 'calc(100vh - 72px)',
-      }}
-    >
-      <div className="container mx-auto px-4 py-8 flex flex-col md:flex-row gap-8">
-        {/* Sidebar */}
-        <aside
-          className="w-full md:w-64 shrink-0 glass-panel rounded-2xl p-4 flex flex-col justify-between"
-          style={{
-            backgroundImage: 'linear-gradient(rgba(255,255,255,0.92), rgba(255,255,255,0.92)), url(/assets/backgrounds/sidebar.jpg)',
-            backgroundSize: 'cover',
-            height: 'fit-content',
-          }}
-        >
-          <div className="space-y-6">
-            {/* Creator Mini Profile Header */}
-            <div className="flex items-center gap-3 pb-4 border-b border-black/10">
-              <img
-                src={getCreatorAvatar(profile)}
-                alt={profile?.display_name || 'Creator'}
-                className="w-12 h-12 rounded-full object-cover border-2 border-purple-400 shadow-sm"
-                style={{
-                  width: '48px',
-                  height: '48px',
-                  minWidth: '48px',
-                  maxWidth: '48px',
-                  minHeight: '48px',
-                  maxHeight: '48px',
-                  borderRadius: '50%',
-                  objectFit: 'cover',
-                  flexShrink: 0,
-                }}
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = '/assets/creator-portraits/devon.jpg';
-                }}
-              />
-              <div className="overflow-hidden">
-                <h3 className="text-sm font-bold text-neutral-900 truncate">
-                  {profile?.display_name || currentUser?.email}
-                </h3>
-                <p className="text-xs text-purple-700 font-mono truncate">
-                  @{profile?.handle || 'creator'}
-                </p>
-                <span className="inline-block mt-1 px-2 py-0.5 text-[10px] font-bold rounded-full bg-purple-100 text-purple-800 border border-purple-200">
+    <div className="portal-layout">
+      {/* Sidebar with Purple/Lavender Gradient */}
+      <aside className="portal-sidebar">
+        <div>
+          {/* Brand Logo with clickable link */}
+          <div
+            className="portal-sidebar-logo"
+            onClick={onNavigateHome}
+            title="Return to Kivora Homepage"
+          >
+            <span>Kivora</span>
+            <span className="brand-dot">.</span>
+          </div>
+
+          {/* Creator Mini Profile Card */}
+          <div
+            className="portal-profile-card cursor-pointer"
+            onClick={() => setIsEditProfileOpen(true)}
+            title="Edit Creator Profile"
+          >
+            <img
+              src={getCreatorAvatar(profile)}
+              alt={profile?.display_name || currentUser?.full_name || 'Creator'}
+              className="portal-profile-avatar"
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = '/assets/creator-portraits/devon.jpg';
+              }}
+            />
+            <div className="portal-profile-info">
+              <div className="portal-profile-name">
+                {profile?.display_name || currentUser?.full_name || 'Creator'}
+              </div>
+              <div className="portal-profile-handle">
+                @{profile?.handle || (currentUser?.email ? currentUser.email.split('@')[0] : 'creator')}
+              </div>
+              <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '6px' }}>
+                <span className="portal-profile-badge">
                   {profile?.verification_tier || 'COMMUNITY'}
                 </span>
+                {(approvalStatus || profile?.approval_status) && (
+                  <span
+                    style={{
+                      fontSize: '10px',
+                      fontWeight: '800',
+                      padding: '2px 8px',
+                      borderRadius: '999px',
+                      letterSpacing: '0.04em',
+                      textTransform: 'uppercase',
+                      backgroundColor:
+                        (approvalStatus || profile?.approval_status) === 'APPROVED'
+                          ? '#D1FAE5'
+                          : (approvalStatus || profile?.approval_status) === 'LEGACY_ACTIVE'
+                          ? '#EDE9FE'
+                          : (approvalStatus || profile?.approval_status) === 'REJECTED'
+                          ? '#FEE2E2'
+                          : '#FEF3C7',
+                      color:
+                        (approvalStatus || profile?.approval_status) === 'APPROVED'
+                          ? '#065F46'
+                          : (approvalStatus || profile?.approval_status) === 'LEGACY_ACTIVE'
+                          ? '#5B21B6'
+                          : (approvalStatus || profile?.approval_status) === 'REJECTED'
+                          ? '#991B1B'
+                          : '#92400E',
+                    }}
+                  >
+                    ● {(approvalStatus || profile?.approval_status) === 'LEGACY_ACTIVE' ? 'LEGACY ACTIVE' : (approvalStatus || profile?.approval_status)}
+                  </span>
+                )}
               </div>
             </div>
+          </div>
 
-            {/* Navigation Tabs */}
-            <nav className="space-y-1">
-              {[
-                { id: 'overview', label: '📊 Dashboard Overview', icon: '📊' },
-                { id: 'profile', label: '👤 Creator Profile', icon: '👤' },
-                { id: 'portfolio', label: '🎨 My Portfolio', icon: '🎨', count: profile?.portfolio_projects?.length },
-                { id: 'briefs', label: '✨ Discover Briefs', icon: '✨' },
-                { id: 'opportunities', label: '⚡ Smart Opportunities', icon: '⚡', count: opportunities.length },
-                { 
-                  id: 'invitations', 
-                  label: '✉️ Direct Invitations', 
-                  icon: '✉️', 
-                  count: (isLoadingInvitations && invitations === null) ? undefined : (invitations?.length ?? 0) 
-                },
-                { id: 'applications', label: '📝 My Applications', icon: '📝', count: applications.length },
-                { id: 'saved', label: '🔖 Saved Briefs', icon: '🔖', count: savedBriefs.length },
-                { id: 'collaborations', label: '🤝 Collaborations', icon: '🤝', count: engagements.length },
-                { id: 'messages', label: '💬 Messages & Chat', icon: '💬' },
-                { id: 'verification', label: '🛡 Verification & Proofs', icon: '🛡', count: verifications.length },
-              ].map((tab) => (
-
+          {/* Navigation Links */}
+          <nav className="portal-nav-list">
+            {[
+              { id: 'overview', label: 'Dashboard', icon: <LayoutDashboardIcon /> },
+              { id: 'profile', label: 'Creator Profile', icon: <UserIcon /> },
+              { id: 'portfolio', label: 'My Portfolio', icon: <PaletteIcon />, count: profile?.portfolio_projects?.length },
+              { id: 'briefs', label: 'Discover Briefs', icon: <CompassIcon /> },
+              { id: 'applications', label: 'My Applications', icon: <FileTextIcon />, count: applications?.length },
+              { id: 'collaborations', label: 'Collaborations', icon: <HeartHandshakeIcon />, count: engagements?.length },
+              { id: 'messages', label: 'Messages & Chat', icon: <MessageSquareIcon /> },
+              { id: 'opportunities', label: 'Opportunities', icon: <SparklesIcon />, count: opportunities?.length },
+              { id: 'analytics', label: 'Analytics', icon: <BarChartIcon /> },
+              { id: 'settings', label: 'Settings', icon: <SettingsIcon /> },
+            ].map((item) => {
+              const isActive = activeTab === item.id;
+              return (
                 <button
-                  key={tab.id}
+                  key={item.id}
                   type="button"
-                  onClick={() => handleTabChange(tab.id)}
-                  className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition ${
-                    activeTab === tab.id
-                      ? 'bg-purple-600 text-white shadow-md'
-                      : 'text-neutral-700 hover:bg-black/5'
-                  }`}
+                  onClick={() => handleTabChange(item.id)}
+                  className={`portal-nav-item ${isActive ? 'active' : ''}`}
                 >
-                  <span>{tab.label}</span>
-                  {tab.count !== undefined && (
-                    <span
-                      className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                        activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-black/5 text-neutral-600'
-                      }`}
-                    >
-                      {tab.count}
+                  <div className="flex items-center gap-2.5">
+                    <span className="portal-nav-icon">{item.icon}</span>
+                    <span>{item.label}</span>
+                  </div>
+                  {item.count !== undefined && item.count > 0 && !isActive && (
+                    <span className="portal-nav-count">
+                      {item.count}
                     </span>
                   )}
                 </button>
-              ))}
-            </nav>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* Sidebar Footer with Log Out */}
+        <div className="portal-sidebar-footer">
+          <button
+            type="button"
+            onClick={onLogout}
+            className="portal-logout-btn"
+          >
+            <LogOutIcon />
+            <span>Log Out</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content Area with Cream/White Background */}
+      <div className="portal-main">
+        {/* Top Header Bar */}
+        <header className="portal-topbar">
+          <div className="portal-pill-badge creator">
+            <span>✨</span>
+            <span>Creator Studio</span>
           </div>
 
-          <div className="pt-6 border-t border-black/10 mt-6 space-y-2">
+          <div className="portal-search-wrap">
+            <svg
+              className="portal-search-icon"
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" x2="16.65" y1="21" y2="16.65" />
+            </svg>
+            <input
+              type="text"
+              className="portal-search-input"
+              placeholder="Search brand briefs, keywords, or categories..."
+              value={portalSearchQuery}
+              onChange={(e) => setPortalSearchQuery(e.target.value)}
+            />
+          </div>
+
+          <div className="portal-topbar-actions">
+            <ThemeToggle />
+            <NotificationBell onNavigate={handleNotificationNavigate} />
+
             <button
               type="button"
+              className="portal-icon-btn"
+              title="Messages & Chat"
+              onClick={() => handleTabChange('messages')}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+            </button>
+
+            <img
+              src={getCreatorAvatar(profile)}
+              alt={profile?.display_name || 'Aanya Sharma'}
+              className="w-8 h-8 rounded-full object-cover border border-black/10 cursor-pointer shadow-xs"
               onClick={() => setIsEditProfileOpen(true)}
-              className="w-full py-2 px-3 text-xs font-semibold rounded-xl bg-white/80 hover:bg-white text-neutral-800 border border-black/10 text-center transition"
-            >
-              ⚙ Edit Profile Details
-            </button>
-            <button
-              type="button"
-              onClick={onLogout}
-              className="w-full py-2 px-3 text-xs font-semibold rounded-xl text-red-600 hover:bg-red-50 text-center transition"
-            >
-              Sign Out
-            </button>
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = '/assets/creator-portraits/elena.jpg';
+              }}
+              title={profile?.display_name || currentUser?.display_name || currentUser?.full_name || 'Aanya Sharma'}
+            />
           </div>
-        </aside>
+        </header>
 
-        {/* Main Workspace Area */}
-        <main className="flex-1 min-w-0">
+        {/* Content Body */}
+        <div className="portal-content-body">
           {error && (
             <div className="banner-error mb-6 p-4 rounded-xl bg-red-100 border border-red-200 text-red-800 text-xs">
               {error}
@@ -426,178 +714,215 @@ export default function CreatorDashboard({
           {/* TAB 1: OVERVIEW */}
           {activeTab === 'overview' && (
             <div className="space-y-6">
-              {/* Welcome Header */}
-              <div className="glass-panel p-6 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              {/* Welcome Section */}
+              <div className="portal-header-row">
                 <div>
-                  <span className="badge-editorial">
-                    <span className="badge-dot" />
-                    CREATOR WORKSPACE
-                  </span>
-                  <h1 className="text-2xl font-serif font-bold text-neutral-900 mt-1">
-                    Welcome back, <span className="serif-italic-accent">{profile?.display_name || 'Creator'}</span>
-                  </h1>
-                  <p className="text-xs text-neutral-600 mt-1">
-                    Manage your audited portfolio, pitch for premium brand briefs, and submit master deliverables.
+                  <span className="text-xs text-neutral-500 font-sans block mb-0.5">Welcome back,</span>
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-2xl sm:text-3xl font-extrabold text-neutral-900 font-sans tracking-tight">
+                      {profile?.display_name || currentUser?.display_name || currentUser?.full_name || 'Aanya Sharma'}
+                    </h1>
+                    {profile?.verification_tier === 'TOP_STUDIO' && (
+                      <span className="text-amber-500 text-xl" title="Top Rated Verified Pro">✨</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-neutral-500 mt-1 font-sans">
+                    Create. Collaborate. Grow with Kivora.
                   </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex items-center gap-2.5">
                   <button
                     type="button"
-                    className="btn-primary text-xs"
-                    onClick={() => setIsAddProjectOpen(true)}
-                  >
-                    + Add New Project
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-secondary text-xs"
+                    className="portal-btn-primary"
                     onClick={() => handleTabChange('briefs')}
                   >
-                    Explore Briefs →
+                    <span>Explore Briefs</span>
+                    <span>→</span>
                   </button>
                 </div>
               </div>
 
-              {/* Verified Metrics Stat Cards (derived from real DB records) */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="glass-panel p-4 rounded-xl text-center">
-                  <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider block">
-                    Portfolio Works
-                  </span>
-                  <span className="text-2xl font-serif font-bold text-neutral-900">
-                    {profile?.portfolio_projects?.length || 0}
-                  </span>
+              {/* 4 Pastel Stat Cards */}
+              <div className="portal-stat-grid">
+                {/* 1. Portfolio Works (Pastel Lavender) */}
+                <div className="portal-stat-card lavender">
+                  <div className="portal-stat-header">
+                    <div className="portal-stat-icon-wrap" style={{ background: '#F3E2FD', color: '#683EE6' }}>
+                      🎨
+                    </div>
+                    <span className="portal-stat-title">Portfolio Works</span>
+                  </div>
+                  <div>
+                    <div className="portal-stat-value">
+                      {profile?.portfolio_projects ? profile.portfolio_projects.length : 0}
+                    </div>
+                    <div className="portal-stat-subtitle">
+                      Published projects
+                    </div>
+                  </div>
                 </div>
-                <div className="glass-panel p-4 rounded-xl text-center">
-                  <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider block">
-                    Completed Projects
-                  </span>
-                  <span className="text-2xl font-serif font-bold text-purple-700">
-                    {profile?.completed_projects_count || 0}
-                  </span>
+
+                {/* 2. Applications (Pastel Mint/Lavender) */}
+                <div className="portal-stat-card lavender">
+                  <div className="portal-stat-header">
+                    <div className="portal-stat-icon-wrap" style={{ background: '#EDE9FE', color: '#6D28D9' }}>
+                      📝
+                    </div>
+                    <span className="portal-stat-title">Applications</span>
+                  </div>
+                  <div>
+                    <div className="portal-stat-value">
+                      {applications ? applications.length : 0}
+                    </div>
+                    <div className="portal-stat-subtitle">
+                      Total submitted
+                    </div>
+                  </div>
                 </div>
-                <div className="glass-panel p-4 rounded-xl text-center">
-                  <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider block">
-                    Audited Claims
-                  </span>
-                  <span className="text-2xl font-serif font-bold text-emerald-600">
-                    {profile?.verified_claims_count || 0} ✓
-                  </span>
+
+                {/* 3. Active Collaborations (Pastel Mint) */}
+                <div className="portal-stat-card mint">
+                  <div className="portal-stat-header">
+                    <div className="portal-stat-icon-wrap" style={{ background: '#DBF7E9', color: '#059669' }}>
+                      🤝
+                    </div>
+                    <span className="portal-stat-title">Active Collaborations</span>
+                  </div>
+                  <div>
+                    <div className="portal-stat-value">
+                      {engagements ? engagements.filter((e) => e.status !== 'COMPLETED').length : 0}
+                    </div>
+                    <div className="portal-stat-subtitle">
+                      Projects in progress
+                    </div>
+                  </div>
                 </div>
-                <div className="glass-panel p-4 rounded-xl text-center">
-                  <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider block">
-                    Average Rating
-                  </span>
-                  <span className="text-2xl font-serif font-bold text-neutral-900">
-                    ★ {profile?.average_rating || 5.0}
-                  </span>
+
+                {/* 4. Average Rating (Pastel Warm Yellow) */}
+                <div className="portal-stat-card yellow">
+                  <div className="portal-stat-header">
+                    <div className="portal-stat-icon-wrap" style={{ background: '#FDF4D4', color: '#D97706' }}>
+                      ★
+                    </div>
+                    <span className="portal-stat-title">Average Rating</span>
+                  </div>
+                  <div>
+                    <div className="portal-stat-value flex items-center gap-1">
+                      {profile?.completed_projects_count && profile.completed_projects_count > 0 ? (
+                        <>
+                          <span className="text-amber-500 text-lg">★</span>
+                          <span>{Number(profile.average_rating || 5.0).toFixed(1)}</span>
+                        </>
+                      ) : (
+                        <span className="text-sm font-semibold text-neutral-400">— (New)</span>
+                      )}
+                    </div>
+                    <div className="portal-stat-subtitle">
+                      {profile?.completed_projects_count && profile.completed_projects_count > 0
+                        ? `From ${profile.completed_projects_count} reviews`
+                        : 'No reviews yet'}
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Active Engagements / Collaborations */}
-              <div className="glass-panel p-6 rounded-2xl">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-base font-bold text-neutral-900 font-serif">
-                    Active Campaign Collaborations ({engagements.length})
-                  </h3>
+              {/* Active Campaign Collaborations */}
+              <div>
+                <div className="flex items-center justify-between mb-3.5">
+                  <h2 className="text-base font-bold text-neutral-900 font-sans tracking-tight">
+                    Active Campaign Collaborations
+                  </h2>
                   <button
                     type="button"
-                    className="text-xs text-purple-700 hover:underline font-semibold"
-                    onClick={() => setActiveTab('collaborations')}
+                    className="text-xs font-semibold text-purple-700 hover:text-purple-900 transition font-sans"
+                    onClick={() => handleTabChange('collaborations')}
                   >
                     View All →
                   </button>
                 </div>
 
-                {engagements.length === 0 ? (
-                  <div className="p-8 text-center text-neutral-400 text-xs">
-                    No active campaign engagements yet. Pitch to open campaign briefs to start collaborating!
-                  </div>
-                ) : (
+                {engagements && engagements.length > 0 ? (
                   <div className="space-y-3">
-                    {engagements.slice(0, 3).map((eng) => (
-                      <div
-                        key={eng.id}
-                        className="p-4 rounded-xl border border-black/5 bg-white/60 flex flex-col md:flex-row items-start md:items-center justify-between gap-3"
-                      >
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-purple-100 text-purple-800">
-                              {eng.status}
-                            </span>
-                            <h4 className="text-sm font-bold text-neutral-900">{eng.brief_title}</h4>
+                    {engagements.slice(0, 3).map((collab, idx) => {
+                      const coverImg =
+                        idx === 0
+                          ? '/assets/campaign-covers/brand_skincare_cover.jpg'
+                          : '/assets/campaign-covers/golden_serum_cover.jpg';
+
+                      return (
+                        <div
+                          key={collab.id}
+                          className="portal-card-row cursor-pointer"
+                          onClick={() => {
+                            setSelectedWorkspaceEngagementId(collab.id);
+                          }}
+                        >
+                          <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                            <img
+                              src={coverImg}
+                              alt={collab.brief_title}
+                              className="w-16 h-14 sm:w-20 sm:h-16 rounded-xl object-cover shrink-0 border border-black/[0.04]"
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = '/assets/campaign-covers/brand_fashion_cover.jpg';
+                              }}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <span className="portal-badge-tag approved mb-1">
+                                {collab.status || 'ACTIVE'}
+                              </span>
+                              <h3 className="text-sm font-bold text-neutral-900 font-sans tracking-tight truncate">
+                                {collab.brief_title}
+                              </h3>
+                              <p className="text-xs text-neutral-500 mt-0.5 font-sans">
+                                Brand: <strong className="text-neutral-700">{collab.brand_company_name || 'Brand Partner'}</strong> • Agreed: {formatINR(clampDemoBudget(collab.agreed_amount, 35000))}
+                              </p>
+                            </div>
                           </div>
-                          <p className="text-xs text-neutral-500 mt-1">
-                            Brand: <strong>{eng.brand_company_name || 'Lumina'}</strong> • Agreed: ${eng.agreed_amount?.toLocaleString()}
-                          </p>
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            className="btn-primary text-xs py-1.5 px-3"
-                            onClick={() => setSubmittingEngagement(eng)}
-                          >
-                            Submit Deliverable
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
 
-              {/* Recent Applications */}
-              <div className="glass-panel p-6 rounded-2xl">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-base font-bold text-neutral-900 font-serif">
-                    Recent Pitch Submissions ({applications.length})
-                  </h3>
-                  <button
-                    type="button"
-                    className="text-xs text-purple-700 hover:underline font-semibold"
-                    onClick={() => setActiveTab('applications')}
-                  >
-                    View All →
-                  </button>
-                </div>
-
-                {applications.length === 0 ? (
-                  <div className="p-8 text-center text-neutral-400 text-xs">
-                    No submitted pitches yet. Browse available briefs to apply!
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {applications.slice(0, 3).map((app) => (
-                      <div
-                        key={app.id}
-                        className="p-4 rounded-xl border border-black/5 bg-white/60 flex items-center justify-between"
-                      >
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
-                                app.status === 'ACCEPTED'
-                                  ? 'bg-emerald-100 text-emerald-800'
-                                  : app.status === 'REJECTED'
-                                  ? 'bg-red-100 text-red-800'
-                                  : 'bg-yellow-100 text-yellow-800'
-                              }`}
+                          <div className="flex items-center gap-3 shrink-0">
+                            <button
+                              type="button"
+                              className="portal-btn-primary"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSubmittingEngagement(collab);
+                              }}
                             >
-                              {app.status}
-                            </span>
-                            <span className="text-xs font-semibold text-neutral-800">
-                              Proposed Rate: ${app.proposed_rate?.toLocaleString()} ({app.proposed_timeline_days} days)
-                            </span>
+                              Submit Deliverable
+                            </button>
+                            <button
+                              type="button"
+                              className="portal-dots-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleTabChange('collaborations');
+                              }}
+                              title="Collaboration options"
+                            >
+                              ⋮
+                            </button>
                           </div>
-                          <p className="text-xs text-neutral-600 mt-1 line-clamp-1 italic">
-                            "{app.pitch_text}"
-                          </p>
                         </div>
-                        <span className="text-[10px] text-neutral-400">
-                          {new Date(app.submitted_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                    ))}
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-2xl border border-black/[0.06] p-8 text-center shadow-xs">
+                    <div className="w-12 h-12 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center mx-auto mb-3 text-xl">
+                      🤝
+                    </div>
+                    <h3 className="text-sm font-bold text-neutral-900 mb-1">No Active Collaborations Yet</h3>
+                    <p className="text-xs text-neutral-500 max-w-sm mx-auto mb-4">
+                      Explore open brand campaign briefs, submit creative proposals, and launch your first collaboration.
+                    </p>
+                    <button
+                      type="button"
+                      className="portal-btn-primary"
+                      onClick={() => handleTabChange('briefs')}
+                    >
+                      Browse Campaign Briefs →
+                    </button>
                   </div>
                 )}
               </div>
@@ -661,11 +986,11 @@ export default function CreatorDashboard({
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-6 pt-6 border-t border-black/10">
                   <div>
                     <span className="text-[11px] font-bold text-neutral-500 uppercase block">Min Budget</span>
-                    <span className="text-sm font-bold text-neutral-900">${profile?.min_budget?.toLocaleString()}</span>
+                    <span className="text-sm font-bold text-neutral-900">{formatINR(clampDemoBudget(profile?.min_budget, 25000))}</span>
                   </div>
                   <div>
                     <span className="text-[11px] font-bold text-neutral-500 uppercase block">Hourly Rate</span>
-                    <span className="text-sm font-bold text-neutral-900">${profile?.hourly_rate}/hr</span>
+                    <span className="text-sm font-bold text-neutral-900">{profile?.hourly_rate ? formatINR(profile.hourly_rate >= 500 ? profile.hourly_rate : profile.hourly_rate * 25) : '₹2,500'}/hr</span>
                   </div>
                   <div>
                     <span className="text-[11px] font-bold text-neutral-500 uppercase block">Portfolio Link</span>
@@ -756,52 +1081,56 @@ export default function CreatorDashboard({
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                   {profile?.portfolio_projects?.map((proj) => (
                     <div
                       key={proj.id}
-                      className="glass-panel rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition flex flex-col justify-between"
+                      className="glass-panel rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition flex flex-col justify-between border border-black/5"
                     >
                       <div
-                        className="cursor-pointer relative aspect-video bg-neutral-900"
+                        className="cursor-pointer relative aspect-video bg-neutral-900 group overflow-hidden"
                         onClick={() => onSelectProject(proj)}
                       >
                         <img
                           src={proj.thumbnail_url || proj.primary_asset_url}
                           alt={proj.title}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                         />
-                        <span className="absolute top-2 left-2 px-2 py-0.5 text-[10px] font-bold rounded bg-black/70 text-white uppercase">
-                          {proj.content_type}
-                        </span>
-                        {proj.featured && (
-                          <span className="absolute top-2 right-2 px-2 py-0.5 text-[10px] font-bold rounded bg-purple-600 text-white">
-                            ★ Featured
+                        <div className="absolute top-2 left-2 right-2 flex items-center justify-between pointer-events-none gap-2">
+                          <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-black/75 text-white uppercase tracking-wider backdrop-blur-sm">
+                            {proj.content_type || 'Asset'}
                           </span>
-                        )}
+                          {proj.featured && (
+                            <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-purple-600 text-white shadow-sm flex items-center gap-1 font-sans">
+                              <span>★</span>
+                              <span>Featured</span>
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
                         <div>
                           <h4
-                            className="text-sm font-bold text-neutral-900 hover:text-purple-700 cursor-pointer line-clamp-1"
+                            className="text-sm font-bold text-neutral-900 hover:text-purple-700 cursor-pointer line-clamp-1 min-h-[20px]"
                             onClick={() => onSelectProject(proj)}
+                            title={proj.title}
                           >
                             {proj.title}
                           </h4>
-                          <p className="text-xs text-neutral-500 line-clamp-2 mt-1">
+                          <p className="text-xs text-neutral-500 line-clamp-2 mt-1 min-h-[32px] leading-relaxed">
                             {proj.description || 'No description provided.'}
                           </p>
                         </div>
 
-                        <div className="pt-3 border-t border-black/10 flex items-center justify-between text-xs">
-                          <span className="text-[10px] text-neutral-500 font-mono">
-                            {proj.aspect_ratio} • {proj.resolution || '4K'}
+                        <div className="pt-3 border-t border-black/10 flex items-center justify-between text-xs gap-2">
+                          <span className="text-[10px] text-neutral-500 font-mono bg-neutral-100 px-2 py-0.5 rounded">
+                            {proj.aspect_ratio || '16:9'} • {proj.resolution || '4K'}
                           </span>
-                          <div className="flex gap-2">
+                          <div className="flex items-center gap-2">
                             <button
                               type="button"
-                              className="text-xs text-purple-700 hover:underline font-semibold"
+                              className="btn-secondary text-xs py-1 px-2.5 rounded-lg font-semibold"
                               onClick={() => {
                                 setEditingProject(proj);
                                 setIsAddProjectOpen(true);
@@ -811,7 +1140,7 @@ export default function CreatorDashboard({
                             </button>
                             <button
                               type="button"
-                              className="text-xs text-red-500 hover:underline"
+                              className="px-2.5 py-1 text-xs text-red-600 hover:bg-red-50 rounded-lg border border-red-200 transition font-semibold"
                               onClick={() => handleDeleteProject(proj.id)}
                             >
                               Delete
@@ -826,33 +1155,262 @@ export default function CreatorDashboard({
             </div>
           )}
 
-          {/* TAB 4: BRIEFS */}
+          {/* TAB 4: BRIEFS (DISCOVER BRAND BRIEFS MATCHING REFERENCE) */}
           {activeTab === 'briefs' && (
-            <div className="space-y-6">
+            <div className="space-y-5">
+              {/* Header */}
               <div>
-                <h2 className="text-xl font-serif font-bold text-neutral-900">
-                  Open Campaign Briefs
-                </h2>
-                <p className="text-xs text-neutral-500">
-                  Commercial briefs published by verified brands. Submit your pitch with custom rates and portfolio evidence.
+                <h1 className="text-2xl font-extrabold text-neutral-900 font-sans tracking-tight">
+                  Discover Brand Briefs
+                </h1>
+                <p className="text-xs text-neutral-500 mt-1 font-sans">
+                  Find exciting opportunities and collaborate with verified brands.
                 </p>
               </div>
 
-              <BriefsExplorer
-                onSelectBrief={onSelectBrief}
-                onOpenAiBuilder={() => {}}
-                savedBriefIds={new Set(savedBriefs.map((sb) => sb.brief_id || sb.brief?.id).filter(Boolean))}
-                onToggleSaveBrief={(briefId, isSaved, brief) => {
-                  if (isSaved) {
-                    setSavedBriefs((prev) => {
-                      if (prev.some((b) => (b.brief_id || b.brief?.id) === briefId)) return prev;
-                      return [...prev, { id: 'temp-' + briefId, brief_id: briefId, brief }];
-                    });
-                  } else {
-                    setSavedBriefs((prev) => prev.filter((b) => (b.brief_id || b.brief?.id) !== briefId && b.id !== briefId));
-                  }
-                }}
-              />
+              {/* Category Pills Row */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-1 no-scrollbar">
+                {[
+                  { key: 'ALL', label: 'All' },
+                  { key: 'SKINCARE', label: 'Skincare' },
+                  { key: 'BEAUTY', label: 'Beauty' },
+                  { key: 'FASHION', label: 'Fashion' },
+                  { key: 'TECH', label: 'Tech' },
+                  { key: 'FOOD', label: 'Food' },
+                  { key: 'LIFESTYLE', label: 'Lifestyle' },
+                  { key: 'TRAVEL', label: 'Travel' },
+                  { key: 'GAMING', label: 'Gaming' },
+                  { key: 'MORE', label: 'More ⌄' },
+                ].map((cat) => {
+                  const isActive = creatorBriefCategory === cat.key;
+                  return (
+                    <button
+                      key={cat.key}
+                      type="button"
+                      onClick={() => setCreatorBriefCategory(cat.key)}
+                      className={`portal-category-pill ${isActive ? 'active' : 'inactive'}`}
+                    >
+                      {cat.label}
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  className="portal-category-pill inactive"
+                  title="Filter options"
+                >
+                  🎛️
+                </button>
+              </div>
+
+              {/* Filter Dropdowns Row */}
+              <div className="portal-filter-bar pt-1">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <select
+                    className="portal-dropdown-btn"
+                    value={creatorContentType}
+                    onChange={(e) => setCreatorContentType(e.target.value)}
+                  >
+                    <option value="ALL">Content Type ⌄</option>
+                    <option value="VIDEO">Video</option>
+                    <option value="REELS">Reels</option>
+                    <option value="ANIMATION">Animation / 3D</option>
+                    <option value="STILLS">Stills</option>
+                  </select>
+
+                  <select
+                    className="portal-dropdown-btn"
+                    value={creatorBudgetRange}
+                    onChange={(e) => setCreatorBudgetRange(e.target.value)}
+                  >
+                    <option value="ALL">Budget Range ⌄</option>
+                    <option value="TIER_1">&lt; ₹25,000</option>
+                    <option value="TIER_2">₹25,000 - ₹40,000</option>
+                    <option value="TIER_3">&gt; ₹40,000</option>
+                  </select>
+
+                  <select
+                    className="portal-dropdown-btn"
+                    value={creatorPlatform}
+                    onChange={(e) => setCreatorPlatform(e.target.value)}
+                  >
+                    <option value="ALL">Platform ⌄</option>
+                    <option value="INSTAGRAM">Instagram</option>
+                    <option value="YOUTUBE">YouTube</option>
+                    <option value="TIKTOK">TikTok</option>
+                    <option value="WEB">Web</option>
+                  </select>
+
+                  <select
+                    className="portal-dropdown-btn"
+                    value={creatorCampaignGoal}
+                    onChange={(e) => setCreatorCampaignGoal(e.target.value)}
+                  >
+                    <option value="ALL">Campaign Goal ⌄</option>
+                    <option value="AWARENESS">Brand Awareness</option>
+                    <option value="CONVERSIONS">Conversions</option>
+                    <option value="REELS">Social Reels</option>
+                  </select>
+
+                  {(creatorBriefCategory !== 'ALL' ||
+                    creatorContentType !== 'ALL' ||
+                    creatorBudgetRange !== 'ALL' ||
+                    creatorPlatform !== 'ALL' ||
+                    creatorCampaignGoal !== 'ALL' ||
+                    portalSearchQuery) && (
+                    <button
+                      type="button"
+                      className="text-xs font-semibold text-purple-700 hover:text-purple-900 transition ml-1 font-sans"
+                      onClick={() => {
+                        setCreatorBriefCategory('ALL');
+                        setCreatorContentType('ALL');
+                        setCreatorBudgetRange('ALL');
+                        setCreatorPlatform('ALL');
+                        setCreatorCampaignGoal('ALL');
+                        setPortalSearchQuery('');
+                      }}
+                    >
+                      Clear Filters
+                    </button>
+                  )}
+                </div>
+
+                <div className="shrink-0">
+                  <select
+                    className="portal-dropdown-btn"
+                    value={creatorSortBy}
+                    onChange={(e) => setCreatorSortBy(e.target.value)}
+                  >
+                    <option value="LATEST">Sort by: Latest ⌄</option>
+                    <option value="BUDGET_HIGH">Sort by: Highest Budget ⌄</option>
+                    <option value="BUDGET_LOW">Sort by: Lowest Budget ⌄</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* 3-Column Brief Cards Grid */}
+              {(() => {
+                const briefsToDisplay =
+                  filteredDiscoverBriefs.length > 0
+                    ? filteredDiscoverBriefs
+                    : allBriefs;
+
+                if (!briefsToDisplay || briefsToDisplay.length === 0) {
+                  return (
+                    <div className="bg-white rounded-2xl border border-black/[0.06] p-12 text-center shadow-xs">
+                      <div className="w-12 h-12 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center mx-auto mb-3 text-xl">
+                        🧭
+                      </div>
+                      <h3 className="text-base font-bold text-neutral-900 mb-1">No Campaign Briefs Found</h3>
+                      <p className="text-xs text-neutral-500 max-w-sm mx-auto">
+                        No active briefs currently match your selected filters. Try broadening your criteria or clear category filters.
+                      </p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="portal-brief-grid">
+                    {briefsToDisplay.map((brief, idx) => {
+                      const coverImg =
+                        brief.cover_image ||
+                        getBriefCoverImage(brief) ||
+                        (idx === 0
+                          ? '/assets/campaign-covers/brand_skincare_cover.jpg'
+                          : idx === 1
+                          ? '/assets/campaign-covers/golden_serum_cover.jpg'
+                          : '/assets/campaign-covers/brand_fashion_cover.jpg');
+
+                      return (
+                        <div
+                          key={brief.id}
+                          className="portal-brief-grid-card cursor-pointer group"
+                          onClick={() => onSelectBrief(brief)}
+                        >
+                          {/* Image Cover with floating status tag */}
+                          <div className="portal-brief-thumb-wrap">
+                            <img
+                              src={coverImg}
+                              alt={brief.title}
+                              className="portal-brief-thumb"
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = '/assets/campaign-covers/brand_skincare_cover.jpg';
+                              }}
+                            />
+                            <span className="portal-brief-status-tag">
+                              {brief.status === 'PUBLISHED' || !brief.status ? 'OPEN' : brief.status}
+                            </span>
+                          </div>
+
+                          {/* Body */}
+                          <div className="p-4 space-y-2.5 flex-1 flex flex-col justify-between">
+                            <div className="space-y-2">
+                              {/* Brand info */}
+                              <div className="flex items-center gap-1.5">
+                                <div className="w-5 h-5 rounded-full bg-purple-100 border border-purple-200 text-purple-700 flex items-center justify-center font-bold text-[10px] shrink-0">
+                                  {(brief.brand_company_name || brief.brand?.company_name || 'L')[0]}
+                                </div>
+                                <span className="text-xs font-semibold text-neutral-800 truncate">
+                                  {brief.brand_company_name || brief.brand?.company_name || 'Lumina Skincare'}
+                                </span>
+                                <span className="portal-verified-circle" style={{ width: 14, height: 14, fontSize: 8 }} title="Audited & Verified Brand">✓</span>
+                              </div>
+
+                              {/* Title */}
+                              <h3 className="text-sm font-bold text-neutral-900 font-sans tracking-tight line-clamp-1 group-hover:text-purple-700 transition">
+                                {brief.title}
+                              </h3>
+
+                              {/* Objective / Description */}
+                              <p className="text-xs text-neutral-500 font-sans line-clamp-2 leading-relaxed">
+                                {brief.campaign_objective || brief.deliverables_description || 'Creative campaign brief.'}
+                              </p>
+                            </div>
+
+                            <div className="pt-2 border-t border-black/[0.04] space-y-2">
+                              {/* Budget */}
+                              <div>
+                                <span className="portal-budget-pill">
+                                  {formatINR(clampDemoBudget(brief.budget_amount, 35000))}
+                                </span>
+                              </div>
+
+                              {/* Tags */}
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="portal-tag-pill">
+                                  📹 {brief.content_type || 'Video'}
+                                </span>
+                                <span className="portal-tag-pill">
+                                  🎬 Reels
+                                </span>
+                                <span className="portal-tag-pill">
+                                  📸 Instagram
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Footer Button */}
+                          <div className="p-4 pt-0">
+                            <button
+                              type="button"
+                              className="portal-btn-outline-purple w-full text-center py-2 text-xs font-bold"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onSelectBrief(brief);
+                              }}
+                            >
+                              <span>View Details</span>
+                              <span>→</span>
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </div>
           )}
 
@@ -875,41 +1433,109 @@ export default function CreatorDashboard({
               ) : (
                 <div className="space-y-4">
                   {applications.map((app) => (
-                    <div key={app.id} className="glass-panel p-5 rounded-2xl space-y-3">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full ${
-                                app.status === 'ACCEPTED'
-                                  ? 'bg-emerald-100 text-emerald-800'
-                                  : app.status === 'REJECTED'
-                                  ? 'bg-red-100 text-red-800'
-                                  : 'bg-purple-100 text-purple-800'
-                              }`}
-                            >
-                              {app.status}
+                    <div key={app.id} className="glass-panel p-6 rounded-2xl space-y-4 border border-black/5 hover:border-purple-200 transition">
+                      {/* Top Header Row: Brief Title + Brand & Status Badge */}
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[11px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-100">
+                              {app.brand_name || 'Brand Partner'}
                             </span>
                             <span className="text-xs text-neutral-400">
-                              Submitted: {new Date(app.submitted_at).toLocaleString()}
+                              ID: {app.id.slice(0, 8)}
                             </span>
                           </div>
-                          <div className="flex items-center gap-3 mt-2 text-sm font-semibold">
-                            <span>Proposed Rate: ${app.proposed_rate?.toLocaleString()}</span>
-                            <span>•</span>
-                            <span>Timeline: {app.proposed_timeline_days} Days</span>
-                          </div>
+                          <h3
+                            className="text-base font-bold text-neutral-900 hover:text-purple-700 cursor-pointer transition line-clamp-1"
+                            onClick={() => {
+                              if (onSelectBrief && app.brief_id) {
+                                onSelectBrief({ id: app.brief_id, title: app.brief_title });
+                              }
+                            }}
+                            title="View brief details"
+                          >
+                            {app.brief_title || 'Commercial Campaign Brief'} ↗
+                          </h3>
+                        </div>
+
+                        {/* Status Label - fully contained with clear border and pill */}
+                        <div className="shrink-0 self-start">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full border shadow-xs ${
+                              app.status === 'ACCEPTED'
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                                : app.status === 'REJECTED'
+                                ? 'bg-red-50 text-red-800 border-red-200'
+                                : app.status === 'SHORTLISTED'
+                                ? 'bg-amber-50 text-amber-800 border-amber-300'
+                                : 'bg-purple-50 text-purple-800 border-purple-200'
+                            }`}
+                          >
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${
+                                app.status === 'ACCEPTED'
+                                  ? 'bg-emerald-600'
+                                  : app.status === 'REJECTED'
+                                  ? 'bg-red-600'
+                                  : app.status === 'SHORTLISTED'
+                                  ? 'bg-amber-600'
+                                  : 'bg-purple-600'
+                              }`}
+                            />
+                            {app.status}
+                          </span>
                         </div>
                       </div>
 
-                      <div className="p-3 rounded-xl bg-white/70 border border-black/5 text-xs text-neutral-700">
-                        <strong className="block text-neutral-900 mb-1">Your Pitch:</strong>
-                        {app.pitch_text}
+                      {/* 3-Section Metadata Strip */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 rounded-xl bg-white/80 border border-black/5 text-xs">
+                        <div>
+                          <span className="text-[10px] uppercase font-bold text-neutral-400 block tracking-wider">
+                            Proposed Compensation
+                          </span>
+                          <span className="font-bold text-purple-700 text-sm mt-0.5 block">
+                            {formatINR(clampDemoBudget(app.proposed_rate, 35000))}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] uppercase font-bold text-neutral-400 block tracking-wider">
+                            Production Timeline
+                          </span>
+                          <span className="font-semibold text-neutral-800 text-sm mt-0.5 block">
+                            {app.proposed_timeline_days} Calendar Days
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] uppercase font-bold text-neutral-400 block tracking-wider">
+                            Submitted Date
+                          </span>
+                          <span className="font-medium text-neutral-600 text-xs mt-1 block">
+                            {new Date(app.submitted_at).toLocaleDateString(undefined, {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                            })}
+                          </span>
+                        </div>
                       </div>
 
+                      {/* Pitch Text Section */}
+                      <div className="p-4 rounded-xl bg-neutral-50/80 border border-black/5 text-xs text-neutral-700 space-y-1.5">
+                        <strong className="block text-neutral-900 text-[11px] uppercase tracking-wider font-bold">
+                          Proposal & Creative Approach:
+                        </strong>
+                        <p className="whitespace-pre-wrap leading-relaxed break-words">
+                          {app.pitch_text}
+                        </p>
+                      </div>
+
+                      {/* Brand Feedback (if available) */}
                       {app.brand_feedback && (
-                        <div className="p-3 rounded-xl bg-purple-50 border border-purple-200 text-xs text-purple-900">
-                          <strong>Brand Feedback:</strong> {app.brand_feedback}
+                        <div className="p-3.5 rounded-xl bg-purple-50 border border-purple-200 text-xs text-purple-900 space-y-1">
+                          <strong className="block text-purple-800 text-[11px] uppercase tracking-wider font-bold">
+                            Brand Client Feedback:
+                          </strong>
+                          <p className="leading-relaxed">{app.brand_feedback}</p>
                         </div>
                       )}
                     </div>
@@ -1001,7 +1627,7 @@ export default function CreatorDashboard({
                               <div className="min-w-0">
                                 <p className="font-semibold text-neutral-900 truncate">{be.brief_title}</p>
                                 <div className="flex items-center gap-2 mt-0.5 text-[11px] text-neutral-500">
-                                  <span>${be.agreed_amount?.toLocaleString()} Agreed</span>
+                                  <span>{formatINR(clampDemoBudget(be.agreed_amount, 35000))} Agreed</span>
                                   <span>•</span>
                                   <span>{be.deliverables_count} Deliverables</span>
                                 </div>
@@ -1041,7 +1667,7 @@ export default function CreatorDashboard({
                             {eng.brief_title}
                           </h3>
                           <p className="text-xs text-neutral-500">
-                            Brand: <strong>{eng.brand_company_name}</strong> • Agreed Budget: ${eng.agreed_amount?.toLocaleString()}
+                            Brand: <strong>{eng.brand_company_name}</strong> • Agreed Budget: {formatINR(clampDemoBudget(eng.agreed_amount, 35000))}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
@@ -1200,7 +1826,7 @@ export default function CreatorDashboard({
                   <h4 className="text-xs font-bold text-purple-700 uppercase tracking-wider">
                     Submit New Audit Request
                   </h4>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="label-form">Select Portfolio Project</label>
                       <select
@@ -1354,28 +1980,28 @@ export default function CreatorDashboard({
                   {invitations.map((inv) => (
                     <div
                       key={inv.id}
-                      className="p-5 bg-white rounded-2xl border border-black/10 shadow-sm flex flex-col justify-between space-y-4"
+                      className="p-5 bg-white rounded-2xl border border-black/10 shadow-sm flex flex-col justify-between space-y-4 min-h-[280px]"
                     >
                       <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
+                        <div className="flex items-center justify-between mb-3 gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
                             <BrandLogo
                               brandName={inv.brand_name}
-                              size={24}
+                              size={26}
                               shape="rounded"
                               padding="2px"
                             />
-                            <span className="text-xs font-bold text-purple-700 bg-purple-50 px-2.5 py-1 rounded-lg">
-                              {inv.brand_name || 'Brand'}
+                            <span className="text-xs font-bold text-purple-700 bg-purple-50 px-2.5 py-1 rounded-lg truncate">
+                              {inv.brand_name || 'Brand Partner'}
                             </span>
                           </div>
                           <span
-                            className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                            className={`shrink-0 text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
                               inv.status === 'INVITED'
-                                ? 'bg-amber-100 text-amber-800'
+                                ? 'bg-amber-50 text-amber-800 border-amber-200'
                                 : inv.status === 'ACCEPTED'
-                                ? 'bg-emerald-100 text-emerald-800'
-                                : 'bg-neutral-100 text-neutral-600'
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                : 'bg-neutral-100 text-neutral-600 border-neutral-200'
                             }`}
                           >
                             {inv.status}
@@ -1383,7 +2009,7 @@ export default function CreatorDashboard({
                         </div>
 
                         <h3
-                          className="font-bold text-sm text-neutral-900 mb-1 hover:text-purple-700 cursor-pointer transition flex items-center gap-1.5"
+                          className="font-bold text-sm text-neutral-900 mb-1.5 hover:text-purple-700 cursor-pointer transition flex items-center gap-1.5 line-clamp-1"
                           onClick={() => {
                             if (onSelectBrief && inv.brief_id) {
                               onSelectBrief({ id: inv.brief_id, title: inv.brief_title });
@@ -1391,14 +2017,16 @@ export default function CreatorDashboard({
                           }}
                           title="Open Campaign Brief details"
                         >
-                          <span>{inv.brief_title}</span>
-                          <span className="text-purple-600 text-xs">↗</span>
+                          <span className="truncate">{inv.brief_title || 'Campaign Brief'}</span>
+                          <span className="text-purple-600 text-xs shrink-0">↗</span>
                         </h3>
-                        <p className="text-xs text-neutral-600 line-clamp-3 mb-2">{inv.pitch_text}</p>
+                        <div className="p-3 bg-neutral-50 rounded-xl border border-black/5 text-xs text-neutral-600 line-clamp-3 leading-relaxed mb-3">
+                          {inv.pitch_text || 'Direct collaboration opportunity tailored to your creative expertise.'}
+                        </div>
 
                         <div className="text-xs font-semibold text-neutral-700 flex items-center justify-between pt-2 border-t border-black/5">
-                          <span>Offered Rate:</span>
-                          <span className="text-purple-700 font-bold">${inv.proposed_rate?.toLocaleString()} USD</span>
+                          <span className="text-neutral-500">Offered Compensation:</span>
+                          <span className="text-purple-700 font-bold text-sm">{formatINR(clampDemoBudget(inv.proposed_rate, 35000))}</span>
                         </div>
                       </div>
 
@@ -1407,14 +2035,14 @@ export default function CreatorDashboard({
                           <button
                             type="button"
                             onClick={() => handleAcceptInvitation(inv.id, inv.brief_id)}
-                            className="flex-1 py-2 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white shadow transition"
+                            className="flex-1 py-2 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white shadow-xs transition"
                           >
                             Accept & Kickoff 🚀
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDeclineInvitation(inv.id)}
-                            className="px-4 py-2 rounded-xl text-xs font-semibold bg-neutral-100 hover:bg-neutral-200 text-neutral-700 transition"
+                            className="px-4 py-2 rounded-xl text-xs font-semibold bg-neutral-100 hover:bg-neutral-200 text-neutral-700 border border-neutral-200 transition"
                           >
                             Decline
                           </button>
@@ -1443,11 +2071,19 @@ export default function CreatorDashboard({
                               }
                               handleTabChange('messages');
                             }}
-                            className="flex-1 py-2 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white shadow transition flex items-center justify-center gap-1.5"
+                            className="w-full py-2 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white shadow-xs transition flex items-center justify-center gap-1.5"
                           >
                             <span>💬</span>
                             <span>Chat with {inv.brand_name || 'Brand'}</span>
                           </button>
+                        </div>
+                      )}
+
+                      {inv.status !== 'INVITED' && inv.status !== 'ACCEPTED' && (
+                        <div className="pt-2">
+                          <div className="w-full py-2 text-center text-xs text-neutral-500 font-semibold bg-neutral-50 rounded-xl border border-neutral-200">
+                            Status: {inv.status}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -1589,7 +2225,7 @@ export default function CreatorDashboard({
                               Compensation
                             </span>
                             <span className="saved-budget-val">
-                              ${brief.budget_amount ? brief.budget_amount.toLocaleString() : 'Open'} USD
+                              {brief.budget_amount ? formatINR(clampDemoBudget(brief.budget_amount, 35000)) : 'Open'}
                             </span>
                           </div>
                           <button
@@ -1678,6 +2314,64 @@ export default function CreatorDashboard({
                 </div>
               )}
 
+              {/* Filter & Search Toolbar */}
+              <div className="p-4 bg-white rounded-2xl border border-black/10 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 text-xs">
+                <div className="flex-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      placeholder="Search matched briefs, brands, formats..."
+                      value={oppSearchQuery}
+                      onChange={(e) => setOppSearchQuery(e.target.value)}
+                      className="w-full pl-9 pr-8 py-2 bg-neutral-50 border border-black/10 rounded-xl text-xs focus:bg-white focus:border-purple-600 outline-none transition"
+                    />
+                    <span className="absolute left-3 top-2.5 text-neutral-400">🔍</span>
+                    {oppSearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setOppSearchQuery('')}
+                        className="absolute right-3 top-2.5 text-neutral-400 hover:text-neutral-700"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="w-full sm:w-60">
+                    <select
+                      value={oppDomainFilter}
+                      onChange={(e) => setOppDomainFilter(e.target.value)}
+                      className="w-full px-3 py-2 bg-neutral-50 border border-black/10 rounded-xl text-xs focus:bg-white focus:border-purple-600 outline-none transition"
+                    >
+                      <option value="ALL">All Creative Domains</option>
+                      {DOMAIN_FOLDERS.map((domain) => (
+                        <option key={domain} value={domain}>
+                          {DOMAIN_LABELS[domain] || domain}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
+                  <span className="text-neutral-500 font-semibold">
+                    {filteredOpportunities.length} {filteredOpportunities.length === 1 ? 'Opportunity' : 'Opportunities'}
+                  </span>
+                  {(oppDomainFilter !== 'ALL' || oppSearchQuery) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOppDomainFilter('ALL');
+                        setOppSearchQuery('');
+                      }}
+                      className="px-2.5 py-1 text-xs text-purple-700 hover:text-purple-900 font-semibold underline"
+                    >
+                      Reset Filters
+                    </button>
+                  )}
+                </div>
+              </div>
+
               {/* Matches List */}
               {opportunities.length === 0 ? (
                 <div className="p-12 text-center bg-white rounded-2xl border border-black/10">
@@ -1687,106 +2381,134 @@ export default function CreatorDashboard({
                     Try adjusting your portfolio specializations or click "Refresh Matches" as new commercial campaigns are posted.
                   </p>
                 </div>
+              ) : filteredOpportunities.length === 0 ? (
+                <div className="p-12 text-center bg-white rounded-2xl border border-black/10">
+                  <span className="text-3xl block mb-2">⚡</span>
+                  <h3 className="text-sm font-bold text-neutral-800">No opportunities match your filter</h3>
+                  <p className="text-xs text-neutral-500 mt-1 max-w-md mx-auto">
+                    No briefs found matching the selected domain or search query.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOppDomainFilter('ALL');
+                      setOppSearchQuery('');
+                    }}
+                    className="mt-4 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition shadow-xs"
+                  >
+                    Clear Filter
+                  </button>
+                </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {opportunities.map((opp) => (
-                    <div
-                      key={opp.id}
-                      className="kivora-opportunity-card"
-                    >
-                      <div>
-                        {/* Brand & Fit Row */}
-                        <div className="opp-card-top-row">
-                          <div className="opp-brand-info">
-                            <span className="opp-brand-name">
-                              {opp.brief?.brand?.company_name || 'Brand Campaign'}
-                            </span>
-                          </div>
-                          <span className="opp-match-pill">
-                            ★ {Math.round(opp.match_score)}% Fit
-                          </span>
-                        </div>
+                  {filteredOpportunities.map((opp) => {
+                    const briefDomain = opp.brief ? resolveBriefDomain(opp.brief) : null;
+                    const domainLabel = briefDomain && DOMAIN_LABELS[briefDomain];
 
-                        {/* Campaign Title & Objective */}
-                        <h3
-                          className="opp-title"
-                          onClick={() => {
-                            if (onSelectBrief && opp.brief) onSelectBrief(opp.brief);
-                          }}
-                        >
-                          {opp.brief?.title}
-                        </h3>
-                        <p className="opp-desc">
-                          {opp.brief?.campaign_objective || opp.brief?.deliverables_description}
-                        </p>
-
-                        {/* Match Reasons Chips */}
-                        <div className="opp-reasons-container">
-                          <div className="opp-reasons-header">
-                            <span className="opp-reasons-label">
-                              Why this matched
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => setExpandedOppId(expandedOppId === opp.id ? null : opp.id)}
-                              className="opp-reasons-toggle"
-                            >
-                              {expandedOppId === opp.id ? 'Hide Details ▲' : 'Explain Match ▼'}
-                            </button>
-                          </div>
-                          {(opp.match_reasons || []).slice(0, 2).map((reason, ri) => (
-                            <div key={ri} className="opp-reason-item">
-                              <span className="opp-reason-check">✓</span>
-                              <span className="truncate">{reason}</span>
-                            </div>
-                          ))}
-
-                          {/* Expandable Explanation Details */}
-                          {expandedOppId === opp.id && (
-                            <div className="mt-3 pt-3 border-t border-purple-100 space-y-2 text-xs">
-                              <div className="font-semibold text-purple-900 text-[11px]">
-                                Detailed Compatibility Factors:
-                              </div>
-                              {(opp.match_reasons || []).map((reason, ri) => (
-                                <div key={ri} className="opp-reason-item">
-                                  <span className="text-purple-600 font-bold shrink-0">✓</span>
-                                  <span>{reason}</span>
-                                </div>
-                              ))}
-                              {opp.brief?.content_type && (
-                                <div className="text-[11px] text-neutral-500 pt-2 border-t border-purple-100 flex items-center justify-between">
-                                  <span>Format: {opp.brief.content_type} ({opp.brief.aspect_ratio || '16:9'})</span>
-                                  <span>Revisions: {opp.brief.revision_allowance || 2}</span>
-                                </div>
-                              )}
-                              <p className="text-[10px] text-neutral-400 italic pt-1">
-                                Match score determined from verified portfolio nodes, tools, and past deliverables.
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Card Footer: Budget & Primary Action */}
-                      <div className="opp-card-footer">
+                    return (
+                      <div
+                        key={opp.id}
+                        className="kivora-opportunity-card"
+                      >
                         <div>
-                          <span className="opp-budget-label">Compensation</span>
-                          <span className="opp-budget-amount">
-                            ${opp.brief?.budget_amount?.toLocaleString()} USD
-                          </span>
+                          {/* Brand & Fit Row */}
+                          <div className="opp-card-top-row">
+                            <div className="opp-brand-info">
+                              <span className="opp-brand-name">
+                                {opp.brief?.brand?.company_name || 'Brand Campaign'}
+                              </span>
+                              {domainLabel && (
+                                <span className="px-2 py-0.5 text-[10px] font-semibold bg-purple-50 text-purple-700 rounded-md border border-purple-100 shrink-0">
+                                  {domainLabel}
+                                </span>
+                              )}
+                            </div>
+                            <span className="opp-match-pill shrink-0">
+                              ★ {Math.round(opp.match_score)}% Fit
+                            </span>
+                          </div>
+
+                          {/* Campaign Title & Objective */}
+                          <h3
+                            className="opp-title"
+                            onClick={() => {
+                              if (onSelectBrief && opp.brief) onSelectBrief(opp.brief);
+                            }}
+                          >
+                            {opp.brief?.title}
+                          </h3>
+                          <p className="opp-desc">
+                            {opp.brief?.campaign_objective || opp.brief?.deliverables_description}
+                          </p>
+
+                          {/* Match Reasons Chips */}
+                          <div className="opp-reasons-container">
+                            <div className="opp-reasons-header">
+                              <span className="opp-reasons-label">
+                                Why this matched
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setExpandedOppId(expandedOppId === opp.id ? null : opp.id)}
+                                className="opp-reasons-toggle"
+                              >
+                                {expandedOppId === opp.id ? 'Hide Details ▲' : 'Explain Match ▼'}
+                              </button>
+                            </div>
+                            {(opp.match_reasons || []).slice(0, 2).map((reason, ri) => (
+                              <div key={ri} className="opp-reason-item">
+                                <span className="opp-reason-check">✓</span>
+                                <span className="truncate">{reason}</span>
+                              </div>
+                            ))}
+
+                            {/* Expandable Explanation Details */}
+                            {expandedOppId === opp.id && (
+                              <div className="mt-3 pt-3 border-t border-purple-100 space-y-2 text-xs">
+                                <div className="font-semibold text-purple-900 text-[11px]">
+                                  Detailed Compatibility Factors:
+                                </div>
+                                {(opp.match_reasons || []).map((reason, ri) => (
+                                  <div key={ri} className="opp-reason-item">
+                                    <span className="text-purple-600 font-bold shrink-0">✓</span>
+                                    <span>{reason}</span>
+                                  </div>
+                                ))}
+                                {opp.brief?.content_type && (
+                                  <div className="text-[11px] text-neutral-500 pt-2 border-t border-purple-100 flex items-center justify-between">
+                                    <span>Format: {opp.brief.content_type} ({opp.brief.aspect_ratio || '16:9'})</span>
+                                    <span>Revisions: {opp.brief.revision_allowance || 2}</span>
+                                  </div>
+                                )}
+                                <p className="text-[10px] text-neutral-400 italic pt-1">
+                                  Match score determined from verified portfolio nodes, tools, and past deliverables.
+                                </p>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (onSelectBrief && opp.brief) onSelectBrief(opp.brief);
-                          }}
-                          className="opp-action-btn"
-                        >
-                          Review Opportunity →
-                        </button>
+
+                        {/* Card Footer: Budget & Primary Action */}
+                        <div className="opp-card-footer">
+                          <div>
+                            <span className="opp-budget-label">Compensation</span>
+                            <span className="opp-budget-amount">
+                              {formatINR(clampDemoBudget(opp.brief?.budget_amount, 35000))}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (onSelectBrief && opp.brief) onSelectBrief(opp.brief);
+                            }}
+                            className="opp-action-btn"
+                          >
+                            Review Opportunity →
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -1809,8 +2531,28 @@ export default function CreatorDashboard({
               />
             </div>
           )}
-        </main>
 
+          {/* TAB: ANALYTICS */}
+          {activeTab === 'analytics' && (
+            <CreatorAnalyticsView
+              profile={profile}
+              applications={applications}
+              engagements={engagements}
+              opportunities={opportunities}
+              onNavigate={(tab) => handleTabChange(tab)}
+            />
+          )}
+
+          {/* TAB: SETTINGS */}
+          {activeTab === 'settings' && (
+            <PortalSettingsView
+              currentUser={currentUser}
+              profile={profile}
+              onOpenEditProfile={() => setIsEditProfileOpen(true)}
+              role="CREATOR"
+            />
+          )}
+        </div>
       </div>
 
       {/* Modals */}

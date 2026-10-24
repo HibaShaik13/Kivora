@@ -42,7 +42,7 @@ from backend.app.schemas.schemas import (
     EvidenceRecordCreate,
     EvidenceRecordRead,
 )
-from backend.app.core.deps import require_role
+from backend.app.core.deps import require_role, require_approved_creator_user
 
 router = APIRouter(prefix="/api/creators", tags=["Creators"])
 
@@ -101,6 +101,7 @@ def format_creator_list_item(c: CreatorProfile) -> CreatorProfileListRead:
         hourly_rate=c.hourly_rate,
         availability_status=c.availability_status,
         verification_tier=c.verification_tier,
+        approval_status=getattr(c, "approval_status", "PENDING"),
         verified_claims_count=c.verified_claims_count,
         completed_projects_count=c.completed_projects_count,
         average_rating=c.average_rating,
@@ -143,6 +144,18 @@ def list_creators(
         ~CreatorProfile.display_name.ilike("Test User%"),
         ~CreatorProfile.avatar_url.ilike("%dicebear.com/7.x/bottts%")
     )
+
+    # Filter public brand discovery to expose only approved creators
+    try:
+        from sqlalchemy import inspect
+        bind = db.get_bind()
+        cols = [c["name"] for c in inspect(bind).get_columns("creator_profiles")]
+        if "approval_status" in cols:
+            query = query.filter(CreatorProfile.approval_status.in_(["APPROVED", "LEGACY_ACTIVE"]))
+        else:
+            query = query.filter(CreatorProfile.verification_tier.in_(["VERIFIED_PRO", "TOP_STUDIO"]))
+    except Exception:
+        query = query.filter(CreatorProfile.verification_tier.in_(["VERIFIED_PRO", "TOP_STUDIO"]))
 
     if search:
         search_filter = f"%{search.lower()}%"
@@ -265,8 +278,17 @@ def list_creators(
             matched.sort(key=lambda c: c.verified_claims_count, reverse=True)
         else:
             matched.sort(key=lambda c: (c.average_rating, c.verified_claims_count), reverse=True)
-    else:
-        matched.sort(key=lambda c: (c.average_rating, c.verified_claims_count), reverse=True)
+    # If category filter is applied, prioritize primary domain specialists first
+    if category:
+        cat_k = category.lower().strip()
+        def is_primary_cat(cr):
+            return any(
+                cc.is_primary and (
+                    (cc.category and (cc.category.slug.lower() == cat_k or cc.category.name.lower() == cat_k))
+                    or cc.category_id.lower() == cat_k
+                ) for cc in (cr.categories or [])
+            ) or (cat_k in (cr.primary_specialization or '').lower() or cat_k.replace('-', ' ') in (cr.primary_specialization or '').lower())
+        matched.sort(key=lambda c: (1 if is_primary_cat(c) else 0, c.average_rating, c.verified_claims_count), reverse=True)
 
     # Pagination
     if page is not None and limit is not None:
@@ -305,7 +327,7 @@ def get_my_creator_profile(
 
 @router.get("/me/brands", response_model=List[dict])
 def get_my_collaborating_brands(
-    current_user: User = Depends(require_role(["CREATOR"])),
+    current_user: User = Depends(require_approved_creator_user),
     db: Session = Depends(get_db)
 ):
     """Authenticated creator retrieves all brands they have collaborated with."""

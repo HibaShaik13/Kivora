@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { getCreatorAvatar } from '../utils/visualAssetHelpers';
+import { formatINR, clampDemoBudget } from '../utils/indianLocalization';
 import BrandLogo from './BrandLogo';
 // Lightweight inline SVG icons
 const X = ({ size = 18, className = '' }) => (
@@ -436,7 +437,7 @@ export default function CollaborationWorkspaceModal({
                         <span>Format: <strong>{workspace.brief?.content_type}</strong></span>
                         <span>Ratio: <strong>{workspace.brief?.aspect_ratio}</strong></span>
                         <span>Target: <strong>{workspace.brief?.resolution_min}</strong></span>
-                        <span>Agreed: <strong>${eng?.agreed_amount?.toLocaleString()}</strong></span>
+                        <span>Agreed: <strong>{formatINR(clampDemoBudget(eng?.agreed_amount, 35000))}</strong></span>
                       </div>
                     </div>
 

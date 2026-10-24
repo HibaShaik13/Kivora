@@ -454,8 +454,9 @@ export default function MessagesInbox({
               const otherPartyName = isCreatorUser ? c.brand_name : c.creator_name;
               const defaultFallbackAvatar = isCreatorUser
                 ? '/assets/brands/lumina.svg'
-                : '/assets/avatars/elena.jpg';
+                : '/assets/creator-portraits/elena.jpg';
               const creatorAvatarResolved = getCreatorAvatar({
+                id: c.creator_id,
                 display_name: c.creator_name,
                 handle: c.creator_handle,
                 avatar_url: c.creator_avatar,
@@ -580,6 +581,7 @@ export default function MessagesInbox({
                 ) : (
                   <img
                     src={getCreatorAvatar({
+                      id: activeConv.creator_id,
                       display_name: activeConv.creator_name,
                       handle: activeConv.creator_handle,
                       avatar_url: activeConv.creator_avatar,
@@ -594,7 +596,7 @@ export default function MessagesInbox({
                     }}
                     onError={(e) => {
                       e.target.onerror = null;
-                      e.target.src = '/assets/avatars/elena.jpg';
+                      e.target.src = '/assets/creator-portraits/elena.jpg';
                     }}
                   />
                 )}

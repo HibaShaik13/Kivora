@@ -1,11 +1,20 @@
 import { fetchApi } from './api';
+import { localizeCreators, localizeCreator } from '../utils/indianLocalization';
 
 export const creatorService = {
-  getCreators: (params = {}) => {
+  getCreators: async (params = {}) => {
     const query = new URLSearchParams(params).toString();
-    return fetchApi(`/api/creators${query ? `?${query}` : ''}`);
+    const data = await fetchApi(`/api/creators${query ? `?${query}` : ''}`);
+    if (Array.isArray(data)) {
+      return localizeCreators(data);
+    }
+    if (data && Array.isArray(data.items)) {
+      return { ...data, items: localizeCreators(data.items) };
+    }
+    return data;
   },
-  getCreatorDetail: (slugOrId) => {
-    return fetchApi(`/api/creators/${slugOrId}`);
+  getCreatorDetail: async (slugOrId) => {
+    const data = await fetchApi(`/api/creators/${slugOrId}`);
+    return localizeCreator(data);
   },
 };

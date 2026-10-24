@@ -65,6 +65,7 @@ def _create_verified_user(db, role: str) -> User:
             min_budget=1500.0,
             availability_status="AVAILABLE",
             verification_tier="VERIFIED_PRO",
+            approval_status="APPROVED",
             created_at=datetime.now(timezone.utc),
         )
         db.add(creator)

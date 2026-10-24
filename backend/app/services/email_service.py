@@ -364,6 +364,56 @@ def send_marketplace_email(
     }
 
 
+def send_creator_approval_email(email: str, creator_name: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Sends an automated approval notification email to a creator once an administrator
+    approves their profile and portfolio.
+    """
+    name = creator_name or "Creator"
+    subject = "🎉 Congratulations! Your Kivora Creator Account Has Been Approved"
+    title = f"Welcome to Kivora, {name}!"
+    message = (
+        f"Great news! Your Kivora creator profile and portfolio have been reviewed and approved by our curation team. "
+        f"You now have full access to explore active brand briefs, submit proposals, collaborate directly with clients, "
+        f"and showcase your creative work in public brand discovery."
+    )
+    action_url = "http://localhost:5173/?tab=briefs"
+    return send_marketplace_email(
+        to_email=email,
+        subject=subject,
+        title=title,
+        message=message,
+        action_url=action_url,
+    )
+
+
+def send_creator_rejection_email(email: str, creator_name: Optional[str] = None, reason: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Sends an automated notification email to a creator when their profile review requires adjustments,
+    including the specific administrator feedback and guidance on how to resubmit.
+    """
+    name = creator_name or "Creator"
+    feedback = reason.strip() if reason and reason.strip() else "Please ensure your portfolio items demonstrate original work and provide detailed project descriptions."
+    subject = "Action Needed: Updates Required for Your Kivora Creator Profile"
+    title = f"Updates Needed on Your Profile, {name}"
+    message = (
+        f"Thank you for submitting your creator profile to Kivora. Our curation team has reviewed your submission, "
+        f"and we need a few updates before we can approve your account.\n\n"
+        f"Reviewer Feedback:\n"
+        f"\"{feedback}\"\n\n"
+        f"You can log in with your existing account credentials, update your profile or portfolio details, "
+        f"and resubmit for administrative review without needing to create a new account."
+    )
+    action_url = "http://localhost:5173/?tab=onboarding"
+    return send_marketplace_email(
+        to_email=email,
+        subject=subject,
+        title=title,
+        message=message,
+        action_url=action_url,
+    )
+
+
 class EmailService:
     @staticmethod
     def send_otp(email: str, otp_code: str, purpose: str = "REGISTRATION") -> Dict[str, Any]:
@@ -379,4 +429,12 @@ class EmailService:
         template_data: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         return send_marketplace_email(to_email, subject, title, message, action_url, template_data)
+
+    @staticmethod
+    def send_creator_approval(email: str, creator_name: Optional[str] = None) -> Dict[str, Any]:
+        return send_creator_approval_email(email, creator_name)
+
+    @staticmethod
+    def send_creator_rejection(email: str, creator_name: Optional[str] = None, reason: Optional[str] = None) -> Dict[str, Any]:
+        return send_creator_rejection_email(email, creator_name, reason)
 

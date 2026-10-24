@@ -19,7 +19,7 @@ from backend.app.models.models import (
     CreatorProfile,
     Brief,
 )
-from backend.app.core.deps import get_current_user, require_role
+from backend.app.core.deps import get_current_user, require_role, require_approved_creator_user
 
 from backend.app.schemas.schemas import (
     SavedStatusResponse,
@@ -42,7 +42,7 @@ router = APIRouter(prefix="/api/saved", tags=["Saved Items"])
 def save_brief(
     brief_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["CREATOR"])),
+    current_user: User = Depends(require_approved_creator_user),
 ):
     """
     Saves a brief to the creator's bookmarks.
@@ -88,7 +88,7 @@ def save_brief(
 def unsave_brief(
     brief_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["CREATOR"])),
+    current_user: User = Depends(require_approved_creator_user),
 ):
     """
     Removes a brief from the creator's bookmarks.
@@ -131,7 +131,7 @@ def list_saved_briefs(
     page: int = Query(1, ge=1),
     page_size: int = Query(30, ge=1, le=100),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["CREATOR"])),
+    current_user: User = Depends(require_approved_creator_user),
 ):
     """
     Returns the creator's saved briefs with complete brief card metadata.

@@ -21,8 +21,8 @@ export default function CreateBriefModal({ isOpen, onClose, onBriefCreated, init
     initialData?.deliverables_description || '1x 4K Master Hero Film, 2x Social Cutdowns (9:16), Clean ProRes master files with prompt seed manifest.'
   );
   const [revisionAllowance, setRevisionAllowance] = useState(initialData?.revision_allowance || 2);
-  const [budgetAmount, setBudgetAmount] = useState(initialData?.budget_amount || 4500);
-  const [budgetCurrency, setBudgetCurrency] = useState(initialData?.budget_currency || 'USD');
+  const [budgetAmount, setBudgetAmount] = useState(initialData?.budget_amount || 35000);
+  const [budgetCurrency, setBudgetCurrency] = useState(initialData?.budget_currency || 'INR');
   const [deadlineDays, setDeadlineDays] = useState(initialData?.deadline_days || 14);
   const [commercialRequirements, setCommercialRequirements] = useState(
     initialData?.commercial_use_requirements || 'Full Commercial Buyout with global broadcast rights'
@@ -210,41 +210,42 @@ export default function CreateBriefModal({ isOpen, onClose, onBriefCreated, init
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div
-        className="modal-container glass-panel max-w-3xl max-h-[90vh] overflow-y-auto"
+        className="modal-container glass-panel max-w-3xl w-[94vw] max-h-[90vh] flex flex-col p-0 overflow-hidden shadow-2xl rounded-2xl"
         onClick={(e) => e.stopPropagation()}
         style={{
           backgroundImage: 'linear-gradient(rgba(255,255,255,0.96), rgba(255,255,255,0.96)), url(/assets/backgrounds/briefs-explorer.jpg)',
           backgroundSize: 'cover',
         }}
       >
-        <div className="modal-header">
+        <div className="modal-header flex-shrink-0 px-6 py-4 border-b border-black/10 flex items-center justify-between bg-white/80 backdrop-blur-sm">
           <div>
             <span className="badge-editorial">
               <span className="badge-dot" />
               STRUCTURED CAMPAIGN BRIEF
             </span>
-            <h2 className="modal-title">Launch Campaign Brief</h2>
+            <h2 className="modal-title text-xl font-bold text-neutral-900 mt-1">Launch Campaign Brief</h2>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>
+          <button type="button" className="modal-close-btn" onClick={onClose} aria-label="Close modal">
             ✕
           </button>
         </div>
 
-        {error && (
-          <div className="banner-error mb-4" style={{ padding: '0.75rem 1rem', borderRadius: '10px', background: '#FEE2E2', color: '#991B1B' }}>
-            {error}
-          </div>
-        )}
+        <form onSubmit={(e) => handleSubmit(e, 'PUBLISHED')} className="flex flex-col flex-1 overflow-hidden min-h-0">
+          <div className="modal-body overflow-y-auto flex-1 p-6 space-y-4">
+            {error && (
+              <div className="banner-error mb-4" style={{ padding: '0.75rem 1rem', borderRadius: '10px', background: '#FEE2E2', color: '#991B1B' }}>
+                {error}
+              </div>
+            )}
 
-        {duplicateWarning && (
-          <div className="banner-warning mb-4" style={{ padding: '0.75rem 1rem', borderRadius: '10px', background: '#FEF3C7', color: '#92400E', border: '1px solid #FCD34D' }}>
-            ⚠️ <strong>Duplicate Warning:</strong> {duplicateWarning}
-          </div>
-        )}
+            {duplicateWarning && (
+              <div className="banner-warning mb-4" style={{ padding: '0.75rem 1rem', borderRadius: '10px', background: '#FEF3C7', color: '#92400E', border: '1px solid #FCD34D' }}>
+                ⚠️ <strong>Duplicate Warning:</strong> {duplicateWarning}
+              </div>
+            )}
 
-        <form onSubmit={(e) => handleSubmit(e, 'PUBLISHED')} className="space-y-4">
-          <div className="grid grid-cols-3 gap-3">
-            <div className="col-span-2">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="md:col-span-2">
               <label className="label-form">Campaign Title *</label>
               <input
                 type="text"
@@ -359,14 +360,16 @@ export default function CreateBriefModal({ isOpen, onClose, onBriefCreated, init
               />
             </div>
             <div>
-              <label className="label-form">Budget Amount ($)</label>
+              <label className="label-form">Budget Amount (INR ₹)</label>
               <input
                 type="number"
                 className="input-text w-full font-bold text-purple-700"
                 value={budgetAmount}
                 onChange={(e) => setBudgetAmount(e.target.value)}
                 required
-                min={100}
+                min={10000}
+                max={49999}
+                placeholder="e.g. 35000"
               />
             </div>
             <div>
@@ -512,7 +515,9 @@ export default function CreateBriefModal({ isOpen, onClose, onBriefCreated, init
             )}
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-black/10">
+          </div>
+
+          <div className="modal-footer flex-shrink-0 px-6 py-4 border-t border-black/10 bg-white/90 backdrop-blur-sm flex items-center justify-end gap-3">
             <button type="button" className="btn-secondary" onClick={onClose} disabled={isLoading}>
               Cancel
             </button>

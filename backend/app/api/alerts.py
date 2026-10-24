@@ -16,7 +16,7 @@ from backend.app.models.models import (
     OpportunityAlertRecord,
     Brief,
 )
-from backend.app.core.deps import get_current_user, require_role
+from backend.app.core.deps import get_current_user, require_role, require_approved_creator_user
 
 from backend.app.schemas.schemas import (
     AlertPreferenceRead,
@@ -79,7 +79,7 @@ def list_opportunity_alerts(
     page_size: int = Query(30, ge=1, le=100),
     unviewed_only: bool = Query(False),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["CREATOR"])),
+    current_user: User = Depends(require_approved_creator_user),
 ):
     """
     Returns stored opportunity alerts for the authenticated creator, newest first.

@@ -4,6 +4,7 @@ import { api } from '../services/api';
 import { getCurrentUser } from '../services/authService';
 import CreatorCard from './CreatorCard';
 import CategoryCard from './CategoryCard';
+import { formatINR } from '../utils/indianLocalization';
 
 const DISCIPLINE_KEYWORDS = {
   '3D & CGI': ['3d', 'cgi', 'render', 'spatial', 'architecture', 'cinema'],
@@ -31,7 +32,7 @@ const TOOL_KEYWORDS = {
   'Unreal Engine 5': ['unreal', 'ue5'],
 };
 
-const POPULAR_LOCATIONS = ['London', 'Tokyo', 'Berlin', 'Paris', 'New York', 'Sydney'];
+const POPULAR_LOCATIONS = ['Bengaluru', 'Mumbai', 'New Delhi', 'Hyderabad', 'Pune', 'Chennai', 'Kochi', 'Jaipur'];
 
 export default function CreatorDiscovery({ onSelectCreator, onInviteCreator, onOpenChat }) {
   const [allCreators, setAllCreators] = useState([]);
@@ -53,7 +54,7 @@ export default function CreatorDiscovery({ onSelectCreator, onInviteCreator, onO
   const [selectedTools, setSelectedTools] = useState([]);
   const [selectedTiers, setSelectedTiers] = useState([]);
   const [locationQuery, setLocationQuery] = useState('');
-  const [maxBudget, setMaxBudget] = useState(15000);
+  const [maxBudget, setMaxBudget] = useState(49999);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
   // Sidebar accordion states
@@ -128,12 +129,12 @@ export default function CreatorDiscovery({ onSelectCreator, onInviteCreator, onO
     setSelectedTools([]);
     setSelectedTiers([]);
     setLocationQuery('');
-    setMaxBudget(15000);
+    setMaxBudget(49999);
   };
 
   // Composite multi-filter working in unison with actual creator data
   const filteredCreators = useMemo(() => {
-    return allCreators.filter((c) => {
+    const list = allCreators.filter((c) => {
       // Exclude test accounts from public creator discovery
       const isTestUser = (
         c.handle?.toLowerCase().startsWith('test_') ||
@@ -149,7 +150,31 @@ export default function CreatorDiscovery({ onSelectCreator, onInviteCreator, onO
         const catName = selectedCategory.name.toLowerCase();
         const creatorCats = c.categories || [];
 
-        const hasRelationalCategory = creatorCats.some((cc) => {
+        // Check if primary specialization or primary category matches
+        const primaryCat = creatorCats.find((cc) => cc.is_primary);
+        const isPrimaryRelational = primaryCat && (
+          (primaryCat.slug || '').toLowerCase() === catSlug ||
+          (primaryCat.name || '').toLowerCase() === catName
+        );
+
+        const specText = (c.primary_specialization || '').toLowerCase();
+        const isPrimarySpec = specText.includes(catName) || specText.includes(catSlug.replace(/-/g, ' '));
+        const isPrimaryMatch = Boolean(isPrimaryRelational || isPrimarySpec);
+
+        // Keywords from discipline and taxonomy words
+        const disciplineKeywords = DISCIPLINE_KEYWORDS[selectedCategory.name] || [];
+        const nameWords = catName.split(/[ &,-]+/).map(w => w.toLowerCase()).filter((w) => w.length > 2);
+        const allKeywords = [...new Set([...disciplineKeywords, ...nameWords, catSlug.replace(/-/g, ' ')])];
+
+        const bioText = (c.bio || '').toLowerCase();
+        const skillsText = (c.skills || []).map((s) => (s.name || '').toLowerCase()).join(' ');
+        const creatorCorpus = `${specText} ${bioText} ${skillsText}`;
+
+        const hasKeywordMatch = allKeywords.some((kw) => creatorCorpus.includes(kw));
+        const hasTextCategory = creatorCorpus.includes(catName);
+
+        // Secondary category check: requires verified keyword/skill relevance to avoid false matches
+        const hasSecondaryRelational = creatorCats.some((cc) => {
           const s = (cc.slug || '').toLowerCase();
           const n = (cc.name || '').toLowerCase();
           return (
@@ -161,11 +186,7 @@ export default function CreatorDiscovery({ onSelectCreator, onInviteCreator, onO
           );
         });
 
-        const specText = (c.primary_specialization || '').toLowerCase();
-        const bioText = (c.bio || '').toLowerCase();
-        const hasTextCategory = specText.includes(catName) || bioText.includes(catName);
-
-        if (!hasRelationalCategory && !hasTextCategory) {
+        if (!isPrimaryMatch && !(hasSecondaryRelational && (hasKeywordMatch || hasTextCategory))) {
           return false;
         }
 
@@ -175,7 +196,8 @@ export default function CreatorDiscovery({ onSelectCreator, onInviteCreator, onO
           const hasSub = creatorCats.some(
             (cc) => (cc.slug || '').toLowerCase() === subSlug || (cc.name || '').toLowerCase() === subSlug
           );
-          if (!hasSub) return false;
+          const hasSubText = creatorCorpus.includes(subSlug.replace(/-/g, ' '));
+          if (!hasSub && !hasSubText) return false;
         }
       }
 
@@ -234,14 +256,31 @@ export default function CreatorDiscovery({ onSelectCreator, onInviteCreator, onO
         if (!matchesLocation) return false;
       }
 
-      // 7. Rate Range Filter
-      if (maxBudget < 15000) {
+      // 7. Rate Range Filter (INR ₹10,000 - ₹49,999)
+      if (maxBudget < 49999) {
         const creatorBudget = c.min_budget !== undefined && c.min_budget !== null ? c.min_budget : 0;
         if (creatorBudget > maxBudget) return false;
       }
 
       return true;
     });
+
+    // If a category is selected, sort primary specialists first, then by rating
+    if (selectedCategory) {
+      const catSlug = selectedCategory.slug.toLowerCase();
+      const catName = selectedCategory.name.toLowerCase();
+      list.sort((a, b) => {
+        const aPrimary = (a.categories || []).some(cc => cc.is_primary && (cc.slug?.toLowerCase() === catSlug || cc.name?.toLowerCase() === catName)) ||
+          (a.primary_specialization || '').toLowerCase().includes(catName);
+        const bPrimary = (b.categories || []).some(cc => cc.is_primary && (cc.slug?.toLowerCase() === catSlug || cc.name?.toLowerCase() === catName)) ||
+          (b.primary_specialization || '').toLowerCase().includes(catName);
+        if (aPrimary && !bPrimary) return -1;
+        if (!aPrimary && bPrimary) return 1;
+        return (b.average_rating || 0) - (a.average_rating || 0);
+      });
+    }
+
+    return list;
   }, [allCreators, selectedCategory, selectedSubcategory, searchQuery, selectedDisciplines, selectedTools, selectedTiers, locationQuery, maxBudget]);
 
   const hasActiveFilters =
@@ -252,7 +291,7 @@ export default function CreatorDiscovery({ onSelectCreator, onInviteCreator, onO
     selectedTools.length > 0 ||
     selectedTiers.length > 0 ||
     Boolean(locationQuery) ||
-    maxBudget < 15000;
+    maxBudget < 49999;
 
   const activeFilterCount =
     (selectedCategory ? 1 : 0) +
@@ -262,7 +301,7 @@ export default function CreatorDiscovery({ onSelectCreator, onInviteCreator, onO
     selectedTools.length +
     selectedTiers.length +
     (locationQuery ? 1 : 0) +
-    (maxBudget < 15000 ? 1 : 0);
+    (maxBudget < 49999 ? 1 : 0);
 
   const displayedCategories = showAllCategories ? categories : categories.slice(0, 8);
 
@@ -546,17 +585,17 @@ export default function CreatorDiscovery({ onSelectCreator, onInviteCreator, onO
             <div className="filter-range-block">
               <input
                 type="range"
-                min="500"
-                max="15000"
-                step="500"
+                min="10000"
+                max="49999"
+                step="1000"
                 value={maxBudget}
                 onChange={(e) => setMaxBudget(Number(e.target.value))}
                 className="w-full accent-purple-600 cursor-pointer"
               />
               <div className="flex justify-between text-xs text-neutral-500 mt-1 font-mono">
-                <span>$500</span>
+                <span>{formatINR(10000)}</span>
                 <span className="font-bold text-purple-700">
-                  {maxBudget >= 15000 ? 'Any rate ($15k+)' : `Up to $${maxBudget.toLocaleString()}`}
+                  {maxBudget >= 49999 ? 'Any rate (₹50k)' : `Up to ${formatINR(maxBudget)}`}
                 </span>
               </div>
             </div>

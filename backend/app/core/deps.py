@@ -105,3 +105,62 @@ def get_current_brand(
             detail="Brand profile not yet initialized. Please complete brand setup."
         )
     return brand
+
+
+def require_approved_creator(
+    user: User = Depends(require_role(["CREATOR"])),
+    db: Session = Depends(get_db),
+) -> CreatorProfile:
+    """
+    Returns the CreatorProfile for the authenticated creator, strictly enforcing
+    that the creator account has been approved by an administrator.
+    - If unauthenticated -> 401 Unauthorized (via get_current_user)
+    - If email unverified -> 403 Forbidden ("Email address not verified...")
+    - If role != CREATOR -> 403 Forbidden ("Access denied. Role not permitted...")
+    - If creator profile missing -> 404 Not Found
+    - If approval_status == "PENDING" -> 403 Forbidden with error_code "CREATOR_APPROVAL_PENDING"
+    - If approval_status == "REJECTED" -> 403 Forbidden with error_code "CREATOR_APPROVAL_REJECTED"
+    - If approval_status == "APPROVED" -> returns CreatorProfile
+    """
+    creator = user.creator_profile
+    if not creator:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Creator profile not yet initialized. Please complete profile setup.",
+        )
+
+    approval = getattr(creator, "approval_status", "PENDING")
+    if approval == "PENDING":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "error_code": "CREATOR_APPROVAL_PENDING",
+                "message": "Creator account approval is pending administrator review. Marketplace features are locked until approved.",
+            },
+        )
+    elif approval == "REJECTED":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "error_code": "CREATOR_APPROVAL_REJECTED",
+                "message": "Creator account approval was rejected by an administrator. Please update your portfolio evidence and resubmit.",
+            },
+        )
+    elif approval not in ("APPROVED", "LEGACY_ACTIVE"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "error_code": "CREATOR_APPROVAL_UNAUTHORIZED",
+                "message": f"Creator approval status '{approval}' is not authorized for marketplace features.",
+            },
+        )
+
+    return creator
+
+
+def require_approved_creator_user(
+    creator: CreatorProfile = Depends(require_approved_creator),
+) -> User:
+    """Returns the authenticated User instance for an approved creator."""
+    return creator.user
+

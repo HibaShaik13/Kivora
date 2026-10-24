@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 
-export default function NotificationBell({ onNavigate }) {
+export default function NotificationBell({
+  onNavigate,
+  buttonClassName = 'portal-icon-btn',
+  badgeClassName = 'portal-icon-badge',
+}) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -113,23 +117,58 @@ export default function NotificationBell({ onNavigate }) {
       }
     }
     setIsOpen(false);
-    if (notif.link_url && onNavigate) {
-      if (notif.link_url.includes('tab=')) {
-        const match = notif.link_url.match(/tab=([^&]+)/);
-        if (match && match[1]) {
-          onNavigate('dashboard', { tab: match[1] });
+    if (onNavigate) {
+      if (notif.link_url) {
+        if (notif.link_url.includes('tab=')) {
+          const match = notif.link_url.match(/tab=([^&]+)/);
+          if (match && match[1]) {
+            onNavigate('dashboard', { tab: match[1], url: notif.link_url, notif });
+            return;
+          }
+        }
+        if (notif.link_url.startsWith('/inbox') || notif.link_url.includes('conversationId=')) {
+          onNavigate('inbox', { url: notif.link_url, notif });
           return;
         }
+        if (notif.link_url.startsWith('/workspace/')) {
+          const engId = notif.link_url.split('/workspace/')[1];
+          onNavigate('workspace', { engagementId: engId, url: notif.link_url, notif });
+          return;
+        }
+        if (notif.link_url.startsWith('/briefs')) {
+          onNavigate('briefs', { url: notif.link_url, notif });
+          return;
+        }
+        onNavigate('dashboard', { url: notif.link_url, notif });
+      } else {
+        // Inferred from notification type
+        switch (notif.type) {
+          case 'NEW_MESSAGE':
+            onNavigate('inbox', { notif });
+            break;
+          case 'APPLICATION_RECEIVED':
+          case 'APPLICATION_ACCEPTED':
+          case 'APPLICATION_REJECTED':
+            onNavigate('dashboard', { tab: 'applications', notif });
+            break;
+          case 'CREATOR_INVITED':
+          case 'INVITATION_ACCEPTED':
+          case 'INVITATION_DECLINED':
+            onNavigate('dashboard', { tab: 'invitations', notif });
+            break;
+          case 'DELIVERABLE_SUBMITTED':
+          case 'DELIVERABLE_APPROVED':
+          case 'DELIVERABLE_REVISION_REQUESTED':
+            onNavigate('dashboard', { tab: 'collaborations', notif });
+            break;
+          case 'OPPORTUNITY_ALERT':
+            onNavigate('dashboard', { tab: 'opportunities', notif });
+            break;
+          default:
+            onNavigate('dashboard', { notif });
+            break;
+        }
       }
-      if (notif.link_url.startsWith('/inbox')) {
-        onNavigate('inbox');
-        return;
-      }
-      if (notif.link_url.startsWith('/briefs')) {
-        onNavigate('briefs');
-        return;
-      }
-      onNavigate('dashboard');
     }
   };
 
@@ -160,29 +199,15 @@ export default function NotificationBell({ onNavigate }) {
     <div className="notification-bell-container" ref={popoverRef} style={{ position: 'relative' }}>
       <button
         type="button"
-        className="notification-bell-btn"
+        className={buttonClassName || 'portal-icon-btn'}
         onClick={() => setIsOpen(!isOpen)}
         aria-label={`Notifications: ${unreadCount} unread`}
         aria-expanded={isOpen}
         title="View Notifications"
-        style={{
-          position: 'relative',
-          background: 'rgba(255, 255, 255, 0.8)',
-          border: '1px solid #EAE6DF',
-          borderRadius: '50%',
-          width: '38px',
-          height: '38px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-          color: '#1A1A1A',
-          transition: 'all 0.15s ease',
-        }}
       >
         <svg
-          width="18"
-          height="18"
+          width="16"
+          height="16"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -190,31 +215,12 @@ export default function NotificationBell({ onNavigate }) {
           strokeLinecap="round"
           strokeLinejoin="round"
         >
-          <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-          <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+          <path d="M13.73 21a2 2 0 0 1-3.46 0" />
         </svg>
 
         {unreadCount > 0 && (
-          <span
-            className="notification-badge"
-            style={{
-              position: 'absolute',
-              top: '-4px',
-              right: '-4px',
-              backgroundColor: '#7952EC',
-              color: '#FFFFFF',
-              fontSize: '11px',
-              fontWeight: '700',
-              borderRadius: '999px',
-              minWidth: '18px',
-              height: '18px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '0 4px',
-              boxShadow: '0 2px 4px rgba(121, 82, 236, 0.4)',
-            }}
-          >
+          <span className={badgeClassName || 'portal-icon-badge'}>
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}

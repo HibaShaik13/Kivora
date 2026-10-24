@@ -519,14 +519,6 @@ def get_contextual_conversation(
                         conv.brief_id = brief_obj.id
                         db.commit()
 
-            if conv:
-                return ContextualConversationResponse(
-                    status="found",
-                    conversation=_format_conversation_read(conv, current_user, db),
-                    brand_name=brand_name,
-                    brief_title=brief_obj.title,
-                )
-
             # Check application status for this brief
             app = db.query(Application).filter(
                 or_(
@@ -536,9 +528,39 @@ def get_contextual_conversation(
                 Application.brief_id == brief_obj.id,
             ).first()
 
+            # If application is ACCEPTED, ensure conversation is active and return it
+            if not conv and app and app.status == "ACCEPTED" and brief_obj.brand_id:
+                conv = db.query(Conversation).filter(
+                    Conversation.brand_id == brief_obj.brand_id,
+                    Conversation.creator_id == (creator_prof_id or current_user.id),
+                    Conversation.brief_id == brief_obj.id,
+                ).first()
+                if not conv:
+                    import uuid
+                    conv = Conversation(
+                        id=f"conv-{uuid.uuid4().hex[:10]}",
+                        engagement_id=app.engagement.id if app.engagement else None,
+                        brief_id=brief_obj.id,
+                        brand_id=brief_obj.brand_id,
+                        creator_id=creator_prof_id or current_user.id,
+                        created_at=datetime.utcnow(),
+                        updated_at=datetime.utcnow(),
+                    )
+                    db.add(conv)
+                    db.commit()
+                    db.refresh(conv)
+
+            if conv:
+                return ContextualConversationResponse(
+                    status="found",
+                    conversation=_format_conversation_read(conv, current_user, db),
+                    brand_name=brand_name,
+                    brief_title=brief_obj.title,
+                )
+
             invitation_id = None
-            if app and app.status == "PENDING":
-                reason = f"Your application pitch for '{brief_obj.title}' is currently under review by {brand_name}. Direct messaging unlocks as soon as the brand accepts your pitch."
+            if app and app.status in ["PENDING", "SUBMITTED", "UNDER_REVIEW", "SHORTLISTED"]:
+                reason = "Your chat will be enabled once the brand accepts your pitch."
                 required_action = "APPLY"
             elif app and app.status == "INVITED":
                 reason = f"You have been directly invited by {brand_name} to collaborate on '{brief_obj.title}'. Accept the invitation to unlock direct messaging and your collaboration workspace."
@@ -548,7 +570,7 @@ def get_contextual_conversation(
                 reason = f"Your application for '{brief_obj.title}' was not selected for this campaign."
                 required_action = "REJECTED"
             else:
-                reason = f"Direct messaging with {brand_name} for '{brief_obj.title}' unlocks once your application pitch or invitation is accepted. Submit your pitch to start collaborating."
+                reason = f"Direct messaging with {brand_name} unlocks once your application pitch or invitation is accepted. Submit your pitch to activate chat."
                 required_action = "APPLY"
 
             return ContextualConversationResponse(
@@ -706,6 +728,35 @@ def send_message(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Forbidden: You are not an authorized participant in this conversation.",
         )
+
+    # Enforce creator approval gate for messaging
+    if current_user.role == "CREATOR":
+        creator = current_user.creator_profile
+        creator_status = getattr(creator, "approval_status", "PENDING") if creator else "PENDING"
+        if creator_status == "PENDING":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "error_code": "CREATOR_APPROVAL_PENDING",
+                    "message": "Creator account approval is pending administrator review. Marketplace messaging is locked until approved.",
+                },
+            )
+        elif creator_status == "REJECTED":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "error_code": "CREATOR_APPROVAL_REJECTED",
+                    "message": "Creator account approval was rejected by an administrator. Marketplace messaging is disabled.",
+                },
+            )
+        elif creator_status != "APPROVED":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "error_code": "CREATOR_APPROVAL_UNAUTHORIZED",
+                    "message": f"Creator approval status '{creator_status}' is not authorized for messaging.",
+                },
+            )
 
     # Sanitize content against stored XSS
     clean_content = html.escape(content)

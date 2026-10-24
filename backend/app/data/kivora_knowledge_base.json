@@ -1,0 +1,476 @@
+{
+  "version": "2.0.0",
+  "project": "Kivora",
+  "tagline": "The AI-Native Creative Marketplace uniting premier brands with verified generative artists, VFX directors, and 3D animators.",
+  "articles": [
+    {
+      "id": "brand_create_brief",
+      "category": "Brand Portal",
+      "title": "How to Create a Campaign Brief (Manual & AI Brief Builder)",
+      "keywords": [
+        "create brief",
+        "campaign brief",
+        "new brief",
+        "post brief",
+        "launch brief",
+        "ai brief builder",
+        "generate brief",
+        "brief builder",
+        "upload moodboard",
+        "reference images",
+        "how do i create a campaign brief"
+      ],
+      "summary": "Step-by-step instructions for brands to post campaign briefs either manually or using the multimodal AI Brief Builder.",
+      "ui_steps": [
+        "1. Log in to your Brand account (e.g., creative@luminaskincare.demo) or switch to the Brand Portal.",
+        "2. On your Brand Dashboard or top navigation bar, click the 'Launch Brief' or 'Create Brief' button.",
+        "3. Choose between Manual Creation or AI Brief Builder:",
+        "   • Manual Brief Creation: Fill in Campaign Title, Category/Domain (Fashion, Sci-Fi, Product, VFX), Target Budget ($), Project Deadline, Content Deliverables (e.g. 1x 15s 4K video reel), Target Aspect Ratio (16:9, 9:16, 1:1, 4:5), and Required Tools/Skills (Flux.1, ComfyUI, Runway Gen-3).",
+        "   • AI Brief Builder: Click 'AI Brief Builder' in the modal. Enter your creative concept in natural language, select your desired deliverable format, set budget and timeline, and optionally upload reference images or moodboards. Click 'Generate Structured Brief'. Gemini AI automatically synthesizes technical resolutions, aspect ratios, milestones, and commercial usage rights.",
+        "4. Review the generated or entered brief details, adjust any milestone budgets, and click 'Publish Campaign Brief'.",
+        "5. Your brief is now live! It appears immediately in the 'Campaign Briefs' explorer for verified creators to discover and apply."
+      ],
+      "supported_features": [
+        "Manual brief creation with custom deliverables and aspect ratios",
+        "AI Brief Builder powered by Gemini multimodal synthesis",
+        "Image reference and moodboard uploads",
+        "Deterministic milestone budget allocation"
+      ],
+      "related_topics": [
+        "brand_discover_creators_budget",
+        "brand_review_pitches_invitations",
+        "creator_discover_briefs"
+      ]
+    },
+    {
+      "id": "brand_discover_creators_budget",
+      "category": "Brand Portal",
+      "title": "How to Find Creators That Match Your Budget and Discipline",
+      "keywords": [
+        "find creators",
+        "match my budget",
+        "budget filter",
+        "search creators",
+        "filter creators",
+        "creator discovery",
+        "how can i find creators that match my budget",
+        "browse creators",
+        "rates",
+        "pricing"
+      ],
+      "summary": "How brands can filter, discover, and inspect verified creators according to specific budget ceilings, creative specializations, and toolchains.",
+      "ui_steps": [
+        "1. From the top navigation bar or the Brand Portal sidebar, click 'Discover Creators'.",
+        "2. Locate the Filter Toolbar on the left or top of the Discover Creators grid:",
+        "   • Budget Range: Use the budget range slider or minimum/maximum rate inputs to set your exact campaign ceiling (e.g., $1,000 - $3,000).",
+        "   • Creative Specialization: Filter by disciplines such as 3D & CGI, AI Cinematography, Haute Couture & Fashion, Anime Animation, or Photorealistic Product Viz.",
+        "   • Verification Tier: Filter by 'Verified Pro' or 'Top Studio' to see creators with audited evidence records.",
+        "   • Availability: Filter by 'Available Now' to see creators ready for immediate production kickoff.",
+        "3. Review the Creator Cards in the grid: Each card displays the creator's avatar, verified badge, starting rate pill (e.g., 'AVAILABLE • Rate: $2,200'), completed projects count, and primary tool tags.",
+        "4. Click on any creator card to open their full Creator Profile modal (clean header, unclipped profile, full rates breakdown, verified portfolio, and client reviews).",
+        "5. From the profile, you can click 'Invite to Brief' to send them an invitation or 'Chat' (once a collaboration or brief pitch is established)."
+      ],
+      "supported_features": [
+        "Granular budget filtering and rate sorting",
+        "Creative discipline and domain taxonomy filtering",
+        "Verified tier filtering (Verified Pro, Top Studio)",
+        "Direct brief invitations from creator profile modals"
+      ],
+      "related_topics": [
+        "brand_create_brief",
+        "creator_matching_score",
+        "chat_unlock_conditions"
+      ]
+    },
+    {
+      "id": "chat_unlock_conditions",
+      "category": "Shared Workflows",
+      "title": "Why Chat is Locked After Submitting a Pitch & How Messaging Unlocks",
+      "keywords": [
+        "chat locked",
+        "why is chat locked",
+        "unlock chat",
+        "messaging disabled",
+        "chat access",
+        "collaboration messaging",
+        "submit pitch chat",
+        "why is chat locked after i submit a pitch"
+      ],
+      "summary": "Explains why direct chat is locked when a creator submits a pitch, the platform safety rationale, and the exact condition required to unlock messaging.",
+      "ui_steps": [
+        "1. Why is chat locked initially? When a creator submits a pitch to a campaign brief, the pitch status is set to PENDING. Direct messaging is intentionally locked at this stage to protect creators and brands from unsolicited spam, off-platform solicitation, and contract circumvention.",
+        "2. UI Status Display: On the brief proposal card and creator dashboard, the UI clearly displays: 'Your chat will be enabled once the brand accepts your pitch.'",
+        "3. Condition to Unlock Chat: The brand reviews the submitted pitch in their Brand Dashboard under 'Pitches & Proposals'. As soon as the brand clicks 'Accept Proposal' (or when a brand sends a direct 'Invite to Brief'), an official Collaboration Workspace is generated.",
+        "4. Chat Activation: The moment the proposal is accepted, full real-time collaboration chat unlocks immediately in the 'Messages' tab and the Collaboration Workspace modal, enabling safe, milestone-tracked project communication."
+      ],
+      "supported_features": [
+        "Anti-spam protection and contract integrity enforcement",
+        "Automatic collaboration workspace generation upon pitch acceptance",
+        "Real-time messaging inbox with project context",
+        "Audit-logged communication tied to milestone escrow"
+      ],
+      "related_topics": [
+        "creator_pitches_applications",
+        "creator_collaborations_deliverables",
+        "brand_collaborations_escrow"
+      ]
+    },
+    {
+      "id": "creator_matching_score",
+      "category": "Creator Portal",
+      "title": "How the Creator Matching Score and Algorithm Works",
+      "keywords": [
+        "matching score",
+        "how does the creator matching score work",
+        "match score",
+        "algorithm",
+        "compatibility",
+        "eligibility",
+        "fit percentage",
+        "match percentage",
+        "weights"
+      ],
+      "summary": "Comprehensive breakdown of Kivora's deterministic two-phase matching algorithm in backend/app/services/matching.py, explaining hard gates and weighted scoring dimensions.",
+      "ui_steps": [
+        "Kivora uses a transparent, explainable two-phase deterministic matching algorithm (implemented in backend/app/services/matching.py):",
+        "PHASE 1: BINARY ELIGIBILITY GATES (Hard Filters):",
+        "  1. Content Format Compatibility: Brief deliverable format (Video, 3D Model, Product Viz, Animation) must match the creator's portfolio deliverable types or declared discipline mastery.",
+        "  2. Aspect Ratio Capability: Checks whether the creator has demonstrated experience producing in the requested aspect ratio (e.g. 9:16 vertical vs 16:9 cinematic).",
+        "  3. Budget Tolerance: Creator minimum budget cannot exceed the campaign budget by more than 15% (1.15x buffer). If it exceeds by >15%, the creator fails the eligibility gate.",
+        "PHASE 2: WEIGHTED SOFT SCORING (100% Total Calibrated Framework):",
+        "  • Skills Match (25% Weight): Evaluates mastery in required skills (2.0x weight) and preferred skills (1.0x weight), scaled by declared proficiency (Expert=1.0, Advanced=0.85, Intermediate=0.70).",
+        "  • Portfolio Relevance (25% Weight): Past projects are scored for content type match (+40 pts), aspect ratio match (+25 pts), creative style keywords (+25 pts), and attached reproducibility evidence (+10 pts).",
+        "  • Tool & Model Pipeline (15% Weight): Checks mastery in requested generative toolchains (ComfyUI, Runway, Flux, Midjourney, Unreal Engine 5), with bonus points for verified claims.",
+        "  • Creative Domain & Style Affinity (15% Weight): Category taxonomy match (60%) plus aesthetic keyword overlap (40%) from brief style/mood descriptions.",
+        "  • Budget Compatibility (10% Weight): 100% score if creator rate <= brief budget; decays linearly to 60% across the 15% negotiation buffer.",
+        "  • Verification Tier Multiplier (5% Weight): Top Studio = 100%, Verified Pro = 90%, Community = 65%, Unverified = 40%.",
+        "  • Production Availability (5% Weight): Immediately Available = 100%, Limited Availability = 60%, Booked = 20%.",
+        "MATCH TIERS:",
+        "  • 85% - 100%: PERFECT MATCH",
+        "  • 75% - 84%: EXCELLENT MATCH",
+        "  • 60% - 74%: GOOD MATCH",
+        "  • Under 60% or Hard Gate Failure: INCOMPATIBLE (dampened to max 45%)."
+      ],
+      "supported_features": [
+        "Explainable reasons and missing gap analysis",
+        "Relevant portfolio sample previews",
+        "Deterministic, bias-free scoring model",
+        "Transparent score breakdowns for brands"
+      ],
+      "related_topics": [
+        "creator_discover_briefs",
+        "brand_discover_creators_budget"
+      ]
+    },
+    {
+      "id": "creator_verification_evidence",
+      "category": "Creator Portal",
+      "title": "How to Upload Evidence for Creator Verification",
+      "keywords": [
+        "upload evidence",
+        "creator verification",
+        "how do i upload evidence for creator verification",
+        "get verified",
+        "verification badge",
+        "verified pro",
+        "top studio",
+        "evidence submission",
+        "proof",
+        "comfyui node graph"
+      ],
+      "summary": "Step-by-step instructions for generative creators to submit reproducibility evidence, toolchain proof, and portfolio files for human/AI audit.",
+      "ui_steps": [
+        "1. Log in to your Creator account (e.g. elena.rostova@kivora.demo) and navigate to the Creator Dashboard.",
+        "2. Click on the 'Verification' tab in the left sidebar, or click the 'Submit Evidence for Verification' button in the dashboard overview.",
+        "3. In the Verification Submission form, select your desired Verification Tier:",
+        "   • Verified Pro: For professional AI artists and VFX directors demonstrating consistent production workflows.",
+        "   • Top Studio: For established generative production houses with multi-audited enterprise pipelines.",
+        "4. Choose your Verification Type (e.g., 3D & CGI Artist, AI Cinematography, Visual Effects, Concept Art).",
+        "5. Attach your Reproducibility Evidence:",
+        "   • Workflow node graphs (e.g., ComfyUI JSON workflows, Blender shader trees).",
+        "   • Viewport or screen recordings demonstrating layer passes and generation steps.",
+        "   • High-resolution uncompressed asset renders or project archive links.",
+        "   • Prompt manifests and seed parameter logs.",
+        "6. Add a descriptive explanation of your production pipeline in the 'Submission Notes' field (e.g., 'Flux.1 Pro base with custom LoRA, ControlNet depth pass, and Topaz Video AI upscaling').",
+        "7. Click 'Submit for Verification'. Your claim status updates to PENDING_REVIEW and is queued in the Admin Portal for Gemini AI audit and administrator sign-off."
+      ],
+      "supported_features": [
+        "Multi-format evidence uploads and portfolio links",
+        "Automated preliminary Gemini AI consistency analysis",
+        "Human administrator audit queue with audit trail",
+        "Verified badge and score multiplier upon approval"
+      ],
+      "related_topics": [
+        "admin_portal_workflow",
+        "creator_profile_management"
+      ]
+    },
+    {
+      "id": "admin_portal_workflow",
+      "category": "Admin Portal",
+      "title": "How Administrators Review and Approve Creator Verification Claims",
+      "keywords": [
+        "admin review",
+        "approve verification",
+        "how does an administrator review and approve a verification claim",
+        "admin portal",
+        "gemini ai audit",
+        "verification queue",
+        "reject verification",
+        "admin decision",
+        "rationale"
+      ],
+      "summary": "Walkthrough of the redesigned Admin Portal: viewing dashboard stats, filtering the verification queue, inspecting evidence, running Gemini AI audit, and recording decisions.",
+      "ui_steps": [
+        "1. Sign in with an Administrator account (admin@kivora.demo) and access the Admin Portal.",
+        "2. Admin Dashboard Overview: Inspect platform integrity metrics across the 4 top summary cards: Pending Reviews, Approved Creators, Rejected Claims, and AI Audits.",
+        "3. Filter Verification Queue: In the Verification Requests table, use the filter pills ('All', 'Pending', 'Approved', 'Rejected') or the search bar to locate claims awaiting review.",
+        "4. Open Creator Request: Click on any creator's row in the table (e.g., Priya Sharma or Kai Tanaka) to open their dedicated 3-column verification workspace:",
+        "   • Left Column ('Submitted Evidence'): Review project reels, 3D renders, ComfyUI graphs, and case studies at native aspect ratio without clipping. Switch subtabs between 'Submitted Evidence', 'Creator Details', and 'Verification History'.",
+        "   • Middle Column ('Gemini AI Audit'): Click 'Run Gemini AI Audit' to initiate multimodal AI verification analysis. Review the status banner (e.g. 'Potential inconsistency flagged' or 'Consistent with claim'), along with analysis bullet points on frame matching, metadata completeness, and toolchain plausibility.",
+        "   • Right Column ('Trust & Safety'): View overall verification breakdown statistics and recent platform audit history.",
+        "5. Enter Mandatory Decision Rationale: In the bottom decision panel, enter a required reason in the 'Add a reason for your decision (required)' field (up to 500 characters).",
+        "6. Final Decision Action: Click 'Approve Request' (purple button) to verify the creator and issue their verification badge, or click 'Reject Request' (white with red outline) to deny the claim with feedback.",
+        "7. Verification updates are saved immediately in the database, updating creator badges, queue statuses, and dashboard metrics."
+      ],
+      "supported_features": [
+        "Clean, professional light-lavender Admin UI matching platform design",
+        "Multimodal Gemini AI consistency audit integration",
+        "Mandatory human decision rationale field for accountability",
+        "Real-time database persistence and status badge updates"
+      ],
+      "related_topics": [
+        "creator_verification_evidence",
+        "shared_security_roles"
+      ]
+    },
+    {
+      "id": "creator_collaborations_deliverables",
+      "category": "Creator Portal",
+      "title": "How Creators Submit Deliverables and Manage Revisions",
+      "keywords": [
+        "submit deliverable",
+        "how do i submit a deliverable to a brand",
+        "deliverables",
+        "revisions",
+        "milestone submission",
+        "asset upload",
+        "collaboration workspace",
+        "client reviews"
+      ],
+      "summary": "Instructions for creators to upload final campaign deliverables, provide technical notes, and handle brand revision requests.",
+      "ui_steps": [
+        "1. In your Creator Portal sidebar, click on 'Collaborations' to view active projects.",
+        "2. Select the active campaign brief you are working on to open the Collaboration Workspace.",
+        "3. Click the 'Submit Deliverable' button in the deliverables section.",
+        "4. In the Submit Deliverable modal, provide the required details:",
+        "   • Deliverable Title (e.g., 'Hero 15s 4K Video Commercial - Final Cut').",
+        "   • Asset File URL / Cloud Storage Link (e.g. Google Drive, Dropbox, Frame.io, or CDN URL).",
+        "   • Technical Specifications: Resolution (e.g. 3840x2160), frame rate (e.g. 60fps), color space, and aspect ratio (e.g. 16:9).",
+        "   • Production Notes / Toolchain Proof: Summary of final generation and upscaling passes used.",
+        "5. Click 'Submit Deliverable'. The status updates to PENDING_REVIEW.",
+        "6. Brand Review & Revisions: The brand is notified immediately to inspect the deliverable:",
+        "   • If the brand requests revisions, a revision notice appears with feedback notes, allowing you to upload an updated version.",
+        "   • Once the brand clicks 'Approve Deliverable', the milestone escrow funds are automatically released to your creator account balance, and project completion is recorded."
+      ],
+      "supported_features": [
+        "Structured milestone deliverable tracking",
+        "Versioned deliverable submissions and revision logs",
+        "Escrow-protected fund release upon client approval",
+        "Post-delivery rating and review exchanges"
+      ],
+      "related_topics": [
+        "brand_collaborations_escrow",
+        "chat_unlock_conditions"
+      ]
+    },
+    {
+      "id": "creator_brand_notifications_analytics",
+      "category": "Shared Features",
+      "title": "Where to Find Notifications and Analytics in Kivora",
+      "keywords": [
+        "notifications",
+        "analytics",
+        "where can i find my notifications and analytics",
+        "notification bell",
+        "creator analytics",
+        "brand analytics",
+        "metrics",
+        "earnings",
+        "spend"
+      ],
+      "summary": "Navigational guide for finding real-time notifications and dedicated analytics dashboards for both Creators and Brands.",
+      "ui_steps": [
+        "FINDING NOTIFICATIONS:",
+        "  1. In the top navigation bar header, look for the Bell Icon (Notification Bell).",
+        "  2. Click the bell to open the real-time Notification Dropdown. It displays alerts for pitch proposals, pitch acceptances, deliverable uploads, revision feedback, verification decisions, and escrow disbursements.",
+        "  3. Unread alerts are marked with a purple dot; click 'Mark all as read' to clear badges.",
+        "FINDING ANALYTICS (FOR CREATORS):",
+        "  1. In the Creator Portal sidebar, click 'Analytics' (CreatorAnalyticsView).",
+        "  2. Inspect key creator metrics: Profile Views & Impressions, Pitch Acceptance Rate, Total Completed Campaigns, and Total Earnings ($).",
+        "  3. Review monthly revenue breakdowns and creative discipline performance graphs.",
+        "FINDING ANALYTICS (FOR BRANDS):",
+        "  1. In the Brand Portal sidebar, click 'Analytics' (BrandAnalyticsView).",
+        "  2. Inspect key campaign metrics: Total Marketing Spend ($), Active Briefs, Creator Pitches Received, Average Deliverable Turnaround Time, and Content ROI.",
+        "  3. Review spending breakdowns by creative discipline and campaign timeline."
+      ],
+      "supported_features": [
+        "Real-time notifications with unread badge indicators",
+        "Dedicated creator performance and earnings dashboards",
+        "Dedicated brand campaign spend and ROI dashboards",
+        "Historical activity graphs and metric breakdowns"
+      ],
+      "related_topics": [
+        "creator_profile_management",
+        "brand_portal_capabilities"
+      ]
+    },
+    {
+      "id": "brand_portal_capabilities",
+      "category": "Brand Portal",
+      "title": "What Can the Brand Portal Do? Full Feature Overview",
+      "keywords": [
+        "what can the brand portal do",
+        "brand portal features",
+        "brand capabilities",
+        "brand overview",
+        "brand tools",
+        "brand workflow",
+        "what can brands do"
+      ],
+      "summary": "Complete summary of all Brand Portal capabilities, tools, and workflows available for marketing teams and enterprises.",
+      "ui_steps": [
+        "The Kivora Brand Portal provides an end-to-end suite for hiring and managing verified generative creators:",
+        "1. Brand Profile Management: Configure company name, industry, visual guidelines, website, and company logo.",
+        "2. Campaign Brief Creation: Launch briefs with detailed technical specifications, or use the multimodal AI Brief Builder to convert creative concepts and reference images into structured deliverables.",
+        "3. Creator Discovery & Budget Filtering: Search Kivora's curated creator network with filters for budget ranges, creative disciplines (3D, VFX, AI Cinema, Fashion), verification tiers, and toolchains.",
+        "4. Proposal & Pitch Reviews: Inspect incoming creator pitches, compare deterministic matching scores, review past verified deliverables, and evaluate proposed budgets.",
+        "5. Direct Creator Invitations: Send personalized brief invitations with custom initial offers directly from creator profiles.",
+        "6. Milestone Escrow Protection: Fund milestones securely upfront; funds are never released until you inspect and approve submitted deliverables.",
+        "7. Deliverable Inspection & Revisions: View submitted 4K video, 3D renders, or image assets directly in the Collaboration Workspace; approve with one click or request revisions.",
+        "8. Real-Time Collaboration Messaging: Chat directly with creators once proposals or invitations are accepted.",
+        "9. Brand Analytics: Track campaign spend, proposal velocity, deliverable timelines, and ROI metrics.",
+        "10. Real-Time Notifications: Stay updated on incoming pitches, deliverable uploads, and milestone statuses."
+      ],
+      "supported_features": [
+        "Multimodal AI brief synthesis",
+        "Deterministic creator matching and scoring",
+        "Milestone escrow payment protection",
+        "Direct creator invitations and collaboration workspaces"
+      ],
+      "related_topics": [
+        "brand_create_brief",
+        "brand_discover_creators_budget",
+        "end_to_end_workflow"
+      ]
+    },
+    {
+      "id": "end_to_end_workflow",
+      "category": "Platform Architecture",
+      "title": "The Complete Kivora Workflow: From Creator Discovery to Final Delivery",
+      "keywords": [
+        "complete workflow",
+        "explain the complete kivora workflow",
+        "workflow",
+        "how kivora works",
+        "discovery to delivery",
+        "lifecycle",
+        "end to end",
+        "process"
+      ],
+      "summary": "Comprehensive explanation of the complete Kivora journey connecting Brands, Creators, and Administrators from inception to asset sign-off.",
+      "ui_steps": [
+        "The Kivora workflow connects brands and verified creators through 7 structured stages:",
+        "STAGE 1: BRIEF SYNTHESIS",
+        "  • The brand launches a campaign brief manually or via the AI Brief Builder (synthesizing deliverables, aspect ratios, technical resolutions, and milestone budgets).",
+        "STAGE 2: MATCHING & DISCOVERY",
+        "  • Kivora's deterministic two-phase algorithm evaluates creators on Skills (25%), Portfolio Relevance (25%), Toolchains (15%), Creative Domain (15%), Budget Compatibility (10%), Verification (5%), and Availability (5%).",
+        "  • Brands discover top matched creators, or creators find open campaigns in 'Discover Briefs'.",
+        "STAGE 3: PITCHING & INVITATION",
+        "  • Creators submit structured pitches with rate proposals and delivery timelines, or brands directly send invitations from creator profiles.",
+        "STAGE 4: AGREEMENT & ESCROW FUNDING",
+        "  • The brand accepts the proposal. The campaign milestone escrow is funded upfront, and real-time collaboration chat unlocks immediately.",
+        "STAGE 5: PRODUCTION & REPRODUCIBILITY",
+        "  • The creator produces the deliverable using verified generative pipelines (ComfyUI, Runway, Flux.1 Pro, UE5, Blender) adhering to the brief specifications.",
+        "STAGE 6: DELIVERABLE SUBMISSION",
+        "  • The creator submits the final assets and toolchain proof via 'Submit Deliverable'. The status moves to PENDING_REVIEW.",
+        "STAGE 7: APPROVAL, ESCROW RELEASE & REVIEWS",
+        "  • The brand reviews the deliverable in the Collaboration Workspace. If revisions are required, feedback is logged. Upon brand sign-off, escrow funds release instantly to the creator, and both parties leave verified commercial reviews."
+      ],
+      "supported_features": [
+        "Deterministic algorithm-based creator matching",
+        "Automated milestone escrow protection",
+        "Reproducibility verification pipeline",
+        "Full commercial rights handover upon milestone approval"
+      ],
+      "related_topics": [
+        "brand_portal_capabilities",
+        "creator_matching_score",
+        "chat_unlock_conditions"
+      ]
+    },
+    {
+      "id": "creator_profile_management",
+      "category": "Creator Portal",
+      "title": "Managing Creator Profile, Starting Rates, and Publishing Portfolio Projects",
+      "keywords": [
+        "edit profile",
+        "creator profile",
+        "add project",
+        "portfolio",
+        "starting rate",
+        "availability",
+        "bio",
+        "publish project"
+      ],
+      "summary": "How creators customize their public profile, declare minimum rates, and publish portfolio items with technical tags and cover images.",
+      "ui_steps": [
+        "1. In the Creator Portal sidebar, click 'Dashboard'.",
+        "2. Click the 'Edit Profile' button to open the Edit Creator Profile modal. Here you can configure your Display Name, Username (@handle), Specialization, Location, Hourly/Starting Rate ($), Bio, and Availability Status (Available, Limited, Booked).",
+        "3. To publish portfolio projects, switch to the 'Portfolio' tab on your dashboard or profile and click 'Add Project'.",
+        "4. Fill out Project Title, Description, Cover Image URL, Content Type (Video, 3D Render, Animation, Image), Aspect Ratio (16:9, 9:16, 1:1), and Software/Tools used (e.g., ComfyUI, Flux.1 Pro, Unreal Engine 5).",
+        "5. Save project. Your new work appears immediately in your verified portfolio and is factored into automated campaign matching scores."
+      ],
+      "supported_features": [
+        "Comprehensive profile editing with rate and availability controls",
+        "Multi-aspect ratio portfolio project publishing",
+        "Public creator profile view with verified badges and review history"
+      ],
+      "related_topics": [
+        "creator_verification_evidence",
+        "creator_matching_score"
+      ]
+    },
+    {
+      "id": "shared_security_roles",
+      "category": "Platform Architecture",
+      "title": "Platform Security, User Roles, and Authorization Policies",
+      "keywords": [
+        "security",
+        "roles",
+        "permissions",
+        "admin access",
+        "credentials",
+        "privacy",
+        "authentication",
+        "rbac"
+      ],
+      "summary": "Overview of Kivora's role-based access control (CREATOR, BRAND, ADMIN) and strict security policies protecting credentials and platform data.",
+      "ui_steps": [
+        "1. User Roles: Kivora supports three authenticated roles (CREATOR, BRAND, ADMIN) plus unauthenticated GUEST browsing.",
+        "2. Creator Role: Access to Creator Dashboard, pitch submission, portfolio management, deliverable uploads, and verification submissions.",
+        "3. Brand Role: Access to Brand Dashboard, campaign brief creation, AI Brief Builder, creator discovery, proposal acceptance, and milestone escrow management.",
+        "4. Admin Role: Access restricted to platform integrity personnel. Allows inspecting creator verification queues, executing Gemini AI audits, and approving or rejecting claims.",
+        "5. Security Policies: Kivo AI strictly safeguards system integrity: credentials, API keys, database connection strings, and passwords are never disclosed. All admin verification decisions require authenticated admin sessions."
+      ],
+      "supported_features": [
+        "Strict role-based authorization on all API routes",
+        "Confidentiality guardrails preventing credential disclosure",
+        "Admin-only verification decision enforcement"
+      ],
+      "related_topics": [
+        "admin_portal_workflow"
+      ]
+    }
+  ]
+}

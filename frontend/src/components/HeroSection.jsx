@@ -58,7 +58,7 @@ export default function HeroSection({
             Explore talents, ideas and possibilities beyond imagination.
           </p>
 
-          {/* Primary Action Button */}
+          {/* CTA Buttons matching reference image */}
           <div className="cosmic-hero-cta-group">
             <button
               type="button"
@@ -66,46 +66,62 @@ export default function HeroSection({
               onClick={onExploreCreators}
               aria-label="Explore creators"
             >
-              Explore Now <span className="cosmic-arrow-icon">→</span>
+              Explore Creators <span className="cosmic-arrow-icon">→</span>
+            </button>
+            <button
+              type="button"
+              className="cosmic-btn-secondary"
+              onClick={() => {
+                if (onOpenAiBuilder) onOpenAiBuilder();
+                else scrollToLogin();
+              }}
+              aria-label="Post a campaign"
+            >
+              Post a Campaign
             </button>
           </div>
         </div>
 
-        {/* Right Column: Interactive Constellation Floating Badges over Planet Scene */}
+        {/* Right Column: Portal Scene & Interactive Pills matching reference */}
         <div className="cosmic-hero-planet-interactive-layer" aria-label="Creative Universe Navigation">
-          {/* 1. CREATORS floating label (Top Left) */}
-          <div className="cosmic-floating-node node-creators animate-float-slow">
+          {/* Center Portal Badge: Creators */}
+          <div className="cosmic-portal-center-badge animate-float-slow">
             <button
               type="button"
-              className="cosmic-interactive-pill"
+              className="cosmic-portal-pill"
               onClick={onExploreCreators}
               title="Discover verified creators"
             >
               <span className="node-icon">👑</span>
-              <span className="node-text">CREATORS</span>
+              <span className="node-text">Creators</span>
             </button>
-            <div className="cosmic-connector-line line-creators" />
           </div>
 
-          {/* 2. BRIEFS floating label (Top Right) */}
-          <div className="cosmic-floating-node node-briefs animate-float-delayed">
+          {/* Right-aligned Vertical Floating Pills */}
+          <div className="cosmic-hero-right-pills">
             <button
               type="button"
-              className="cosmic-interactive-pill"
+              className="cosmic-interactive-pill animate-float-slow"
+              onClick={onExploreBriefs}
+              title="Explore briefs"
+            >
+              <span className="node-icon">📄</span>
+              <span className="node-text">Briefs</span>
+            </button>
+
+            <button
+              type="button"
+              className="cosmic-interactive-pill animate-float-delayed"
               onClick={onExploreBriefs}
               title="Explore open briefs"
             >
-              <span className="node-icon">📄</span>
-              <span className="node-text">BRIEFS</span>
+              <span className="node-icon">📋</span>
+              <span className="node-text">Briefs</span>
             </button>
-            <div className="cosmic-connector-line line-briefs" />
-          </div>
 
-          {/* 3. COLLABORATE floating label (Bottom Left) */}
-          <div className="cosmic-floating-node node-collaborate animate-float-gentle">
             <button
               type="button"
-              className="cosmic-interactive-pill"
+              className="cosmic-interactive-pill animate-float-gentle"
               onClick={() => {
                 const howItWorks = document.getElementById('how-it-works');
                 if (howItWorks) {
@@ -117,29 +133,21 @@ export default function HeroSection({
               title="Collaborate on campaigns"
             >
               <span className="node-icon">🔗</span>
-              <span className="node-text">COLLABORATE</span>
+              <span className="node-text">Collaborate</span>
             </button>
-            <div className="cosmic-connector-line line-collaborate" />
-          </div>
 
-          {/* 4. CREATE floating label (Bottom Right) */}
-          <div className="cosmic-floating-node node-create animate-float-slow">
             <button
               type="button"
-              className="cosmic-interactive-pill"
+              className="cosmic-interactive-pill animate-float-slow"
               onClick={() => {
-                if (onOpenAiBuilder) {
-                  onOpenAiBuilder();
-                } else {
-                  scrollToLogin();
-                }
+                if (onOpenAiBuilder) onOpenAiBuilder();
+                else scrollToLogin();
               }}
               title="Create a brief or launch campaign"
             >
-              <span className="node-icon">✦</span>
-              <span className="node-text">CREATE</span>
+              <span className="node-icon">⭐</span>
+              <span className="node-text">Create</span>
             </button>
-            <div className="cosmic-connector-line line-create" />
           </div>
         </div>
       </div>

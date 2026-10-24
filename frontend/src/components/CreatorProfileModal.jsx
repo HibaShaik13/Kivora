@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { getCurrentUser } from '../services/authService';
 import { getCreatorAvatar } from '../utils/visualAssetHelpers';
+import { formatINR, clampDemoBudget } from '../utils/indianLocalization';
 
 export default function CreatorProfileModal({
   creator,
@@ -94,40 +95,74 @@ export default function CreatorProfileModal({
   };
 
   const avatarUrl = getCreatorAvatar(creator);
-  const bannerUrl = creator.banner_url || `/assets/banners/${(creator.handle || 'elena').split('_')[0]}_banner.jpg`;
+  const bannerUrl = creator.banner_url || `/assets/banners/${(creator.handle || 'aanya').split('_')[0]}_banner.jpg`;
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div
+      className="modal-backdrop"
+      onClick={onClose}
+      style={{
+        zIndex: 1100,
+        overflowY: 'auto',
+        padding: '1.5rem 1rem',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
       <div
         className="kivora-profile-modal-container glass-panel"
         style={{
-          maxWidth: '840px',
-          width: '94%',
-          maxHeight: '90vh',
+          maxWidth: '860px',
+          width: '100%',
+          maxHeight: '92vh',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          borderRadius: '24px',
+          borderRadius: '20px',
           background: '#FAF7F2',
-          border: '1px solid rgba(121, 82, 236, 0.16)',
-          boxShadow: '0 24px 64px -12px rgba(17, 18, 21, 0.28)',
+          border: '1px solid rgba(121, 82, 236, 0.2)',
+          boxShadow: '0 24px 64px -12px rgba(17, 18, 21, 0.32)',
           position: 'relative',
+          margin: 'auto',
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Compact Banner with Overlay & Top Header Actions */}
-        <div className="profile-modal-banner-wrap" style={{ position: 'relative', height: '120px', flexShrink: 0 }}>
-          <img
-            src={bannerUrl}
-            alt={`${creator.display_name} Banner`}
-            className="profile-modal-banner-img"
-            onError={(e) => {
-              e.target.onerror = null;
-              e.target.src = '/assets/banners/elena_banner.jpg';
-            }}
-          />
-          <div className="profile-modal-banner-overlay" />
-          <div className="profile-modal-top-bar" style={{ zIndex: 10 }}>
+        {/* Top Header Controls Bar (No oversized cover banner) */}
+        <div
+          className="profile-modal-header-bar"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '1rem 1.5rem',
+            borderBottom: '1px solid rgba(121, 82, 236, 0.1)',
+            background: 'linear-gradient(180deg, #FFFFFF 0%, #FAF8FC 100%)',
+            flexShrink: 0,
+            zIndex: 10,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span
+              style={{
+                fontSize: '11px',
+                fontWeight: '700',
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                color: '#6D28D9',
+                backgroundColor: '#EDE9FE',
+                padding: '4px 10px',
+                borderRadius: '999px',
+              }}
+            >
+              Creator Profile
+            </span>
+            <span style={{ fontSize: '13px', fontWeight: '500', color: '#4B5563' }}>
+              • {creator.primary_specialization || 'Generative AI Creator'}
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <button
               type="button"
               className="modal-icon-action-btn"
@@ -136,6 +171,20 @@ export default function CreatorProfileModal({
                 alert('Profile link copied to clipboard!');
               }}
               title="Share profile"
+              style={{
+                padding: '5px 12px',
+                borderRadius: '999px',
+                border: '1px solid #E5E7EB',
+                background: '#FFFFFF',
+                fontSize: '12px',
+                fontWeight: '600',
+                color: '#374151',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+              }}
             >
               ↗ Share
             </button>
@@ -143,10 +192,20 @@ export default function CreatorProfileModal({
               type="button"
               className="modal-icon-action-btn"
               onClick={handleToggleSave}
-              title={isSaved ? "Saved in talent roster" : "Save creator to roster"}
+              title={isSaved ? 'Saved in talent roster' : 'Save creator to roster'}
               style={{
-                color: isSaved ? '#7952EC' : '#111',
+                padding: '5px 12px',
+                borderRadius: '999px',
+                border: isSaved ? '1px solid #7952EC' : '1px solid #E5E7EB',
+                background: isSaved ? '#F5F3FF' : '#FFFFFF',
+                color: isSaved ? '#7952EC' : '#374151',
+                fontSize: '12px',
                 fontWeight: isSaved ? '700' : '600',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
               }}
             >
               {isSaved ? '♥ Saved' : '♡ Save'}
@@ -156,6 +215,20 @@ export default function CreatorProfileModal({
               className="modal-close-round-btn"
               onClick={onClose}
               aria-label="Close"
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                border: '1px solid #E5E7EB',
+                background: '#FFFFFF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '13px',
+                color: '#4B5563',
+                cursor: 'pointer',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+              }}
             >
               ✕
             </button>
@@ -311,10 +384,10 @@ export default function CreatorProfileModal({
                   type="button"
                   className="profile-btn-availability"
                   onClick={() => {
-                    alert(`Creator availability status: ${creator.availability_status || 'AVAILABLE'}. Minimum project budget: $${(creator.min_budget || 2500).toLocaleString()}.`);
+                    alert(`Creator availability status: ${creator.availability_status || 'AVAILABLE'}. Minimum project budget: ${formatINR(clampDemoBudget(creator.min_budget, 25000))}.`);
                   }}
                 >
-                  {creator.availability_status || 'Available'} • Rate: ${(creator.min_budget || 2500).toLocaleString()}
+                  {creator.availability_status || 'Available'} • Rate: {formatINR(clampDemoBudget(creator.min_budget, 25000))}
                 </button>
               </div>
 
@@ -468,11 +541,11 @@ export default function CreatorProfileModal({
                 </div>
                 <div>
                   <span className="font-bold text-neutral-500 block uppercase text-xs mb-1">Min Project Budget</span>
-                  <span className="font-semibold text-purple-700 text-sm">${(creator.min_budget || 2500).toLocaleString()}</span>
+                  <span className="font-semibold text-purple-700 text-sm">{formatINR(clampDemoBudget(creator.min_budget, 25000))}</span>
                 </div>
                 <div>
                   <span className="font-bold text-neutral-500 block uppercase text-xs mb-1">Hourly Rate</span>
-                  <span className="font-semibold text-neutral-900 text-sm">${creator.hourly_rate || 120}/hr</span>
+                  <span className="font-semibold text-neutral-900 text-sm">{formatINR(creator.hourly_rate || 1500)}/hr</span>
                 </div>
                 <div>
                   <span className="font-bold text-neutral-500 block uppercase text-xs mb-1">Availability</span>

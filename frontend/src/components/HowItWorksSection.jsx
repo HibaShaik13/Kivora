@@ -14,16 +14,36 @@ export default function HowItWorksSection({ onExplore, onPostBrief }) {
               <stop offset="50%" stopColor="#8B5CF6" stopOpacity="0.75" />
               <stop offset="100%" stopColor="#6D28D9" stopOpacity="0.95" />
             </linearGradient>
-            <filter id="glow">
-              <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+            <filter id="glowTorus">
+              <feGaussianBlur stdDeviation="4" result="coloredBlur" />
               <feMerge>
-                <feMergeNode in="coloredBlur"/>
-                <feMergeNode in="SourceGraphic"/>
+                <feMergeNode in="coloredBlur" />
+                <feMergeNode in="SourceGraphic" />
               </feMerge>
             </filter>
           </defs>
-          <ellipse cx="50" cy="50" rx="38" ry="24" fill="none" stroke="url(#torusGrad)" strokeWidth="14" transform="rotate(-25 50 50)" filter="url(#glow)" />
-          <ellipse cx="50" cy="50" rx="20" ry="10" fill="none" stroke="#FFFFFF" strokeWidth="3" opacity="0.6" transform="rotate(-25 50 50)" />
+          <ellipse
+            cx="50"
+            cy="50"
+            rx="38"
+            ry="24"
+            fill="none"
+            stroke="url(#torusGrad)"
+            strokeWidth="14"
+            transform="rotate(-25 50 50)"
+            filter="url(#glowTorus)"
+          />
+          <ellipse
+            cx="50"
+            cy="50"
+            rx="20"
+            ry="10"
+            fill="none"
+            stroke="#FFFFFF"
+            strokeWidth="3"
+            opacity="0.6"
+            transform="rotate(-25 50 50)"
+          />
         </svg>
       ),
       action: onExplore,
@@ -41,10 +61,45 @@ export default function HowItWorksSection({ onExplore, onPostBrief }) {
               <stop offset="100%" stopColor="#7E22CE" stopOpacity="0.9" />
             </linearGradient>
           </defs>
-          <rect x="22" y="24" width="40" height="40" rx="8" fill="url(#cubeGrad)" opacity="0.6" transform="rotate(-10 42 44)" />
-          <rect x="36" y="36" width="42" height="42" rx="8" fill="url(#cubeGrad)" opacity="0.85" />
-          <line x1="44" y1="50" x2="68" y2="50" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" opacity="0.8" />
-          <line x1="44" y1="60" x2="60" y2="60" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" opacity="0.8" />
+          <rect
+            x="22"
+            y="24"
+            width="40"
+            height="40"
+            rx="8"
+            fill="url(#cubeGrad)"
+            opacity="0.6"
+            transform="rotate(-10 42 44)"
+          />
+          <rect
+            x="36"
+            y="36"
+            width="42"
+            height="42"
+            rx="8"
+            fill="url(#cubeGrad)"
+            opacity="0.85"
+          />
+          <line
+            x1="44"
+            y1="50"
+            x2="68"
+            y2="50"
+            stroke="#FFFFFF"
+            strokeWidth="3"
+            strokeLinecap="round"
+            opacity="0.8"
+          />
+          <line
+            x1="44"
+            y1="60"
+            x2="60"
+            y2="60"
+            stroke="#FFFFFF"
+            strokeWidth="3"
+            strokeLinecap="round"
+            opacity="0.8"
+          />
         </svg>
       ),
       action: onPostBrief,
@@ -97,56 +152,56 @@ export default function HowItWorksSection({ onExplore, onPostBrief }) {
   ];
 
   return (
-    <section id="how-it-works" className="how-it-works-section">
-      <div className="container">
+    <section id="how-it-works" className="how-it-works-original-section relative overflow-hidden">
+      <div className="container relative z-10">
         {/* Section Header */}
-        <div className="section-head-row">
+        <div className="how-header-row">
           <div>
-            <span className="badge-editorial">
-              <span className="badge-dot" />
+            <div className="how-badge-pill">
+              <span className="how-badge-dot">•</span>
               HOW KIVORA WORKS
-            </span>
-            <h2 className="section-title">
+            </div>
+            <h2 className="how-section-title">
               From idea to <span className="serif-italic-accent">impact.</span>
             </h2>
-            <p className="section-subtext">
+            <p className="how-section-sub">
               A transparent workflow designed for AI-native production and multi-disciplinary creative campaigns.
             </p>
           </div>
 
-          <div className="section-head-link">
+          <div className="how-header-action">
             <button
               type="button"
-              className="link-arrow-btn"
+              className="how-action-link"
               onClick={onExplore}
             >
-              Learn More <span className="arrow-inline">→</span>
+              How It Works <span className="arrow-inline">→</span>
             </button>
           </div>
         </div>
 
-        {/* 4 Steps Grid */}
-        <div className="steps-grid">
+        {/* 4 Large Cards Grid */}
+        <div className="how-cards-grid">
           {steps.map((st) => (
             <div
               key={st.num}
-              className="step-card glass-card"
+              className="how-card"
               onClick={st.action}
               role="button"
               tabIndex={0}
             >
-              <div className="step-card-top">
-                <span className="step-card-num">{st.num} •</span>
-                <div className="step-card-visual">{st.icon}</div>
+              <div className="how-card-top">
+                <span className="how-card-num">{st.num} •</span>
+                <div className="how-card-visual">{st.icon}</div>
               </div>
 
-              <div className="step-card-content">
-                <h3 className="step-card-title">{st.title}</h3>
-                <p className="step-card-desc">{st.desc}</p>
+              <div className="how-card-content">
+                <h3 className="how-card-title">{st.title}</h3>
+                <p className="how-card-desc">{st.desc}</p>
               </div>
 
-              <div className="step-card-footer">
-                <span className="step-corner-arrow">↗</span>
+              <div className="how-card-footer">
+                <span className="how-corner-arrow">↗</span>
               </div>
             </div>
           ))}

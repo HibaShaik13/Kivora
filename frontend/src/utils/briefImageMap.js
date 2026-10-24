@@ -554,23 +554,24 @@ export function getStableDomainImageIndex(briefId, title = '', totalImages = 1) 
 export function getBriefCoverImage(brief, fallbackIndex = 0) {
   if (!brief) return DEFAULT_FALLBACK_COVER;
 
-  // 1. Authoritative 1-to-1 campaign brief mapped asset (171 bijective briefs)
-  const mappedCampaignAsset = getCampaignBriefImage(brief);
-  if (mappedCampaignAsset) {
-    return mappedCampaignAsset;
-  }
-
-  // 2. Check for genuine brand user uploads (e.g. from /uploads/ or external data/http URLs)
+  // 1. Check for genuine brand user uploads (e.g. from /uploads/ or external data/http URLs)
   const candidateUrl = (brief.reference_asset_url || brief.cover_image_url || '').trim();
   if (
     candidateUrl &&
     !candidateUrl.startsWith('/assets/campaign-covers/') &&
     (candidateUrl.startsWith('/uploads/') ||
+      candidateUrl.startsWith('/api/uploads/') ||
       candidateUrl.startsWith('http://') ||
       candidateUrl.startsWith('https://') ||
       candidateUrl.startsWith('data:'))
   ) {
     return candidateUrl;
+  }
+
+  // 2. Authoritative 1-to-1 campaign brief mapped asset (171 bijective briefs)
+  const mappedCampaignAsset = getCampaignBriefImage(brief);
+  if (mappedCampaignAsset) {
+    return mappedCampaignAsset;
   }
 
   // 2. Resolve the creative domain for this brief

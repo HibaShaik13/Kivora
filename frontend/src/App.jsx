@@ -2,9 +2,13 @@ import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import HeroSection from './components/HeroSection';
 import LandingLoginSection from './components/LandingLoginSection';
-import PortfolioSpotlight from './components/PortfolioSpotlight';
 import HowItWorksSection from './components/HowItWorksSection';
-import CreativeUniverseSection from './components/CreativeUniverseSection';
+import VerifiedCreatorsSection from './components/VerifiedCreatorsSection';
+import CreativeDomainsSection from './components/CreativeDomainsSection';
+import FeaturedBrandsConveyor from './components/FeaturedBrandsConveyor';
+import MeetKivoSection from './components/MeetKivoSection';
+import FloatingKivoChatbot from './components/FloatingKivoChatbot';
+import CosmicFooter from './components/CosmicFooter';
 import CreatorDiscovery from './components/CreatorDiscovery';
 import BriefsExplorer from './components/BriefsExplorer';
 import PortfolioModal from './components/PortfolioModal';
@@ -16,15 +20,20 @@ import AuthModal from './components/AuthModal';
 import CreatorDashboard from './components/CreatorDashboard';
 import BrandDashboard from './components/BrandDashboard';
 import AdminDashboard from './components/AdminDashboard';
+import CreatorOnboarding from './components/creator/CreatorOnboarding';
+import CreatorPendingReview from './components/creator/CreatorPendingReview';
+import CreatorRejectionView from './components/creator/CreatorRejectionView';
 import MessagesInbox from './components/MessagesInbox';
 import InviteCreatorModal from './components/InviteCreatorModal';
 import ErrorBoundary from './components/ErrorBoundary';
 import { authService, getCurrentUser, addAuthListener } from './services/authService';
 import { api } from './services/api';
+import { useTheme } from './utils/themeManager';
 import './App.css';
 
 
 export default function App() {
+  const { theme, toggleTheme } = useTheme();
   const [currentView, setCurrentView] = useState(() => {
     try {
       const user = getCurrentUser();
@@ -57,6 +66,9 @@ export default function App() {
     }
   });
   const [currentUser, setCurrentUser] = useState(getCurrentUser());
+  const [creatorApprovalData, setCreatorApprovalData] = useState(null);
+  const [isCheckingApproval, setIsCheckingApproval] = useState(false);
+  const [isResubmitting, setIsResubmitting] = useState(false);
   const [activeConversationId, setActiveConversationId] = useState(() => {
     try {
       const params = new URLSearchParams(window.location.search);
@@ -194,11 +206,60 @@ export default function App() {
   const [isAdminDeskOpen, setIsAdminDeskOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
+  const refreshCreatorApprovalState = async (user = currentUser) => {
+    if (!user || user.role !== 'CREATOR') {
+      setCreatorApprovalData(null);
+      return null;
+    }
+    setIsCheckingApproval(true);
+    try {
+      const statusData = await api.getMyApprovalStatus();
+      setCreatorApprovalData(statusData);
+      return statusData;
+    } catch (err) {
+      console.error('Error fetching creator approval status:', err);
+      return null;
+    } finally {
+      setIsCheckingApproval(false);
+    }
+  };
+
   // Sync auth state & path routing
   useEffect(() => {
     const unsubscribe = addAuthListener((user) => {
       setCurrentUser(user);
+      if (user?.role === 'CREATOR') {
+        refreshCreatorApprovalState(user);
+      } else {
+        setCreatorApprovalData(null);
+      }
     });
+
+    if (currentUser?.role === 'CREATOR') {
+      refreshCreatorApprovalState(currentUser);
+    }
+
+    // Check for incoming OAuth token callback
+    try {
+      const searchParams = new URLSearchParams(window.location.search);
+      const oauthToken = searchParams.get('oauth_token');
+      if (oauthToken) {
+        authService.handleOAuthToken(oauthToken).then((u) => {
+          if (u) {
+            handleAuthSuccess(u);
+            searchParams.delete('oauth_token');
+            searchParams.delete('email');
+            searchParams.delete('role');
+            const newSearch = searchParams.toString();
+            const newUrl = window.location.pathname + (newSearch ? `?${newSearch}` : '') + window.location.hash;
+            window.history.replaceState({}, document.title, newUrl);
+          }
+        });
+      }
+    } catch (e) {
+      console.error('Error handling OAuth callback:', e);
+    }
+
     if (window.location.pathname === '/login' || window.location.hash === '#login') {
       setIsAuthModalOpen(true);
     }
@@ -257,12 +318,15 @@ export default function App() {
     setSelectedBrief(newBrief);
   };
 
-  const handleAuthSuccess = (userData) => {
+  const handleAuthSuccess = async (userData) => {
     const user = userData.user || userData;
     setCurrentUser(user);
     setIsAuthModalOpen(false);
     if (user.role === 'ADMIN') {
       handleNavigate('admin');
+    } else if (user.role === 'CREATOR') {
+      await refreshCreatorApprovalState(user);
+      handleNavigate('dashboard');
     } else {
       handleNavigate('dashboard');
     }
@@ -271,6 +335,8 @@ export default function App() {
   const handleLogout = () => {
     authService.logout();
     setCurrentUser(null);
+    setCreatorApprovalData(null);
+    setIsResubmitting(false);
     try {
       localStorage.removeItem('kivora_current_view');
       localStorage.removeItem('kivora_creator_tab');
@@ -283,29 +349,33 @@ export default function App() {
   return (
     <div className="app-wrapper font-sans">
       {/* Top Navigation */}
-      <Navbar
-        currentView={currentView}
-        onNavigate={handleNavigate}
-        currentUser={currentUser}
-        onOpenAuth={() => setIsAuthModalOpen(true)}
-        onLogout={handleLogout}
-        onOpenAiBuilder={() => setIsAiBuilderOpen(true)}
-        onOpenAdminDesk={() => {
-          if (currentUser?.role === 'ADMIN') {
-            handleNavigate('admin');
-          } else {
-            setIsAdminDeskOpen(true);
-          }
-        }}
-      />
+      {(!currentUser || (currentView !== 'dashboard' && currentView !== 'admin')) && (
+        <Navbar
+          currentView={currentView}
+          onNavigate={handleNavigate}
+          currentUser={currentUser}
+          onOpenAuth={() => setIsAuthModalOpen(true)}
+          onLogout={handleLogout}
+          onOpenAiBuilder={() => setIsAiBuilderOpen(true)}
+          onOpenAdminDesk={() => {
+            if (currentUser?.role === 'ADMIN') {
+              handleNavigate('admin');
+            } else {
+              setIsAdminDeskOpen(true);
+            }
+          }}
+          theme={theme}
+          onToggleTheme={toggleTheme}
+        />
+      )}
 
       {/* Main Content Area */}
       <main className="main-content">
         <ErrorBoundary>
-        {/* VIEW 1: PUBLIC LANDING PAGE */}
+        {/* VIEW 1: PUBLIC LANDING PAGE (EXACT REFERENCE 9 SECTIONS) */}
         {currentView === 'landing' && (
           <div className="landing-page-flow">
-            {/* Hero Section with Cosmic Artwork & Interactive Constellation */}
+            {/* Section 1: Cosmic Hero with 3D Portal and Interactive Constellation */}
             <HeroSection
               onExploreCreators={() => handleNavigate('creators')}
               onExploreBriefs={() => handleNavigate('briefs')}
@@ -317,7 +387,7 @@ export default function App() {
               onOpenAiBuilder={() => setIsAiBuilderOpen(true)}
             />
 
-            {/* Dedicated Login Section with Rotating Creative Quotations */}
+            {/* Section 2: Introduction & 3D Glass Authentication Card */}
             <LandingLoginSection
               currentUser={currentUser}
               onOpenAuth={() => setIsAuthModalOpen(true)}
@@ -332,30 +402,34 @@ export default function App() {
               onLogout={handleLogout}
             />
 
-            {/* Curated 6 Portfolios Showcase with Video Previews */}
-            <PortfolioSpotlight
+            {/* Section 3: Verified 3D Creators Showcase with Hover Tilt */}
+            <VerifiedCreatorsSection
+              onSelectCreator={handleSelectCreator}
               onSelectProject={(project) => setSelectedProject(project)}
+              onNavigateCreators={() => handleNavigate('creators')}
             />
 
-            {/* How Kivora Works (4 Glass Step Cards) */}
+            {/* Section 4: Creative Domains 12-Card Grid */}
+            <CreativeDomainsSection
+              onSelectDomain={() => handleNavigate('creators')}
+              onNavigateCreators={() => handleNavigate('creators')}
+            />
+
+            {/* Section 5: Featured Brands Smooth Infinite Conveyor */}
+            <FeaturedBrandsConveyor
+              onExploreBriefs={() => handleNavigate('briefs')}
+            />
+
+            {/* Section 6: How Kivora Works (4 Connected Steps) */}
             <HowItWorksSection
               onExplore={() => handleNavigate('creators')}
               onPostBrief={() => setIsAiBuilderOpen(true)}
             />
 
-            {/* Featured Creators Discovery */}
-            <section className="container" style={{ padding: '4rem 2rem' }}>
-              <CreatorDiscovery
-                onSelectCreator={handleSelectCreator}
-                onSelectProject={(project) => setSelectedProject(project)}
-                onOpenChat={handleOpenChat}
-              />
-            </section>
-
-            {/* Creative Universe Section */}
-            <CreativeUniverseSection
-              onNavigateCreators={() => handleNavigate('creators')}
-              onNavigateBriefs={() => handleNavigate('briefs')}
+            {/* Section 7: Meet Kivo (3D Robot Mascot & Interactive Chat Preview) */}
+            <MeetKivoSection
+              onOpenAiBuilder={() => setIsAiBuilderOpen(true)}
+              onExploreCreators={() => handleNavigate('creators')}
               onOpenAuth={() => setIsAuthModalOpen(true)}
             />
           </div>
@@ -419,17 +493,50 @@ export default function App() {
                 </button>
               </div>
             ) : currentUser.role === 'CREATOR' ? (
-              <CreatorDashboard
-                currentUser={currentUser}
-                onSelectProject={(proj) => setSelectedProject(proj)}
-                onSelectBrief={(b) => setSelectedBrief(b)}
-                onLogout={handleLogout}
-                initialTab={dashboardTab}
-                initialConversationId={activeConversationId}
-                chatContext={chatContext}
-                onClearChatContext={() => setChatContext(null)}
-                onOpenChat={handleOpenChat}
-              />
+              isCheckingApproval && !creatorApprovalData && !currentUser?.approval_status ? (
+                <div className="container py-24 text-center">
+                  <div className="inline-block w-8 h-8 border-3 border-purple-600 border-t-transparent rounded-full animate-spin mb-3"></div>
+                  <p className="text-xs text-neutral-500 font-semibold">Verifying creator credentials &amp; approval status...</p>
+                </div>
+              ) : (creatorApprovalData?.approval_status === 'APPROVED' || creatorApprovalData?.approval_status === 'LEGACY_ACTIVE' || (!creatorApprovalData && (currentUser?.approval_status === 'APPROVED' || currentUser?.approval_status === 'LEGACY_ACTIVE'))) ? (
+                <CreatorDashboard
+                  currentUser={currentUser}
+                  approvalStatus={creatorApprovalData?.approval_status || currentUser?.approval_status}
+                  onSelectProject={(proj) => setSelectedProject(proj)}
+                  onSelectBrief={(b) => setSelectedBrief(b)}
+                  onLogout={handleLogout}
+                  onNavigateHome={() => handleNavigate('landing')}
+                  initialTab={dashboardTab}
+                  initialConversationId={activeConversationId}
+                  chatContext={chatContext}
+                  onClearChatContext={() => setChatContext(null)}
+                  onOpenChat={handleOpenChat}
+                />
+              ) : ((creatorApprovalData?.approval_status === 'REJECTED' || (!creatorApprovalData && currentUser?.approval_status === 'REJECTED')) && !isResubmitting) ? (
+                <CreatorRejectionView
+                  currentUser={currentUser}
+                  approvalData={creatorApprovalData}
+                  onStartResubmission={() => setIsResubmitting(true)}
+                  onLogout={handleLogout}
+                />
+              ) : ((creatorApprovalData?.approval_status === 'PENDING' || (!creatorApprovalData && currentUser?.approval_status === 'PENDING')) && (creatorApprovalData?.is_submitted || creatorApprovalData?.is_profile_complete || currentUser?.has_profile) && !isResubmitting) ? (
+                <CreatorPendingReview
+                  currentUser={currentUser}
+                  approvalData={creatorApprovalData}
+                  onRefreshStatus={refreshCreatorApprovalState}
+                  onLogout={handleLogout}
+                  onEditProfile={() => setIsResubmitting(true)}
+                />
+              ) : (
+                <CreatorOnboarding
+                  currentUser={currentUser}
+                  onComplete={async () => {
+                    setIsResubmitting(false);
+                    await refreshCreatorApprovalState();
+                  }}
+                  onLogout={handleLogout}
+                />
+              )
             ) : currentUser.role === 'BRAND' ? (
               <BrandDashboard
                 currentUser={currentUser}
@@ -438,6 +545,7 @@ export default function App() {
                 onSelectProject={(proj) => setSelectedProject(proj)}
                 onSelectBrief={(b) => setSelectedBrief(b)}
                 onLogout={handleLogout}
+                onNavigateHome={() => handleNavigate('landing')}
                 initialTab={dashboardTab}
                 initialConversationId={activeConversationId}
                 chatContext={chatContext}
@@ -445,14 +553,14 @@ export default function App() {
                 onOpenChat={handleOpenChat}
               />
             ) : (
-              <AdminDashboard currentUser={currentUser} onLogout={handleLogout} />
+              <AdminDashboard currentUser={currentUser} onLogout={handleLogout} initialTab={dashboardTab} />
             )}
           </>
         )}
 
         {/* VIEW 5: ADMIN DASHBOARD */}
         {currentView === 'admin' && (
-          <AdminDashboard currentUser={currentUser} onLogout={handleLogout} />
+          <AdminDashboard currentUser={currentUser} onLogout={handleLogout} initialTab={dashboardTab} />
         )}
 
         {/* VIEW 6: DIRECT INBOX / MESSAGING */}
@@ -570,40 +678,22 @@ export default function App() {
         />
       )}
 
-      {/* Editorial Luxury Footer */}
-      <footer className="footer-kivora-editorial">
-        <div className="container footer-inner">
-          <div>
-            <div className="footer-brand">
-              Kivora<span className="serif-italic-accent">.</span>
-            </div>
-            <p className="footer-sub">
-              A creative marketplace connecting premier brands with verified AI creators.
-            </p>
-          </div>
+      {/* Editorial Luxury Cosmic Footer */}
+      {(!currentUser || (currentView !== 'dashboard' && currentView !== 'admin')) && (
+        <CosmicFooter
+          onNavigate={handleNavigate}
+          onOpenAdminDesk={() => {
+            if (currentUser?.role === 'ADMIN') {
+              handleNavigate('admin');
+            } else {
+              setIsAdminDeskOpen(true);
+            }
+          }}
+        />
+      )}
 
-          <div className="footer-meta">
-            <div>
-              <span className="footer-status-dot" />
-              API Online • FastAPI & SQLite Connected
-            </div>
-            <span>•</span>
-            <button
-              type="button"
-              className="link-arrow-btn"
-              onClick={() => {
-                if (currentUser?.role === 'ADMIN') {
-                  handleNavigate('admin');
-                } else {
-                  setIsAdminDeskOpen(true);
-                }
-              }}
-            >
-              Admin Audit Desk
-            </button>
-          </div>
-        </div>
-      </footer>
+      {/* Floating Kivo AI Chatbot Trigger & Panel */}
+      <FloatingKivoChatbot />
     </div>
   );
 }

@@ -18,8 +18,10 @@ if __name__ == "__main__":
     try:
         import uvicorn
         port = int(os.environ.get("PORT", 8000))
-        print(f"--> Starting Kivora Production API on 0.0.0.0:{port}...", flush=True)
-        uvicorn.run("backend.app.main:app", host="0.0.0.0", port=port, log_level="info")
+        is_prod = os.environ.get("KIVORA_ENV") == "production"
+        reload = os.environ.get("UVICORN_RELOAD", "false" if is_prod else "false").lower() in ("true", "1", "yes")
+        print(f"--> Starting Kivora Production API on 0.0.0.0:{port} (reload={reload})...", flush=True)
+        uvicorn.run("backend.app.main:app", host="0.0.0.0", port=port, log_level="info", reload=reload)
     except BaseException as e:
         tb = traceback.format_exc()
         print(f"--> FATAL STARTUP EXCEPTION: {e}\n{tb}", file=sys.stderr, flush=True)

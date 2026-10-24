@@ -3,6 +3,7 @@ import api from '../services/api';
 import { getCurrentUser } from '../services/authService';
 import { getBriefCoverImage } from '../utils/visualAssetHelpers';
 import BrandLogo from './BrandLogo';
+import { formatINR, clampDemoBudget } from '../utils/indianLocalization';
 
 export default function BriefCard({
   brief,
@@ -183,8 +184,7 @@ export default function BriefCard({
           <div className="brief-budget-wrap">
             <span className="brief-budget-label">Total Compensation</span>
             <span className="brief-budget-val">
-              ${(brief.budget_amount || 0).toLocaleString()}
-              <span className="brief-currency-code"> {brief.budget_currency || 'USD'}</span>
+              {formatINR(clampDemoBudget(brief.budget_amount, 35000))}
             </span>
           </div>
 

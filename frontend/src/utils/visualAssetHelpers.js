@@ -13,6 +13,43 @@ export const CREATOR_PROFILE_MODULES = import.meta.glob('../assets/creators_prof
 
 // Confirmed manifest mapping: normalized names, creator IDs, handles, and filenames to bespoke portraits
 export const CREATOR_PROFILE_MAP = {
+  // Localized Indian Creator Personas
+  'aanyasharma': '/assets/creator-portraits/elena.jpg',
+  'aanya_creative': '/assets/creator-portraits/elena.jpg',
+  'aanya': '/assets/creator-portraits/elena.jpg',
+  'arjunmehta': '/assets/creator-portraits/marcus.jpg',
+  'mehta_3d': '/assets/creator-portraits/marcus.jpg',
+  'arjun': '/assets/creator-portraits/marcus.jpg',
+  'kabirnair': '/assets/creator-portraits/kai.jpg',
+  'kabir_visuals': '/assets/creator-portraits/kai.jpg',
+  'kabir': '/assets/creator-portraits/kai.jpg',
+  'meerakrishnan': '/assets/creator-portraits/maya.jpg',
+  'meera_fashion': '/assets/creator-portraits/maya.jpg',
+  'meera': '/assets/creator-portraits/maya.jpg',
+  'adityaverma': '/assets/creator-portraits/alex.jpg',
+  'averma_motion': '/assets/creator-portraits/alex.jpg',
+  'aditya': '/assets/creator-portraits/alex.jpg',
+  'zoyaqureshi': '/assets/creator-portraits/zara.jpg',
+  'zoya_concept': '/assets/creator-portraits/zara.jpg',
+  'zoya': '/assets/creator-portraits/zara.jpg',
+  'dhruvkapoor': '/assets/creator-portraits/devon.jpg',
+  'dhruv_sound_vis': '/assets/creator-portraits/devon.jpg',
+  'dhruv': '/assets/creator-portraits/devon.jpg',
+  'sanyamalhotra': '/assets/creator-portraits/sophia.jpg',
+  'sanya_beauty': '/assets/creator-portraits/sophia.jpg',
+  'sanya': '/assets/creator-portraits/sophia.jpg',
+  'tariqfarooqi': '/assets/creator-portraits/tariq.jpg',
+  'charvireddy': '/assets/creator-portraits/chloe.jpg',
+  'charvi_vfx': '/assets/creator-portraits/chloe.jpg',
+  'charvi': '/assets/creator-portraits/chloe.jpg',
+  'lakshyapatel': '/assets/creator-portraits/liam.jpg',
+  'lakshya_games': '/assets/creator-portraits/liam.jpg',
+  'lakshya': '/assets/creator-portraits/liam.jpg',
+  'hassansiddiqui': '/assets/creator-portraits/hassan.jpg',
+  'niharikajoshi': '/assets/creator-portraits/nora.jpg',
+  'niharika_design': '/assets/creator-portraits/nora.jpg',
+  'niharika': '/assets/creator-portraits/nora.jpg',
+
   'alexrivera': '/assets/creators_profiles/alex_rivera.jpg',
   'creator-alex-rivera': '/assets/creators_profiles/alex_rivera.jpg',
   'alex_rivera.jpg': '/assets/creators_profiles/alex_rivera.jpg',
@@ -113,9 +150,9 @@ export const CREATOR_PROFILE_MAP = {
   'edenkovacs': '/assets/creators_profiles/eden_kovacs.jpg',
   'cr-synth-034': '/assets/creators_profiles/eden_kovacs.jpg',
   'eden_kovacs.jpg': '/assets/creators_profiles/eden_kovacs.jpg',
-  'elenarostova': '/assets/creators_profiles/elena_rostova.jpg',
-  'creator-elena-rostova': '/assets/creators_profiles/elena_rostova.jpg',
-  'elena_rostova.jpg': '/assets/creators_profiles/elena_rostova.jpg',
+  'elenarostova': '/assets/creator-portraits/elena.jpg',
+  'creator-elena-rostova': '/assets/creator-portraits/elena.jpg',
+  'elena_rostova.jpg': '/assets/creator-portraits/elena.jpg',
   'elodiekovacs': '/assets/creators_profiles/elodie_kovacs.jpg',
   'cr-synth-098': '/assets/creators_profiles/elodie_kovacs.jpg',
   'elodie_kovacs.jpg': '/assets/creators_profiles/elodie_kovacs.jpg',
@@ -380,14 +417,32 @@ export function getCreatorAvatar(creator) {
     return DEFAULT_FALLBACK_AVATAR;
   }
 
-  // 1. If explicit avatar_url is provided and valid, prioritize it
+  // 1. Check if creator matches any of the bespoke portraits by ID, handle, or name first
+  const nameKey = (creator.display_name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const handleKey = (creator.handle || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const idKey = creator.id || '';
+
+  // Direct Aanya Sharma / Elena Rostova mapping guarantee
+  if (
+    idKey === 'creator-elena-rostova' ||
+    nameKey.includes('aanyasharma') ||
+    handleKey === 'aanyacreative' ||
+    nameKey.includes('elenarostova') ||
+    handleKey === 'elenacreative'
+  ) {
+    return '/assets/creator-portraits/elena.jpg';
+  }
+
+  if (idKey && CREATOR_PROFILE_MAP[idKey]) return CREATOR_PROFILE_MAP[idKey];
+  if (handleKey && CREATOR_PROFILE_MAP[handleKey]) return CREATOR_PROFILE_MAP[handleKey];
+  if (nameKey && CREATOR_PROFILE_MAP[nameKey]) return CREATOR_PROFILE_MAP[nameKey];
+
+  // 2. If explicit avatar_url is provided and valid, prioritize it
   const rawUrl = creator.avatar_url;
   if (rawUrl && typeof rawUrl === 'string') {
     const trimmed = rawUrl.trim();
     if (
-      trimmed.startsWith('/assets/creators_profiles/') ||
       trimmed.startsWith('/assets/creator-portraits/') ||
-      trimmed.startsWith('/assets/avatars/') ||
       trimmed.startsWith('/uploads/') ||
       trimmed.startsWith('http://') ||
       trimmed.startsWith('https://') ||
@@ -399,16 +454,10 @@ export function getCreatorAvatar(creator) {
     if (CREATOR_PROFILE_MAP[cleanFile]) {
       return CREATOR_PROFILE_MAP[cleanFile];
     }
+    if (trimmed.startsWith('/assets/creators_profiles/') || trimmed.startsWith('/assets/avatars/')) {
+      return trimmed;
+    }
   }
-
-  // 2. Check if creator matches any of the 90 bespoke portraits by ID, handle, or name
-  const nameKey = (creator.display_name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-  const handleKey = (creator.handle || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-  const idKey = creator.id || '';
-
-  if (nameKey && CREATOR_PROFILE_MAP[nameKey]) return CREATOR_PROFILE_MAP[nameKey];
-  if (handleKey && CREATOR_PROFILE_MAP[handleKey]) return CREATOR_PROFILE_MAP[handleKey];
-  if (idKey && CREATOR_PROFILE_MAP[idKey]) return CREATOR_PROFILE_MAP[idKey];
 
   // 3. Deterministically assign a unique portrait from our curated collection
   const seed = creator.id || creator.handle || creator.display_name || 'kivora-creator';
@@ -426,18 +475,166 @@ export function handleAvatarError(e, fallback = DEFAULT_FALLBACK_AVATAR) {
   }
 }
 
+export const DOMAIN_COVER_POOLS = {
+  FOOD_BEVERAGE: [
+    '/assets/campaign-covers/brand_beverage_cover.jpg',
+    '/assets/categories/food_beverage/cold_brew_nitrogen_pour.png',
+    '/assets/categories/food_beverage/artisanal_sourdough_pastry.png',
+    '/assets/categories/food_beverage/cascading_cold_brew.png',
+    '/assets/categories/food_beverage/heritage_pastry_craft.png',
+    '/assets/categories/food_beverage/botanical_citrus_pour.png',
+    '/assets/categories/food_beverage/nitrogen_brew_commercial.png',
+    '/assets/categories/food_beverage/artisanal_bakery_warm.png',
+    '/assets/categories/food_beverage/cold_brew_cinematic.png',
+    '/assets/categories/food_beverage/refreshing_beverage_splash.png',
+    '/assets/categories/food_beverage/espresso_nitrogen_draft.png',
+    '/assets/categories/food_beverage/rustic_sourdough_display.png',
+    '/assets/categories/food_beverage/artisan_croissant_breakfast.png',
+    '/assets/categories/food_beverage/specialty_beverage_craft.png',
+    '/assets/categories/food_beverage/gourmet_bakery_heritage.png',
+  ],
+  AUTOMOTIVE: [
+    '/assets/campaign-covers/brand_automotive_cover.jpg',
+    '/assets/portfolio/hassan_apex_gt_thumb.jpg',
+    '/assets/briefs/AUTOMOTIVE/AUTOMOTIVE_image1.png',
+    '/assets/briefs/AUTOMOTIVE/AUTOMOTIVE_image2.png',
+    '/assets/briefs/AUTOMOTIVE/AUTOMOTIVE_image3.png',
+  ],
+  BEAUTY_SKINCARE: [
+    '/assets/campaign-covers/brand_skincare_cover.jpg',
+    '/assets/portfolio/sophia_cellular_dew_thumb.jpg',
+    '/assets/briefs/BEAUTY_SKINCARE/BEAUTY_SKINCARE_image1.png',
+    '/assets/briefs/BEAUTY_SKINCARE/BEAUTY_SKINCARE_image2.png',
+    '/assets/briefs/BEAUTY_SKINCARE/BEAUTY_SKINCARE_image3.png',
+  ],
+  FASHION_APPAREL: [
+    '/assets/campaign-covers/brand_fashion_cover.jpg',
+    '/assets/portfolio/maya_liquid_organza_thumb.jpg',
+    '/assets/briefs/FASHION_APPAREL/FASHION_APPAREL_image1.png',
+    '/assets/briefs/FASHION_APPAREL/FASHION_APPAREL_image2.png',
+  ],
+  TECHNOLOGY_GADGETS: [
+    '/assets/campaign-covers/brand_technology_cover.jpg',
+    '/assets/briefs/TECHNOLOGY_GADGETS/TECHNOLOGY_GADGETS_image1.png',
+    '/assets/briefs/TECHNOLOGY_GADGETS/TECHNOLOGY_GADGETS_image2.png',
+  ],
+  GAMING: [
+    '/assets/campaign-covers/brand_gaming_cover.jpg',
+    '/assets/portfolio/kai_neon_samurai_thumb.jpg',
+    '/assets/briefs/GAMING/GAMING_image1.png',
+    '/assets/briefs/GAMING/GAMING_image2.png',
+  ],
+  HOME_INTERIOR_DESIGN: [
+    '/assets/campaign-covers/brand_architecture_cover.jpg',
+    '/assets/briefs/HOME_INTERIOR_DESIGN/HOME_INTERIOR_DESIGN_image1.png',
+  ],
+  ARCHITECTURE_REAL_ESTATE: [
+    '/assets/campaign-covers/brand_architecture_cover.jpg',
+    '/assets/briefs/HOME_INTERIOR_DESIGN/HOME_INTERIOR_DESIGN_image1.png',
+  ],
+  CINEMATIC_VIDEO: [
+    '/assets/portfolio/solaris_anomaly_thumb.jpg',
+    '/assets/briefs/CINEMATIC_VIDEO/CINEMATIC_VIDEO_image1.png',
+  ],
+  '3D_CGI': [
+    '/assets/portfolio/hassan_apex_gt_thumb.jpg',
+    '/assets/briefs/3D_CGI/3D_CGI_image1.png',
+    '/assets/briefs/3D_CGI/3D_CGI_image2.png',
+  ],
+  AI_ART: [
+    '/assets/portfolio/kai_neon_samurai_thumb.jpg',
+    '/assets/briefs/AI_ART/AI_ART_image1.png',
+  ],
+  MOTION_DESIGN: [
+    '/assets/portfolio/marcus_aura_droplet_thumb.jpg',
+    '/assets/briefs/MOTION_DESIGN/MOTION_DESIGN_image1.png',
+  ],
+  VISUAL_EFFECTS: [
+    '/assets/portfolio/marcus_aura_droplet_thumb.jpg',
+    '/assets/briefs/3D_CGI/3D_CGI_image3.png',
+  ],
+  FITNESS_SPORTS: [
+    '/assets/briefs/FITNESS_SPORTS/FITNESS_SPORTS_image1.png',
+  ],
+  FILM_ENTERTAINMENT: [
+    '/assets/portfolio/solaris_anomaly_thumb.jpg',
+    '/assets/briefs/FILM_ENTERTAINMENT/FILM_ENTERTAINMENT_image1.png',
+  ],
+  MUSIC_AUDIO: [
+    '/assets/briefs/MUSIC_AUDIO/MUSIC_AUDIO_image1.png',
+  ],
+  PACKAGING_INDUSTRIAL_DESIGN: [
+    '/assets/campaign-covers/brand_beverage_cover.jpg',
+    '/assets/briefs/PACKAGING_INDUSTRIAL_DESIGN/PACKAGING_INDUSTRIAL_DESIGN_image1.png',
+  ],
+  ENVIRONMENTAL_SUSTAINABILITY: [
+    '/assets/campaign-covers/brand_architecture_cover.jpg',
+  ],
+  EXPERIMENTAL_GENERATIVE_ART: [
+    '/assets/portfolio/kai_neon_samurai_thumb.jpg',
+  ],
+};
+
 /**
- * Returns a cover image for a creator profile/card.
+ * Resolves the primary creative domain of a creator.
+ */
+export function resolveCreatorDomain(creator) {
+  if (!creator) return '3D_CGI';
+  const catText = Array.isArray(creator.categories)
+    ? creator.categories.map((c) => (typeof c === 'string' ? c : (c.name || c.slug || ''))).join(' ')
+    : '';
+  const text = `${creator.primary_specialization || ''} ${catText} ${creator.bio || ''}`.toLowerCase();
+
+  if (text.includes('food') || text.includes('beverage') || text.includes('culinary') || text.includes('coffee') || text.includes('dining')) return 'FOOD_BEVERAGE';
+  if (text.includes('beauty') || text.includes('skincare') || text.includes('cosmetic')) return 'BEAUTY_SKINCARE';
+  if (text.includes('automotive') || text.includes('vehicle') || text.includes('car')) return 'AUTOMOTIVE';
+  if (text.includes('fashion') || text.includes('apparel') || text.includes('runway')) return 'FASHION_APPAREL';
+  if (text.includes('tech') || text.includes('gadget') || text.includes('hardware')) return 'TECHNOLOGY_GADGETS';
+  if (text.includes('game') || text.includes('gaming')) return 'GAMING';
+  if (text.includes('interior') || text.includes('furniture') || text.includes('home')) return 'HOME_INTERIOR_DESIGN';
+  if (text.includes('architecture') || text.includes('real estate')) return 'ARCHITECTURE_REAL_ESTATE';
+  if (text.includes('cinematic') || text.includes('film') || text.includes('director')) return 'CINEMATIC_VIDEO';
+  if (text.includes('motion') || text.includes('animation')) return 'MOTION_DESIGN';
+  if (text.includes('vfx') || text.includes('effect') || text.includes('fluid')) return 'VISUAL_EFFECTS';
+  if (text.includes('music') || text.includes('audio') || text.includes('sound')) return 'MUSIC_AUDIO';
+  if (text.includes('fitness') || text.includes('sport')) return 'FITNESS_SPORTS';
+  if (text.includes('packaging')) return 'PACKAGING_INDUSTRIAL_DESIGN';
+  if (text.includes('3d') || text.includes('cgi')) return '3D_CGI';
+  return 'AI_ART';
+}
+
+/**
+ * Returns primary representative cover for a creator domain.
+ */
+export function getDomainPrimaryCover(creator) {
+  const domain = resolveCreatorDomain(creator);
+  const pool = DOMAIN_COVER_POOLS[domain] || DOMAIN_COVER_POOLS['3D_CGI'];
+  return pool?.[0] || DEFAULT_CAMPAIGN_COVERS[0];
+}
+
+/**
+ * Deterministically returns a domain-specific cover asset for a creator.
+ */
+export function getCreatorFallbackCover(creator) {
+  const domain = resolveCreatorDomain(creator);
+  const pool = DOMAIN_COVER_POOLS[domain] || DOMAIN_COVER_POOLS['3D_CGI'] || DEFAULT_CAMPAIGN_COVERS;
+  const seed = (creator?.id || creator?.handle || 'kivora-creator') + '-kivora-cover-salt-7';
+  const h = hashString(seed);
+  return pool[h % pool.length];
+}
+
+/**
+ * Returns a domain-accurate, high-aesthetic cover image for a creator profile/card.
  */
 export function getCreatorCover(creator) {
   if (!creator) return DEFAULT_CAMPAIGN_COVERS[0];
-  if (creator.cover_image_url) return creator.cover_image_url;
-  if (creator.portfolio_projects?.[0]?.preview_image_url) {
-    return creator.portfolio_projects[0].preview_image_url;
+  if (creator.cover_image_url && typeof creator.cover_image_url === 'string' && creator.cover_image_url.startsWith('/assets/')) {
+    return creator.cover_image_url;
   }
-  const seed = (creator.id || creator.handle || '') + '-cover';
-  const index = hashString(seed) % DEFAULT_CAMPAIGN_COVERS.length;
-  return DEFAULT_CAMPAIGN_COVERS[index];
+  if (creator.featured_project_thumbnail && typeof creator.featured_project_thumbnail === 'string' && creator.featured_project_thumbnail.startsWith('/assets/')) {
+    return creator.featured_project_thumbnail;
+  }
+  return getCreatorFallbackCover(creator);
 }
 
 // Vite asset glob to ensure all 33 bespoke brand logos are bundled and tracked by Vite

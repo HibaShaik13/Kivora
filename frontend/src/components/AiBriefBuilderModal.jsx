@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../services/api';
 import { getCurrentUser } from '../services/authService';
 
@@ -13,6 +13,12 @@ export default function AiBriefBuilderModal({ isOpen, onClose, onBriefCreated })
   const [isPublishing, setIsPublishing] = useState(false);
   const [error, setError] = useState(null);
   const [generatedBrief, setGeneratedBrief] = useState(null);
+
+  // Reference Asset Image Upload State
+  const [uploadedImage, setUploadedImage] = useState(null); // { url, filename, size }
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -29,6 +35,68 @@ export default function AiBriefBuilderModal({ isOpen, onClose, onBriefCreated })
   if (!isOpen) return null;
 
   const currentUser = getCurrentUser();
+
+  const handleImageFileSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate MIME type
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!validTypes.includes(file.type)) {
+      setUploadError('Invalid file type. Please select a PNG, JPG, WEBP, or GIF image.');
+      return;
+    }
+
+    // Validate size (25MB max)
+    const maxSize = 25 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setUploadError('File exceeds maximum allowed size (25MB limit).');
+      return;
+    }
+
+    setIsUploadingImage(true);
+    setUploadError(null);
+
+    try {
+      const res = await api.uploadMedia(file, 'briefs');
+      if (res && res.url) {
+        setUploadedImage({
+          url: res.url,
+          filename: file.name,
+          size: file.size,
+        });
+        if (generatedBrief) {
+          setGeneratedBrief((prev) => ({
+            ...prev,
+            reference_asset_url: res.url,
+            cover_image_url: res.url,
+          }));
+        }
+      } else {
+        throw new Error('Upload response missing file URL.');
+      }
+    } catch (err) {
+      console.error('Error uploading reference asset:', err);
+      setUploadError(err.message || 'Failed to upload image. Please try again.');
+    } finally {
+      setIsUploadingImage(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setUploadedImage(null);
+    setUploadError(null);
+    if (generatedBrief) {
+      setGeneratedBrief((prev) => ({
+        ...prev,
+        reference_asset_url: null,
+        cover_image_url: null,
+      }));
+    }
+  };
 
   const handleGenerate = async (e) => {
     e.preventDefault();
@@ -49,9 +117,11 @@ export default function AiBriefBuilderModal({ isOpen, onClose, onBriefCreated })
 
       setGeneratedBrief({
         ...response,
-        budget_amount: response.budget_amount || (targetBudget ? parseFloat(targetBudget) : 5000),
-        budget_currency: response.budget_currency || 'USD',
+        budget_amount: response.budget_amount || (targetBudget ? parseFloat(targetBudget) : 35000),
+        budget_currency: response.budget_currency || 'INR',
         status: 'PUBLISHED',
+        reference_asset_url: uploadedImage?.url || response.reference_asset_url || null,
+        cover_image_url: uploadedImage?.url || response.cover_image_url || null,
       });
       setStep('review');
     } catch (err) {
@@ -78,6 +148,8 @@ export default function AiBriefBuilderModal({ isOpen, onClose, onBriefCreated })
     setError(null);
 
     try {
+      const finalAssetUrl = uploadedImage?.url || generatedBrief.reference_asset_url || generatedBrief.cover_image_url || null;
+
       const payload = {
         title: generatedBrief.title,
         campaign_objective: generatedBrief.campaign_objective,
@@ -91,7 +163,7 @@ export default function AiBriefBuilderModal({ isOpen, onClose, onBriefCreated })
         deliverables_description: generatedBrief.deliverables_description,
         revision_allowance: generatedBrief.revision_allowance || 2,
         budget_amount: parseFloat(generatedBrief.budget_amount),
-        budget_currency: generatedBrief.budget_currency || 'USD',
+        budget_currency: generatedBrief.budget_currency || 'INR',
         deadline_days: 21,
         commercial_use_requirements: generatedBrief.commercial_use_requirements || 'Full commercial rights',
         usage_channels: generatedBrief.usage_channels || 'Digital & Social Media',
@@ -99,6 +171,8 @@ export default function AiBriefBuilderModal({ isOpen, onClose, onBriefCreated })
         usage_territories: generatedBrief.usage_territories || 'Worldwide',
         restrictions_and_guidelines: generatedBrief.restrictions_and_guidelines || 'No competitor logos',
         disclosure_requirements: generatedBrief.disclosure_requirements || 'Must state AI Assisted Production',
+        reference_asset_url: finalAssetUrl,
+        cover_image_url: finalAssetUrl,
         status: 'PUBLISHED',
         category_ids: selectedCategoryId ? [selectedCategoryId] : [],
         required_skill_ids: [],
@@ -116,7 +190,7 @@ export default function AiBriefBuilderModal({ isOpen, onClose, onBriefCreated })
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className="modal-backdrop" onClick={onClose} style={{ zIndex: 1100 }}>
       <div className="modal-container max-w-3xl" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div className="flex items-center gap-3">
@@ -132,6 +206,90 @@ export default function AiBriefBuilderModal({ isOpen, onClose, onBriefCreated })
               <span className="font-semibold">Notice:</span> {error}
             </div>
           )}
+
+          {/* Shared Reference Image Upload Component */}
+          <div className="mb-4 p-4 rounded-xl border border-purple-500/20 bg-purple-950/20">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold text-purple-200 uppercase tracking-wider flex items-center gap-1.5">
+                <span>🖼</span>
+                <span>Campaign Reference / Moodboard Image</span>
+              </span>
+              {uploadedImage && (
+                <span className="text-xs text-emerald-400 font-mono">
+                  ✓ Uploaded & Attached
+                </span>
+              )}
+            </div>
+
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              className="hidden"
+              onChange={handleImageFileSelect}
+            />
+
+            {uploadError && (
+              <p className="text-xs text-red-400 mb-2 font-medium">{uploadError}</p>
+            )}
+
+            {uploadedImage ? (
+              <div className="flex items-center gap-4 bg-white/5 p-3 rounded-lg border border-white/10">
+                <img
+                  src={uploadedImage.url}
+                  alt="Reference Preview"
+                  className="w-16 h-16 rounded-lg object-cover border border-purple-400/40 shadow-sm shrink-0"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold text-white truncate">
+                    {uploadedImage.filename}
+                  </p>
+                  <p className="text-[11px] text-neutral-400 font-mono mt-0.5">
+                    {(uploadedImage.size / 1024).toFixed(1)} KB • Persistent Server Asset
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploadingImage}
+                    className="px-2.5 py-1 text-xs rounded bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 border border-purple-400/30 transition"
+                  >
+                    Replace
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRemoveImage}
+                    className="px-2.5 py-1 text-xs rounded bg-red-600/20 hover:bg-red-600/40 text-red-300 border border-red-400/30 transition"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed border-purple-400/30 hover:border-purple-400/60 rounded-lg p-4 text-center cursor-pointer transition bg-white/[0.02] hover:bg-purple-500/[0.04]"
+              >
+                {isUploadingImage ? (
+                  <div className="flex items-center justify-center gap-2 text-xs text-purple-200">
+                    <div className="spinner-sm" />
+                    <span>Uploading and validating image asset...</span>
+                  </div>
+                ) : (
+                  <div>
+                    <span className="text-xl block mb-1">📸</span>
+                    <p className="text-xs font-semibold text-purple-200">
+                      Click to upload campaign reference or product moodboard
+                    </p>
+                    <p className="text-[11px] text-neutral-400 mt-1">
+                      PNG, JPG, or WEBP up to 25MB • Saved directly with this brief
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           {step === 'prompt' ? (
             <form onSubmit={handleGenerate} className="space-y-4">
@@ -168,11 +326,11 @@ export default function AiBriefBuilderModal({ isOpen, onClose, onBriefCreated })
                 </div>
 
                 <div>
-                  <label className="label-form">Target Budget (USD)</label>
+                  <label className="label-form">Target Budget (INR ₹)</label>
                   <input
                     type="number"
                     className="input-text"
-                    placeholder="e.g. 5000"
+                    placeholder="e.g. 35000 (₹10,000 - ₹49,999)"
                     value={targetBudget}
                     onChange={(e) => setTargetBudget(e.target.value)}
                   />
@@ -323,11 +481,11 @@ export default function AiBriefBuilderModal({ isOpen, onClose, onBriefCreated })
                 </div>
 
                 <div>
-                  <label className="label-form">Budget Amount ({generatedBrief.budget_currency || 'USD'})</label>
+                  <label className="label-form">Budget Amount (INR ₹)</label>
                   <input
                     type="number"
                     className="input-text"
-                    value={generatedBrief.budget_amount || 5000}
+                    value={generatedBrief.budget_amount || 35000}
                     onChange={(e) => handleFieldChange('budget_amount', e.target.value)}
                   />
                 </div>

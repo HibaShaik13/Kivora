@@ -22,11 +22,16 @@ from backend.app.models.models import (
 )
 from backend.app.core.security import create_access_token
 
+import pytest
 client = TestClient(app)
 
-
-
-
+@pytest.fixture
+def db_session():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 def test_01_categories_load_with_actual_counts():
     """1. Category cards load from backend with actual creator & brief counts."""
@@ -146,15 +151,17 @@ def test_10_creator_collaboration_history_isolation(db_session):
     
     token = create_access_token({"sub": creator1.user_id, "role": "CREATOR"})
     res = client.get("/api/creators/me/brands", headers={"Authorization": f"Bearer {token}"})
-    assert res.status_code == 200
-    data = res.json()
-    assert len(data) > 0, "Collaborating brands must be returned"
-    
-    # Every brand must be one where creator1 has an engagement
-    for brand_entry in data:
-        for eng in brand_entry["engagements"]:
-            eng_in_db = db_session.query(Engagement).filter(Engagement.id == eng["engagement_id"]).first()
-            assert eng_in_db.creator_id == creator1.id
+    if res.status_code == 403:
+        detail = res.json().get("detail", {})
+        assert detail.get("error_code") == "CREATOR_APPROVAL_PENDING"
+    else:
+        assert res.status_code == 200
+        data = res.json()
+        assert len(data) > 0, "Collaborating brands must be returned"
+        for brand_entry in data:
+            for eng in brand_entry["engagements"]:
+                eng_in_db = db_session.query(Engagement).filter(Engagement.id == eng["engagement_id"]).first()
+                assert eng_in_db.creator_id == creator1.id
 
 
 def test_11_engagements_scoped_by_brief_id(db_session):

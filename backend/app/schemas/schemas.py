@@ -5,7 +5,7 @@ Defines input/output contracts, validation rules, and response shapes.
 
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timezone
-from pydantic import BaseModel, Field, field_serializer
+from pydantic import BaseModel, Field, field_serializer, model_validator
 
 
 # ==========================================
@@ -35,6 +35,16 @@ class ResendOtpRequest(BaseModel):
     email: str = Field(..., pattern=EMAIL_PATTERN)
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: str = Field(..., pattern=EMAIL_PATTERN)
+
+
+class ResetPasswordRequest(BaseModel):
+    email: str = Field(..., pattern=EMAIL_PATTERN)
+    otp_code: str = Field(..., min_length=6, max_length=6)
+    new_password: str = Field(..., min_length=8)
+
+
 class UserSummaryResponse(BaseModel):
     id: str
     email: str
@@ -42,6 +52,7 @@ class UserSummaryResponse(BaseModel):
     is_email_verified: bool
     has_profile: bool = False
     profile_id: Optional[str] = None
+    approval_status: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -136,11 +147,22 @@ class EvidenceRecordCreate(BaseModel):
     evidence_type: str = "PROCESS_SCREENSHOT"
     file_url: str
     title: str
-    description: str
+    description: Optional[str] = None
+    notes: Optional[str] = None
     request_verification: bool = False
     target_type: Optional[str] = "PORTFOLIO_PROJECT"
     target_id: Optional[str] = None
     verification_scope: Optional[str] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def resolve_description(cls, data):
+        if isinstance(data, dict):
+            if not data.get("description") and data.get("notes"):
+                data["description"] = data["notes"]
+            elif not data.get("description"):
+                data["description"] = data.get("title") or "Process Evidence"
+        return data
 
 
 class VerificationRequestCreate(BaseModel):
@@ -384,6 +406,7 @@ class CreatorProfileListRead(BaseModel):
     hourly_rate: Optional[float] = None
     availability_status: str
     verification_tier: str
+    approval_status: str = "PENDING"
     verified_claims_count: int
     completed_projects_count: int
     average_rating: float
@@ -400,6 +423,34 @@ class CreatorProfileListRead(BaseModel):
 class CreatorProfileDetailRead(CreatorProfileListRead):
     website_url: Optional[str] = None
     portfolio_projects: List[PortfolioProjectRead] = []
+
+    class Config:
+        from_attributes = True
+
+
+class CreatorApprovalUpdateRequest(BaseModel):
+    approval_status: str = Field(..., pattern="^(PENDING|APPROVED|REJECTED|LEGACY_ACTIVE)$")
+    reviewer_notes: Optional[str] = None
+
+
+class CreatorApprovalDetailRead(BaseModel):
+    creator_id: str
+    user_id: str
+    display_name: str
+    handle: str
+    approval_status: str
+    verification_tier: str
+    is_email_verified: bool
+    portfolio_count: int = 0
+    evidence_count: int = 0
+    reviewed_by: Optional[str] = None
+    reviewer_notes: Optional[str] = None
+    reviewed_at: Optional[datetime] = None
+    avatar_url: Optional[str] = None
+    primary_specialization: Optional[str] = None
+    bio: Optional[str] = None
+    location: Optional[str] = None
+    submitted_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -570,6 +621,8 @@ class ApplicationRead(BaseModel):
     submitted_at: datetime
     reviewed_at: Optional[datetime] = None
     brand_feedback: Optional[str] = None
+    brief_title: Optional[str] = None
+    brand_name: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -694,6 +747,7 @@ class CreatorMatchResult(BaseModel):
     display_name: str
     handle: str
     avatar_url: str
+    location: Optional[str] = None
     primary_specialization: str
     verification_tier: str
     min_budget: float
@@ -1174,6 +1228,24 @@ class ReviewSummaryRead(BaseModel):
     timeliness_avg: Optional[float] = None
     rating_distribution: dict
     recent_reviews: List[ReviewRead] = []
+
+
+class KivoChatMessage(BaseModel):
+    sender: str
+    text: str
+
+
+class KivoChatRequest(BaseModel):
+    message: str
+    history: List[KivoChatMessage] = []
+    user_role: Optional[str] = None
+
+
+class KivoChatResponse(BaseModel):
+    reply: str
+    suggestions: List[str] = []
+    generation_engine: str = "GEMINI"
+
 
 
 

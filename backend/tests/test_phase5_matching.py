@@ -227,7 +227,7 @@ def test_hard_filter_content_type_mismatch():
     assert res.hard_requirements_met is False
     assert res.breakdown.hard_filter_passed is False
     assert res.match_level == "INCOMPATIBLE"
-    assert any("No proven ANIMATION portfolio project found" in g for g in res.gaps)
+    assert any("No proven ANIMATION portfolio project" in g for g in res.gaps)
 
 
 def test_data_coverage_calculation():

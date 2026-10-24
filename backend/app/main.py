@@ -47,10 +47,11 @@ DEFAULT_ORIGINS = [
     "http://127.0.0.1:5173",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "https://kivora-frontend.onrender.com",
     "https://kivora-web-tv1x.onrender.com",
     "https://kivora-web.onrender.com",
 ]
-env_allowed = os.getenv("ALLOWED_ORIGINS", "")
+env_allowed = os.getenv("ALLOWED_ORIGINS", "") + "," + os.getenv("KIVORA_CORS_ORIGINS", "")
 allowed_origins = list(set(DEFAULT_ORIGINS + [o.strip() for o in env_allowed.split(",") if o.strip()]))
 
 app.add_middleware(

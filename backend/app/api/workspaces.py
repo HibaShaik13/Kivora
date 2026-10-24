@@ -40,7 +40,7 @@ from backend.app.schemas.schemas import (
     ReviewSummaryRead,
     ProjectRead,
 )
-from backend.app.core.deps import get_current_verified_user, require_role
+from backend.app.core.deps import get_current_verified_user, require_role, require_approved_creator_user
 from backend.app.services.collaboration_service import CollaborationService
 from backend.app.services.ai_review_service import AiReviewService
 
@@ -72,7 +72,7 @@ def get_creator_collaboration_history(
     status: Optional[str] = Query(None, description="Filter by status (COMPLETED, FINAL_APPROVED, etc.)"),
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
-    current_user: User = Depends(require_role(["CREATOR"])),
+    current_user: User = Depends(require_approved_creator_user),
     db: Session = Depends(get_db),
 ):
     """Creator views only their own collaboration history across brands."""

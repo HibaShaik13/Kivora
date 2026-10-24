@@ -32,7 +32,7 @@ from backend.app.schemas.schemas import (
     InvitationRead,
     InvitationActionRequest,
 )
-from backend.app.core.deps import require_role, get_current_verified_user
+from backend.app.core.deps import require_role, get_current_verified_user, require_approved_creator_user
 from backend.app.services.notification_service import NotificationService
 
 router = APIRouter(prefix="/api/engagements", tags=["Engagements"])
@@ -394,7 +394,7 @@ def list_brief_invitations(
 @router.post("/invitations/{invitation_id}/accept", response_model=InvitationRead)
 def accept_invitation(
     invitation_id: str,
-    current_user: User = Depends(require_role(["CREATOR"])),
+    current_user: User = Depends(require_approved_creator_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -575,7 +575,7 @@ def get_engagement_detail(
 def submit_deliverable(
     engagement_id: str,
     payload: DeliverableSubmissionCreate,
-    current_user: User = Depends(require_role(["CREATOR"])),
+    current_user: User = Depends(require_approved_creator_user),
     db: Session = Depends(get_db)
 ):
     """

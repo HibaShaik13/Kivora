@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { getCreatorAvatar } from '../utils/visualAssetHelpers';
 
 export default function PortfolioModal({ project, onClose, onSelectCreator }) {
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'workflow' | 'evidence'
@@ -221,13 +222,21 @@ export default function PortfolioModal({ project, onClose, onSelectCreator }) {
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <img
-                      src={project.creator_avatar || project.creator?.avatar_url || '/assets/avatars/elena.jpg'}
+                      src={
+                        getCreatorAvatar(
+                          project.creator || {
+                            avatar_url: project.creator_avatar,
+                            display_name: project.creator_name,
+                            handle: project.creator_handle,
+                          }
+                        )
+                      }
                       alt={project.creator_name || 'Creator'}
                       className="attribution-avatar"
                       style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover' }}
                       onError={(e) => {
                         e.target.onerror = null;
-                        e.target.src = '/assets/avatars/elena.jpg';
+                        e.target.src = '/assets/creator-portraits/elena.jpg';
                       }}
                     />
                     <div>

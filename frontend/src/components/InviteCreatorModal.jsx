@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
+import { formatINR, clampDemoBudget } from '../utils/indianLocalization';
 
 export default function InviteCreatorModal({ creator, isOpen, onClose, onSuccess }) {
   const [briefs, setBriefs] = useState([]);
@@ -273,7 +274,7 @@ export default function InviteCreatorModal({ creator, isOpen, onClose, onSuccess
                 >
                   {briefs.map((b) => (
                     <option key={b.id} value={b.id}>
-                      {b.title} (${(b.budget_amount || 0).toLocaleString()} • {b.content_type})
+                      {b.title} ({formatINR(clampDemoBudget(b.budget_amount, 35000))} • {b.content_type})
                     </option>
                   ))}
                 </select>
@@ -292,7 +293,7 @@ export default function InviteCreatorModal({ creator, isOpen, onClose, onSuccess
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontWeight: '600', color: '#222' }}>
-                    <span>Budget: ${(selectedBrief.budget_amount || 0).toLocaleString()}</span>
+                    <span>Budget: {formatINR(clampDemoBudget(selectedBrief.budget_amount, 35000))}</span>
                     <span>Format: {selectedBrief.aspect_ratio || '16:9'}</span>
                   </div>
                   <p style={{ margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -304,7 +305,7 @@ export default function InviteCreatorModal({ creator, isOpen, onClose, onSuccess
               {/* Proposed Rate */}
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: '6px' }}>
-                  Proposed Rate (USD)
+                  Proposed Rate (INR ₹)
                 </label>
                 <input
                   type="number"
@@ -312,7 +313,7 @@ export default function InviteCreatorModal({ creator, isOpen, onClose, onSuccess
                   step="any"
                   value={proposedRate}
                   onChange={(e) => setProposedRate(e.target.value)}
-                  placeholder="e.g. 3500"
+                  placeholder="e.g. 25000"
                   style={{
                     width: '100%',
                     padding: '10px 14px',
@@ -332,7 +333,7 @@ export default function InviteCreatorModal({ creator, isOpen, onClose, onSuccess
                   rows="3"
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Hi Elena, we love your recent 3D commercial work and would love to partner on this upcoming brand launch..."
+                  placeholder="Hi Aanya, we love your recent 3D commercial work and would love to partner on this upcoming brand launch..."
                   style={{
                     width: '100%',
                     padding: '10px 14px',

@@ -7,16 +7,6 @@ from backend.app.main import app
 from backend.app.database import get_db, SessionLocal
 from backend.app.models.models import User, OtpCode
     
-client = TestClient(app)
-
-@pytest.fixture
-def db_session():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
 @pytest.fixture
 def mock_smtp_env(monkeypatch):
     import backend.app.services.email_service as email_service
@@ -25,7 +15,7 @@ def mock_smtp_env(monkeypatch):
     monkeypatch.setattr(email_service, "SMTP_USER", "mock_user")
     monkeypatch.setattr(email_service, "SMTP_PASSWORD", "mock_pass")
 
-def test_register_and_verify(db_session, mock_smtp_env, monkeypatch):
+def test_register_and_verify(client, db_session, mock_smtp_env, monkeypatch):
     email = f"test_{uuid.uuid4()}@example.com"
     
     import backend.app.services.email_service as email_service
@@ -86,7 +76,7 @@ def test_register_and_verify(db_session, mock_smtp_env, monkeypatch):
     assert res_reuse.status_code == 400
     assert "No active verification code found" in res_reuse.json()["detail"]
 
-def test_attempt_limit(db_session, mock_smtp_env, monkeypatch):
+def test_attempt_limit(client, db_session, mock_smtp_env, monkeypatch):
     email = f"test_{uuid.uuid4()}@limit.com"
     import backend.app.services.email_service as email_service
     
@@ -116,6 +106,7 @@ def test_attempt_limit(db_session, mock_smtp_env, monkeypatch):
 
 def test_missing_smtp_raises(monkeypatch):
     import backend.app.services.email_service as email_service
+    monkeypatch.setenv("KIVORA_ENV", "production")
     monkeypatch.setattr(email_service, "SMTP_USER", "")
     from backend.app.services.email_service import send_otp_email
     with pytest.raises(ValueError, match="Missing required SMTP configuration"):

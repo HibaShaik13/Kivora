@@ -108,6 +108,7 @@ def _setup_collaboration_fixtures(db):
         min_budget=1500.0,
         availability_status="AVAILABLE",
         verification_tier="VERIFIED_PRO",
+        approval_status="APPROVED",
     )
     db.add(creator_profile)
 

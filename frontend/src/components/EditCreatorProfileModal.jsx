@@ -5,9 +5,9 @@ export default function EditCreatorProfileModal({ isOpen, onClose, onProfileUpda
   const [displayName, setDisplayName] = useState(currentProfile?.display_name || '');
   const [handle, setHandle] = useState(currentProfile?.handle || '');
   const [bio, setBio] = useState(currentProfile?.bio || '');
-  const [avatarUrl, setAvatarUrl] = useState(currentProfile?.avatar_url || '/assets/avatars/elena.jpg');
+  const [avatarUrl, setAvatarUrl] = useState(currentProfile?.avatar_url || '/assets/creator-portraits/elena.jpg');
   const [bannerUrl, setBannerUrl] = useState(currentProfile?.banner_url || '/assets/banners/elena_banner.jpg');
-  const [location, setLocation] = useState(currentProfile?.location || 'Tokyo / Global');
+  const [location, setLocation] = useState(currentProfile?.location || 'Bengaluru, Karnataka');
   const [yearsExperience, setYearsExperience] = useState(currentProfile?.years_experience || 4);
   const [primarySpecialization, setPrimarySpecialization] = useState(
     currentProfile?.primary_specialization || 'Cinematic Generative Video'
@@ -75,9 +75,9 @@ export default function EditCreatorProfileModal({ isOpen, onClose, onProfileUpda
       setDisplayName(currentProfile.display_name || '');
       setHandle(currentProfile.handle || '');
       setBio(currentProfile.bio || '');
-      setAvatarUrl(currentProfile.avatar_url || '/assets/avatars/elena.jpg');
+      setAvatarUrl(currentProfile.avatar_url || '/assets/creator-portraits/elena.jpg');
       setBannerUrl(currentProfile.banner_url || '/assets/banners/elena_banner.jpg');
-      setLocation(currentProfile.location || 'Tokyo / Global');
+      setLocation(currentProfile.location || 'Bengaluru, Karnataka');
       setYearsExperience(currentProfile.years_experience || 4);
       setPrimarySpecialization(currentProfile.primary_specialization || 'Cinematic Generative Video');
       setWebsiteUrl(currentProfile.website_url || 'https://kivora.dev/@creator');
@@ -145,248 +145,252 @@ export default function EditCreatorProfileModal({ isOpen, onClose, onProfileUpda
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div
-        className="modal-container glass-panel max-w-2xl max-h-[90vh] overflow-y-auto"
+        className="modal-container glass-panel max-w-3xl w-[94vw] max-h-[90vh] flex flex-col p-0 overflow-hidden shadow-2xl rounded-2xl"
         onClick={(e) => e.stopPropagation()}
         style={{
           backgroundImage: 'linear-gradient(rgba(255,255,255,0.96), rgba(255,255,255,0.96)), url(/assets/backgrounds/creator-profile.jpg)',
           backgroundSize: 'cover',
         }}
       >
-        <div className="modal-header">
+        <div className="modal-header flex-shrink-0 px-6 py-4 border-b border-black/10 flex items-center justify-between bg-white/80 backdrop-blur-sm">
           <div>
             <span className="badge-editorial">
               <span className="badge-dot" />
               CREATOR PASSPORT
             </span>
-            <h2 className="modal-title">Edit Creator Profile</h2>
+            <h2 className="modal-title text-xl font-bold text-neutral-900 mt-1">Edit Creator Profile</h2>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>
+          <button type="button" className="modal-close-btn" onClick={onClose} aria-label="Close modal">
             ✕
           </button>
         </div>
 
-        {error && (
-          <div className="banner-error mb-4" style={{ padding: '0.75rem 1rem', borderRadius: '10px', background: '#FEE2E2', color: '#991B1B' }}>
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="label-form">Display Name *</label>
-              <input
-                type="text"
-                className="input-text w-full"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="e.g. Elena Rostova"
-                required
-              />
-            </div>
-            <div>
-              <label className="label-form">Handle / Username *</label>
-              <input
-                type="text"
-                className="input-text w-full"
-                value={handle}
-                onChange={(e) => setHandle(e.target.value)}
-                placeholder="elenarostova"
-                required
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="label-form">Biography & Creative Manifesto</label>
-            <textarea
-              className="input-text w-full"
-              rows={3}
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              placeholder="Tell brands about your artistic direction, multi-model pipelines, and commercial production standards."
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="label-form">Primary Specialization</label>
-              <input
-                type="text"
-                className="input-text w-full"
-                value={primarySpecialization}
-                onChange={(e) => setPrimarySpecialization(e.target.value)}
-                placeholder="e.g. Cinematic Generative Video"
-              />
-            </div>
-            <div>
-              <label className="label-form">Location / Timezone</label>
-              <input
-                type="text"
-                className="input-text w-full"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="e.g. Tokyo / UTC+9"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="label-form">Years Experience</label>
-              <input
-                type="number"
-                className="input-text w-full"
-                value={yearsExperience}
-                onChange={(e) => setYearsExperience(e.target.value)}
-                min={0}
-              />
-            </div>
-            <div>
-              <label className="label-form">Min Project Budget ($)</label>
-              <input
-                type="number"
-                className="input-text w-full"
-                value={minBudget}
-                onChange={(e) => setMinBudget(e.target.value)}
-                min={0}
-              />
-            </div>
-            <div>
-              <label className="label-form">Hourly Rate ($)</label>
-              <input
-                type="number"
-                className="input-text w-full"
-                value={hourlyRate}
-                onChange={(e) => setHourlyRate(e.target.value)}
-                min={0}
-              />
-            </div>
-          </div>
-
-          <div className="p-3.5 rounded-xl border border-black/10 bg-white/70 space-y-3">
-            <label className="label-form block mb-1">Creator Profile Portrait / Avatar</label>
-            <div className="flex items-center gap-4 flex-wrap">
-              <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-[#7952EC] bg-[#FAF7F2] flex-shrink-0 shadow-sm">
-                <img
-                  src={avatarUrl || '/assets/creator-portraits/portrait_ai_artist.jpg'}
-                  alt="Avatar preview"
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src = '/assets/creator-portraits/portrait_ai_artist.jpg';
-                  }}
-                />
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden min-h-0">
+          <div className="modal-body overflow-y-auto flex-1 p-6 space-y-4">
+            {error && (
+              <div className="banner-error" style={{ padding: '0.75rem 1rem', borderRadius: '10px', background: '#FEE2E2', color: '#991B1B' }}>
+                {error}
               </div>
-              <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
-                <div className="flex items-center gap-2">
-                  <label className="btn-secondary text-xs cursor-pointer py-1.5 px-3">
-                    {isUploadingAvatar ? 'Uploading...' : '📷 Upload New Photo'}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleAvatarUpload}
-                      className="hidden"
-                      disabled={isUploadingAvatar}
-                    />
-                  </label>
-                  {avatarUrl && (
-                    <button
-                      type="button"
-                      onClick={() => setAvatarUrl('')}
-                      className="text-xs text-red-600 hover:underline px-2 py-1"
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="label-form block mb-1 text-xs font-semibold text-neutral-700">Display Name *</label>
                 <input
                   type="text"
-                  className="input-text text-xs w-full py-1"
-                  value={avatarUrl}
-                  onChange={(e) => setAvatarUrl(e.target.value)}
-                  placeholder="/assets/creator-portraits/... or /uploads/..."
+                  className="input-text w-full"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="e.g. Aanya Sharma"
+                  required
+                />
+              </div>
+              <div>
+                <label className="label-form block mb-1 text-xs font-semibold text-neutral-700">Handle / Username *</label>
+                <input
+                  type="text"
+                  className="input-text w-full"
+                  value={handle}
+                  onChange={(e) => setHandle(e.target.value)}
+                  placeholder="aanyasharma"
+                  required
                 />
               </div>
             </div>
-            {avatarUploadError && (
-              <p className="text-xs text-red-600">{avatarUploadError}</p>
-            )}
-          </div>
 
-          <div>
-            <label className="label-form">Banner URL</label>
-            <input
-              type="text"
-              className="input-text w-full"
-              value={bannerUrl}
-              onChange={(e) => setBannerUrl(e.target.value)}
-              placeholder="/assets/banners/elena_banner.jpg"
-            />
-          </div>
+            <div>
+              <label className="label-form block mb-1 text-xs font-semibold text-neutral-700">Biography & Creative Manifesto</label>
+              <textarea
+                className="input-text w-full"
+                rows={3}
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                placeholder="Tell brands about your artistic direction, multi-model pipelines, and commercial production standards."
+              />
+            </div>
 
-          <div>
-            <label className="label-form">Website / Portfolio Link</label>
-            <input
-              type="url"
-              className="input-text w-full"
-              value={websiteUrl}
-              onChange={(e) => setWebsiteUrl(e.target.value)}
-              placeholder="https://elenarostova.art"
-            />
-          </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="label-form block mb-1 text-xs font-semibold text-neutral-700">Primary Specialization</label>
+                <input
+                  type="text"
+                  className="input-text w-full"
+                  value={primarySpecialization}
+                  onChange={(e) => setPrimarySpecialization(e.target.value)}
+                  placeholder="e.g. Cinematic Generative Video"
+                />
+              </div>
+              <div>
+                <label className="label-form block mb-1 text-xs font-semibold text-neutral-700">Location / Timezone</label>
+                <input
+                  type="text"
+                  className="input-text w-full"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="e.g. Bengaluru, Karnataka"
+                />
+              </div>
+            </div>
 
-          {/* Skills Checklist */}
-          <div>
-            <label className="label-form">Creative Skills & Disciplines</label>
-            <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-2 rounded-lg border border-black/10 bg-white/60">
-              {availableSkills.map((sk) => {
-                const isSelected = selectedSkillIds.includes(sk.id);
-                return (
-                  <button
-                    key={sk.id}
-                    type="button"
-                    onClick={() => toggleSkill(sk.id)}
-                    className={`tag-pill text-xs transition ${
-                      isSelected
-                        ? 'bg-purple-600 text-white font-semibold border-purple-600'
-                        : 'bg-white text-neutral-700 hover:bg-neutral-100'
-                    }`}
-                  >
-                    {isSelected ? '✓ ' : '+ '}
-                    {sk.name}
-                  </button>
-                );
-              })}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="label-form block mb-1 text-xs font-semibold text-neutral-700">Years Experience</label>
+                <input
+                  type="number"
+                  className="input-text w-full"
+                  value={yearsExperience}
+                  onChange={(e) => setYearsExperience(e.target.value)}
+                  min={0}
+                />
+              </div>
+              <div>
+                <label className="label-form block mb-1 text-xs font-semibold text-neutral-700">Min Project Budget (INR ₹)</label>
+                <input
+                  type="number"
+                  className="input-text w-full"
+                  value={minBudget}
+                  onChange={(e) => setMinBudget(e.target.value)}
+                  min={0}
+                  placeholder="e.g. 25000"
+                />
+              </div>
+              <div>
+                <label className="label-form block mb-1 text-xs font-semibold text-neutral-700">Hourly Rate (INR ₹)</label>
+                <input
+                  type="number"
+                  className="input-text w-full"
+                  value={hourlyRate}
+                  onChange={(e) => setHourlyRate(e.target.value)}
+                  min={0}
+                />
+              </div>
+            </div>
+
+            <div className="p-4 rounded-xl border border-black/10 bg-white/70 space-y-3">
+              <label className="label-form block text-xs font-semibold text-neutral-700">Creator Profile Portrait / Avatar</label>
+              <div className="flex items-center gap-4 flex-wrap">
+                <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-[#7952EC] bg-[#FAF7F2] flex-shrink-0 shadow-sm">
+                  <img
+                    src={avatarUrl || '/assets/creator-portraits/portrait_ai_artist.jpg'}
+                    alt="Avatar preview"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = '/assets/creator-portraits/portrait_ai_artist.jpg';
+                    }}
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
+                  <div className="flex items-center gap-2">
+                    <label className="btn-secondary text-xs cursor-pointer py-1.5 px-3">
+                      {isUploadingAvatar ? 'Uploading...' : '📷 Upload New Photo'}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleAvatarUpload}
+                        className="hidden"
+                        disabled={isUploadingAvatar}
+                      />
+                    </label>
+                    {avatarUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setAvatarUrl('')}
+                        className="text-xs text-red-600 hover:underline px-2 py-1"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    className="input-text text-xs w-full py-1.5"
+                    value={avatarUrl}
+                    onChange={(e) => setAvatarUrl(e.target.value)}
+                    placeholder="/assets/creator-portraits/... or /uploads/..."
+                  />
+                </div>
+              </div>
+              {avatarUploadError && (
+                <p className="text-xs text-red-600">{avatarUploadError}</p>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="label-form block mb-1 text-xs font-semibold text-neutral-700">Banner URL</label>
+                <input
+                  type="text"
+                  className="input-text w-full"
+                  value={bannerUrl}
+                  onChange={(e) => setBannerUrl(e.target.value)}
+                  placeholder="/assets/banners/elena_banner.jpg"
+                />
+              </div>
+              <div>
+                <label className="label-form block mb-1 text-xs font-semibold text-neutral-700">Website / Portfolio Link</label>
+                <input
+                  type="url"
+                  className="input-text w-full"
+                  value={websiteUrl}
+                  onChange={(e) => setWebsiteUrl(e.target.value)}
+                  placeholder="https://aanyasharma.art"
+                />
+              </div>
+            </div>
+
+            {/* Skills Checklist */}
+            <div>
+              <label className="label-form block mb-1 text-xs font-semibold text-neutral-700">Creative Skills & Disciplines</label>
+              <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-2.5 rounded-lg border border-black/10 bg-white/60">
+                {availableSkills.map((sk) => {
+                  const isSelected = selectedSkillIds.includes(sk.id);
+                  return (
+                    <button
+                      key={sk.id}
+                      type="button"
+                      onClick={() => toggleSkill(sk.id)}
+                      className={`tag-pill text-xs transition ${
+                        isSelected
+                          ? 'bg-purple-600 text-white font-semibold border-purple-600'
+                          : 'bg-white text-neutral-700 hover:bg-neutral-100'
+                      }`}
+                    >
+                      {isSelected ? '✓ ' : '+ '}
+                      {sk.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Tools Checklist */}
+            <div>
+              <label className="label-form block mb-1 text-xs font-semibold text-neutral-700">Generative AI Tools & Pipeline Stacks</label>
+              <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-2.5 rounded-lg border border-black/10 bg-white/60">
+                {availableTools.map((tl) => {
+                  const isSelected = selectedToolIds.includes(tl.id);
+                  return (
+                    <button
+                      key={tl.id}
+                      type="button"
+                      onClick={() => toggleTool(tl.id)}
+                      className={`tag-pill text-xs transition ${
+                        isSelected
+                          ? 'bg-purple-600 text-white font-semibold border-purple-600'
+                          : 'bg-white text-neutral-700 hover:bg-neutral-100'
+                      }`}
+                    >
+                      {isSelected ? '✓ ' : '+ '}
+                      {tl.name}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
-          {/* Tools Checklist */}
-          <div>
-            <label className="label-form">Generative AI Tools & Pipeline Stacks</label>
-            <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-2 rounded-lg border border-black/10 bg-white/60">
-              {availableTools.map((tl) => {
-                const isSelected = selectedToolIds.includes(tl.id);
-                return (
-                  <button
-                    key={tl.id}
-                    type="button"
-                    onClick={() => toggleTool(tl.id)}
-                    className={`tag-pill text-xs transition ${
-                      isSelected
-                        ? 'bg-purple-600 text-white font-semibold border-purple-600'
-                        : 'bg-white text-neutral-700 hover:bg-neutral-100'
-                    }`}
-                  >
-                    {isSelected ? '✓ ' : '+ '}
-                    {tl.name}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-black/10">
+          <div className="modal-footer flex-shrink-0 px-6 py-4 border-t border-black/10 bg-white/90 backdrop-blur-sm flex items-center justify-end gap-3">
             <button type="button" className="btn-secondary" onClick={onClose} disabled={isLoading}>
               Cancel
             </button>
